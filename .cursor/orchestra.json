@@ -1,0 +1,96 @@
+{
+  "version": 2,
+  "profile": "personal",
+  "project": {
+    "name": "whatsapp-ui-template",
+    "root": ".",
+    "github": {
+      "owner": "YOUR_OWNER",
+      "repo": "whatsapp-ui-template",
+      "sshHost": "github.com"
+    }
+  },
+  "runtime": {
+    "local": {
+      "parentFolder": "Documents/your-projects",
+      "shell": "powershell"
+    },
+    "cloud": {
+      "enabled": true,
+      "environmentFile": ".cursor/environment.json",
+      "skillsPath": ".cursor/skills"
+    }
+  },
+  "secrets": {
+    "supabase": [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY"
+    ],
+    "cloudApi": [
+      "CLOUD_API_KEY",
+      "CLOUD_PHONE_NUMBER_ID",
+      "CLOUD_WEBHOOK_SECRET"
+    ],
+    "whatsappWorker": [
+      "SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "SECTOR_SLUG",
+      "WHATSAPP_AUTH_DIR",
+      "BAILEYS_LOG_LEVEL"
+    ]
+  },
+  "services": {
+    "supabase": {
+      "enabled": true,
+      "orgId": "",
+      "orgName": "",
+      "projectRef": "",
+      "projectName": "whatsapp-ui-template",
+      "accountNote": "Free tier — your account"
+    },
+    "vercel": {
+      "enabled": true,
+      "teamId": "",
+      "teamSlug": "",
+      "projectName": "whatsapp-ui-template",
+      "projectId": ""
+    },
+    "clasp": {
+      "enabled": false,
+      "scriptId": null,
+      "rootDir": "gas"
+    },
+    "frontend": {
+      "enabled": true,
+      "framework": "nextjs"
+    },
+    "whatsappVm": {
+      "enabled": false,
+      "sectorSlug": "",
+      "provider": "gcp",
+      "machineType": "e2-micro",
+      "region": "us-central1",
+      "host": null,
+      "user": "",
+      "appsPath": "/home/user/apps",
+      "sshKeyName": "",
+      "pm2Name": "",
+      "authDirHint": "",
+      "accountNote": "Provision when you have a number ready"
+    }
+  },
+  "roles": {
+    "architect": true,
+    "writer": true,
+    "reviewer": true,
+    "documenter": true,
+    "security": true,
+    "optimizer": true
+  },
+  "paths": {
+    "architectureDoc": "docs/architecture.md",
+    "implementationPlan": "docs/implementation-plan.md",
+    "agentsDoc": "AGENTS.md"
+  }
+}

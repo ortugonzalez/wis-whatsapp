@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next / build
+.next/
+out/
+build/
+dist/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+.envrc
+*.pem
+
+# debug / OS
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.DS_Store
+Thumbs.db
+
+# testing / typescript
+/coverage
+*.tsbuildinfo
+
+# vercel / supabase local
+.vercel
+supabase/.branches
+supabase/.temp
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# worker auth (never commit Baileys session)
+workers/**/auth/
+workers/**/.wwebjs_auth/
+**/WHATSAPP_AUTH*/

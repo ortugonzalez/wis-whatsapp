@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  --color-bg-base: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --font-heading: var(--font-inter), system-ui, sans-serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-accent: var(--color-accent);
+  --color-bg-base: var(--color-bg-base);
+  --color-bg-surface: var(--color-bg-surface);
+  --font-heading: var(--font-heading);
+  --font-body: var(--font-body);
+}
+
+html {
+  overflow-x: clip;
+}
+
+body {
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  overflow-x: clip;
+  touch-action: manipulation;
+}
+
+h1,
+h2,
+h3,
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.btn {
+  border: 1px solid var(--color-accent);
+  background: var(--color-bg-surface);
+  color: var(--color-accent);
+  border-radius: 8px;
+  font-weight: 600;
+  touch-action: manipulation;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  color: #fff;
+}
+
+.btn:active:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  color: #fff;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-solid {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  touch-action: manipulation;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-solid:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.btn-solid:active:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.btn-solid:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.input {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 16px;
+}
+
+.input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.composer-textarea {
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-text-muted) 45%, transparent)
+    transparent;
+}
+
+.composer-textarea::-webkit-scrollbar {
+  width: 0.5px;
+}
+
+.composer-textarea::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-text-muted) 45%, transparent);
+  border-radius: 1px;
+}
+
+.composer-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inbox-scroll-host {
+  overflow: hidden;
+}
+
+.inbox-scroll-host > .inbox-scroll {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: color-mix(in srgb, var(--color-text-muted) 45%, transparent)
+    transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .inbox-scroll-host > .inbox-scroll {
+    width: calc(100% + 19px);
+  }
+}
+
+.safe-pad-x {
+  padding-left: max(1rem, var(--safe-left));
+  padding-right: max(1rem, var(--safe-right));
+}
+
+.safe-pad-top {
+  padding-top: var(--safe-top);
+}
+
+.safe-pad-bottom {
+  padding-bottom: var(--safe-bottom);
+}
+
+.safe-pad-bottom-composer {
+  padding-bottom: calc(0.75rem + var(--safe-bottom));
+}

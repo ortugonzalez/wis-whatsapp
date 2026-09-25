@@ -1,0 +1,39 @@
+{
+  "labels": [
+    {
+      "name": "hermes/todo",
+      "color": "0E8A16",
+      "description": "Pendiente en cola para Automation Plan"
+    },
+    {
+      "name": "hermes/planning",
+      "color": "1D76DB",
+      "description": "Cloud agent planificando (arquitecto + revisor de contrato)"
+    },
+    {
+      "name": "hermes/awaiting-approval",
+      "color": "FBCA04",
+      "description": "Plan listo; espera APROBADO / REHACER / DECISIONES del humano"
+    },
+    {
+      "name": "hermes/approved",
+      "color": "5319E7",
+      "description": "Luz verde humana (opcional si el PR tiene comentario APROBADO)"
+    },
+    {
+      "name": "hermes/implementing",
+      "color": "D93F0B",
+      "description": "Escritor + QA + docs + smoke en curso"
+    },
+    {
+      "name": "hermes/preview",
+      "color": "006B75",
+      "description": "Branch/PR listo; humano decide merge"
+    },
+    {
+      "name": "hermes/blocked",
+      "color": "B60205",
+      "description": "Falta decisión, secreto o smoke/test imposible en cloud"
+    }
+  ]
+}

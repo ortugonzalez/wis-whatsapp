@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#2563eb" />
+    <title>Offline — WhatsApp CRM</title>
+    <style>
+      :root {
+        --primary: #2563eb;
+        --accent: #059669;
+        --bg-base: #f8fafc;
+        --text-primary: #1e293b;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: max(1.5rem, env(safe-area-inset-top))
+          max(1.5rem, env(safe-area-inset-right))
+          max(1.5rem, env(safe-area-inset-bottom))
+          max(1.5rem, env(safe-area-inset-left));
+        background: var(--bg-base);
+        color: var(--text-primary);
+        font-family: system-ui, sans-serif;
+        text-align: center;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 0 0 0.5rem;
+      }
+      p {
+        margin: 0 0 1.25rem;
+        line-height: 1.45;
+        color: #475569;
+      }
+      button {
+        min-height: 44px;
+        min-width: 44px;
+        width: 100%;
+        max-width: 16rem;
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: #fff;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      button:active {
+        background: #047857;
+        border-color: #047857;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Offline</h1>
+      <p>
+        No network connection. Check Wi‑Fi or mobile data and try again.
+      </p>
+      <button type="button" onclick="location.reload()">Retry</button>
+    </main>
+  </body>
+</html>
