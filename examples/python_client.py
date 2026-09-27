@@ -15,7 +15,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class WISClient:
     LIST_RESOURCES = frozenset({'contacts', 'conversations', 'messages', 'operations',
         'groups', 'events', 'calls', 'identities', 'stories', 'products', 'collections',
-        'labels', 'label-associations', 'communities', 'channels', 'channel-messages', 'collection-products', 'media'})
+        'labels', 'label-associations', 'communities', 'channels', 'channel-messages', 'collection-products', 'bots', 'media'})
 
     def __init__(self, base=None, token=None, timeout=30):
         self.base = (base or os.environ.get('WIS_API_URL', 'http://localhost:3010/api/v1')).rstrip('/')

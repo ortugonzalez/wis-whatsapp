@@ -2119,7 +2119,8 @@
                       "group_requests",
                       "community_subgroups",
                       "account_limits",
-                      "newsletter_messages"
+                      "newsletter_messages",
+                      "bot_list"
                     ]
                   },
                   "target": {
@@ -2172,7 +2173,7 @@
             "description": "Administrator session and same-origin request required"
           }
         },
-        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available. account_limits accepts only kind, with no target or extra properties; reads own account limits without changing any sending gate. newsletter_messages accepts only kind/target for an already observed channel; administrator-only fixed 50-message read. No subscribe or receipt operation."
+        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available. account_limits accepts only kind, with no target or extra properties; reads own account limits without changing any sending gate. newsletter_messages accepts only kind/target for an already observed channel; administrator-only fixed 50-message read. No subscribe or receipt operation. bot_list accepts only kind, with no target or extra fields. Administrator manual read of provider catalog only."
       }
     },
     "/reference-fields": {
@@ -3754,6 +3755,46 @@
           },
           "404": {
             "description": "Collection not found"
+          }
+        }
+      }
+    },
+    "/bots": {
+      "get": {
+        "summary": "Observed provider bot catalog, not WIS automations or contacts",
+        "description": "Read scope. Local snapshot only. Returns jid/persona_id only, partial:true and history_complete:false. Metadata preserves failed refresh with stale entries and sanitized errors/timestamps. Does not create chats, contact records or subscriptions.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Partial local provider bot catalog"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Read scope required"
           }
         }
       }

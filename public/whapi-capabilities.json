@@ -3998,12 +3998,12 @@
       "id": "getbotlist",
       "name": "Get bots",
       "source": "https://whapi.readme.io/reference/getbotlist.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/bots",
+      "screen": "/#account",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "test": "Pruebas worker/API y evidencia docs/bots-read.md; sin equivalencia completa.",
+      "reason": "Listado consultado de bots que WhatsApp informa para la cuenta; solo identificadores disponibles. Sin configuración ni envío.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [

@@ -166,6 +166,28 @@ export async function checkedNewsletterMessages(socket,target) {
   }
   return {messages,count:messages.length,truncated:entries.length>=50,partial:true,complete:false,limit:50};
 }
+export async function checkedBotList(socket) {
+  const reply=await socket.query({tag:'iq',attrs:{xmlns:'bot',to:'s.whatsapp.net',type:'get'},content:[{tag:'bot',attrs:{v:'2'}}]},10000);
+  if(!reply)throw Error('read_timeout');
+  if(!Array.isArray(reply.content))throw Error('invalid_bot_response');
+  const error=reply.content.find(x=>x?.tag==='error');
+  if(error||reply.attrs?.type==='error')throw Object.assign(Error('provider_error'),{statusCode:Number(error?.attrs?.code)});
+  const bot=reply.content.find(x=>x?.tag==='bot');
+  if(reply.tag!=='iq'||reply.attrs?.type!=='result'||!Array.isArray(bot?.content))throw Error('invalid_bot_response');
+  const sections=bot.content.filter(x=>x?.tag==='section'&&x.attrs?.type==='all');
+  if(!sections.length)throw Error('invalid_bot_response');
+  const bots=[];
+  for(const section of sections) {
+    if(section.content!==undefined&&!Array.isArray(section.content))throw Error('invalid_bot_response');
+    for(const value of section.content||[]) {
+      if(value?.tag!=='bot'||typeof value.attrs?.jid!=='string'||!/^\d{1,40}@(s\.whatsapp\.net|lid|bot)$/.test(value.attrs.jid))throw Error('invalid_bot_response');
+      const persona=value.attrs.persona_id;
+      if(persona!==undefined&&(typeof persona!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(persona)))throw Error('invalid_bot_response');
+      if(bots.length<=1000)bots.push({jid:value.attrs.jid,persona_id:persona??null});
+    }
+  }
+  return {bots:bots.slice(0,1000),truncated:bots.length>1000,partial:true,complete:false,limit:1000};
+}
 export async function checkedBusinessRead(socket,method,args) {
   if(typeof socket.query!=='function')throw new Error('capability_unavailable');
   const catalog=method==='getCatalog';
@@ -340,8 +362,9 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     const groupRead=['community_subgroups','group_requests'].includes(name);
     const limitsRead=['account_quota','account_timelock'].includes(name);
     const newsletterRead=name==='newsletter_messages';
+    const botRead=name==='bot_list';
     const list=['fetchBlocklist','groupFetchAllParticipating','communityFetchAllParticipating'].includes(name);
-    if(!publicRead && typeof current[business||list||groupRead||limitsRead||newsletterRead?'query':name]!=='function')throw new Error('capability_unavailable');
+    if(!publicRead && typeof current[business||list||groupRead||limitsRead||newsletterRead||botRead?'query':name]!=='function')throw new Error('capability_unavailable');
     let timer,timedOut=false;
     const diagnostic=activeReadCommand?{command_id:activeReadCommand.id,kind:activeReadCommand.kind,method:name}:null;
     const diagnosticResource=activeReadCommand?.target || 'wis-5679';
@@ -349,7 +372,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       const pending={socket:current};unresolvedRead=pending;
       // Local timeout does not cancel Baileys' IQ request. Block further reads until
       // that request settles (or a different socket takes over), avoiding fan-out.
-      const request=Promise.resolve().then(()=>newsletterRead?checkedNewsletterMessages(current,args[0]):limitsRead?checkedAccountLimits(current,name==='account_quota'?'quota':'timelock'):groupRead?checkedGroupRead(current,name,args[0]):publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
+      const request=Promise.resolve().then(()=>botRead?checkedBotList(current):newsletterRead?checkedNewsletterMessages(current,args[0]):limitsRead?checkedAccountLimits(current,name==='account_quota'?'quota':'timelock'):groupRead?checkedGroupRead(current,name,args[0]):publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
         if(timedOut && diagnostic && owns() && sock===current)event('read.late_completed',diagnosticResource,{...diagnostic,result:'response_received_after_timeout'});
         return value;
       },error=>{
@@ -418,6 +441,10 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(typeof requestId!=='string' || !requestId)throw new Error('invalid_history_response');
         snapshot('history_request',command.id,{request_id:requestId,status:'requested',request_accepted_at:new Date().toISOString(),complete:false});
         event('history.requested',command.target,{command_id:command.id,request_id:requestId,requested_count:50,complete:false});
+      } else if(command.kind==='bot_list') {
+        if(command.target)throw Error('invalid_target');
+        const result=await readCall(current,'bot_list');
+        snapshot('bot_list','wis-5679',{...result,available:true,response_verified:true,error:null,source:'checked_bot_iq'});
       } else if(command.kind==='newsletter_messages') {
         if(!/^\d{1,40}@newsletter$/.test(command.target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('unknown_newsletter');
         const result=await readCall(current,'newsletter_messages',[command.target]);
@@ -515,6 +542,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       if(owns()) {
         const failure=classifyReadError(error);
         db.prepare("UPDATE read_commands SET status='failed',error=?,updated_at=? WHERE id=?").run(failure.code,new Date().toISOString(),command.id);
+        if(command.kind==='bot_list')snapshot('bot_list','wis-5679',{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='newsletter_messages')snapshot('newsletter_messages',command.target,{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(['community_subgroups','group_requests'].includes(command.kind))snapshot(command.kind,command.target,{available:false,stale:true,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='avatar') {
