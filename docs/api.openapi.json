@@ -3241,6 +3241,72 @@
           }
         }
       }
+    },
+    "/stories": {
+      "get": {
+        "summary": "Read observed WhatsApp statuses that remain unexpired and unrevoked",
+        "description": "Read scope. SQL expiry/revocation filters run before list pagination, counts and detail selection, independently of worker cleanup. Generic snapshots does not allow story kind. Empty results do not prove no WhatsApp statuses. No media downloads, provider URLs, keys, read receipts or publishing. Content can expire after response; clients should hide it at expires_at and discard expired cached views.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            },
+            "description": "Composite persisted story ID returns detail"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data rows/detail: id,author,fromMe,type,body,date,expires_at,source,updated_at,contact(id,display_name)|null,media_available=false,history_complete=false; list meta total,limit,offset,has_more,active_only=true,source=observed_events"
+          },
+          "400": {
+            "description": "Invalid author/filter"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Read scope required"
+          },
+          "404": {
+            "description": "Story absent, expired or revoked"
+          }
+        }
+      }
     }
   }
 }

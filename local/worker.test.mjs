@@ -270,6 +270,21 @@ test('startup recovers explicit cached contact pairs once without new provider o
  const second=await runWorker(options);await second.stop();assert.deepEqual(db.prepare("SELECT payload FROM snapshots WHERE kind='identity' ORDER BY resource_id").all(),rows);assert.equal(db.prepare('SELECT count(*) n FROM contacts').get().n,0);db.close();
 });
 
+test('received stories expire, deduplicate and cannot resurrect after revocation',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();const dir=mkdtempSync(resolve(tmpdir(),'wis-stories-')),ev=new EventEmitter();let writes=0;
+ const fake={default:()=>mockRawQueries({ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},readMessages(){writes++;},sendMessage(){writes++;}}),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth')});
+ const message=(id,seconds)=>({key:{id,remoteJid:'status@broadcast',participant:'123@s.whatsapp.net'},messageTimestamp:seconds,message:{conversation:'ephemeral test'}});
+ const flush=()=>new Promise(r=>setTimeout(r,20));
+ try {
+  const current=Math.floor(Date.now()/1000);ev.emit('messages.upsert',{messages:[message('active',current),message('active',current),message('expired',current-90000),message('invalid',0),message('future-date',current+86400000)]});await flush();
+  assert.equal(db.prepare("SELECT count(*) n FROM snapshots WHERE kind='story'").get().n,2);assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='story' AND resource_id LIKE '%:expired'").get().payload).body,null);
+  ev.emit('messages.delete',{keys:[{...message('active',current).key,participant:'invalid'}]});await flush();assert.equal(db.prepare("SELECT count(*) n FROM snapshots WHERE kind='story_revocation'").get().n,0);assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='story' AND resource_id LIKE '%:active'").get().payload).revoked,false);
+  ev.emit('messages.delete',{keys:[message('active',current).key,message('future',current).key]});await flush();ev.emit('messages.upsert',{messages:[message('active',current),message('future',current)]});await flush();
+  assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='story' AND resource_id LIKE '%:active'").get().payload).body,null);assert.equal(db.prepare("SELECT count(*) n FROM snapshots WHERE kind='story'").get().n,2);assert.equal(writes,0);assert.equal(db.prepare('SELECT count(*) n FROM messages').get().n,0);
+ } finally {await worker.stop();db.close();}
+});
+
 test('late provider failure is correlated and sanitized after local read timeout',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();
  const dir=mkdtempSync(resolve(tmpdir(),'wis-late-test-'));const ev=new EventEmitter();let fail;

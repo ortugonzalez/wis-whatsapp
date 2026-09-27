@@ -451,12 +451,40 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     const old = sock; sock = null;
     if (old) old.end(new Error('local_worker_stopped'));
   }
+  function expireStories() {
+    if(!owns())return;
+    db.prepare("UPDATE snapshots SET payload=json_set(payload,'$.body',NULL,'$.expired',json('true')),updated_at=? WHERE kind='story' AND json_extract(payload,'$.expires_at')<=? AND json_extract(payload,'$.expired') IS NOT 1").run(new Date().toISOString(),new Date().toISOString());
+  }
+  function revokeStory(key) {
+    if(!owns()||!key?.id)return;
+    if(typeof key.id!=='string'||!/^[\x21-\x7e]{1,256}$/.test(key.id))return;
+    if(key.participant!==undefined && key.participant!==null && !/^\d+@(s\.whatsapp\.net|lid)$/.test(key.participant))return;
+    const author=/^\d+@(s\.whatsapp\.net|lid)$/.test(key.participant || '')?key.participant:null;
+    snapshot('story_revocation',author?author+':'+key.id:key.id,{id:key.id,...(author?{author}:{}),revoked:true});
+    db.prepare("UPDATE snapshots SET payload=json_set(payload,'$.body',NULL,'$.revoked',json('true')),updated_at=? WHERE kind='story' AND json_extract(payload,'$.id')=? AND (? IS NULL OR json_extract(payload,'$.author')=?)").run(new Date().toISOString(),key.id,key.participant || null,key.participant || null);
+  }
+  function persistStory(msg,source) {
+    const id=msg.key?.id,author=msg.key?.participant || (msg.key?.fromMe?sock?.user?.id?.replace(/:\d+(?=@)/,''):null);
+    if(typeof id!=='string'||!/^[\x21-\x7e]{1,256}$/.test(id)||!/^\d+@(s\.whatsapp\.net|lid)$/.test(author || ''))return;
+    const message=msg.message?.ephemeralMessage?.message || msg.message;
+    if(message?.protocolMessage?.type===0){const key=message.protocolMessage.key;if(key?.participant&&key.participant!==author)return;revokeStory({...key,participant:author});return;}
+    const date=timestamp(msg.messageTimestamp);if(!date)return;
+    const expires_at=new Date(Date.parse(date)+86400000).toISOString(),expired=Date.parse(expires_at)<=Date.now();
+    const resource=author+':'+id;
+    if(db.prepare("SELECT 1 FROM snapshots WHERE kind='story_revocation' AND resource_id IN (?,?)").get(id,resource))return;
+    const existing=db.prepare("SELECT payload FROM snapshots WHERE kind='story' AND resource_id=?").get(resource);
+    if(existing)return;
+    if(message?.viewOnceMessage||message?.viewOnceMessageV2||message?.viewOnceMessageV2Extension)return;
+    const normalized=normalizeContent(message);if(!normalized)return;
+    snapshot('story',resource,{id,author,fromMe:Boolean(msg.key.fromMe),type:normalized.type,body:expired?null:typeof normalized.body==='string'?normalized.body.slice(0,8192):null,date,expires_at,source,revoked:false,expired});
+  }
   async function persist(messages, source) {
     for (const msg of messages) {
       if (!owns()) return;
       try {
         const jid = msg.key?.remoteJid, waId = msg.key?.id;
-        if (!jid || !waId || jid === 'status@broadcast') continue;
+        if (!jid || !waId) continue;
+        if(jid==='status@broadcast'){persistStory(msg,source);continue;}
         if (db.prepare('SELECT id FROM messages WHERE wa_message_id=?').get(waId)) continue;
         const at = timestamp(msg.messageTimestamp) || (source === 'live' ? new Date().toISOString() : null);
         if (!at) continue;
@@ -565,6 +593,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       }));
       const applyMessageChange=(key,update)=>{
         if(!owns() || sock!==current || !key?.id)return;
+        if(key.remoteJid==='status@broadcast'){if(update.message===null)revokeStory(key);return;}
         const existing=db.prepare('SELECT m.id,m.conversation_id,m.created_at FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE m.wa_message_id=? AND c.wa_chat_id=?').get(key.id,key.remoteJid);
         if(!existing)return;
         const old=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='message' AND resource_id=?").get(key.id)?.payload || '{}');
@@ -724,6 +753,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     try {
       if(!acquireLease(db,owner)) {deadline=0;closeSocket();return;}
       deadline=Date.now()+25000;
+      expireStories();
       recoverIdentities();
       const c=connection();
       if(c.qr_expires_at && c.qr_expires_at<=new Date().toISOString())patch({qr_payload:null,qr_expires_at:null});

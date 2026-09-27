@@ -1084,12 +1084,12 @@
       "id": "getstories",
       "name": "Get list of stories",
       "source": "https://whapi.readme.io/reference/getstories.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/stories",
+      "screen": "/#stories",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Fixtures de expiración, revocación, permisos y sanitización; docs/stories-local.md.",
+      "reason": "Texto y metadatos de estados vigentes recibidos; sin historial completo, descarga, publicación ni confirmaciones de lectura."
     },
     {
       "id": "createstory",
@@ -1139,12 +1139,12 @@
       "id": "getstory",
       "name": "Get story",
       "source": "https://whapi.readme.io/reference/getstory.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/stories",
+      "screen": "/#stories",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Fixtures de expiración, revocación, permisos y sanitización; docs/stories-local.md.",
+      "reason": "Texto y metadatos de estados vigentes recibidos; sin historial completo, descarga, publicación ni confirmaciones de lectura."
     },
     {
       "id": "copystory",

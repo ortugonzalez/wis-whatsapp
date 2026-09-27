@@ -11,6 +11,8 @@ const capabilities = entries.map(([, name, url]) => ({
   reason: 'Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.'
 }));
 const implemented = {
+  getstories: ['/api/v1/stories', 'Estados vigentes recibidos por la sesión, texto y metadatos locales. Sin recuperación completa, descargas ni confirmaciones de lectura.'],
+  getstory: ['/api/v1/stories?id=ID', 'Detalle local de un estado observado no vencido ni revocado; sin medios ni publicación.'],
   getlidbyids: ['/api/v1/identities', 'Inventario local paginado de relaciones LID/PN observadas; sin resolución remota de números arbitrarios.'],
   getlidbyid: ['/api/v1/identities?pn=PN', 'Consulta por PN observado; los conflictos se conservan, sin prometer una relación única.'],
   getidbylid: ['/api/v1/identities?lid=LID', 'Consulta por LID observado; no se calcula un teléfono desde los dígitos de un LID.'],
