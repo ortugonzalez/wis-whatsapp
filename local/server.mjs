@@ -1,4 +1,5 @@
 import {LOCAL_LIMITS} from './limits.mjs';
+import {buildDataCoverage} from './data-coverage.mjs';
 import {createServer} from 'node:http';
 import {randomBytes,randomUUID,createHash,scryptSync,timingSafeEqual} from 'node:crypto';
 import {readFile,writeFile,mkdir,realpath,stat} from 'node:fs/promises';
@@ -141,6 +142,7 @@ export function makeServer(database=db,options={}){
      const counts={contacts:count('contacts'),conversations:count('conversations'),messages:count('messages'),groups:database.prepare("SELECT count(*) AS n FROM snapshots WHERE kind='group'").get().n,operations:count('operations'),pending:database.prepare("SELECT count(*) AS n FROM operations WHERE status IN('pending','sending')").get().n,failed:database.prepare("SELECT count(*) AS n FROM operations WHERE status IN('failed','outcome_unknown')").get().n,events:count('events')};
      return send({counts,connection:cleanConnection(database.prepare("SELECT * FROM connections WHERE id='wis-5679'").get()),account_updated_at:database.prepare("SELECT max(updated_at) AS value FROM snapshots WHERE resource_id='wis-5679'").get().value,last_event_at:database.prepare('SELECT max(created_at) AS value FROM events').get().value,history_complete:false});
     }
+    if(resource==='coverage'&&method==='GET'){auth('read');return send(buildDataCoverage(database));}
     if(resource==='limits'&&method==='GET'){auth('read',true);return send({source:'local_config',limits:LOCAL_LIMITS,flags:{outbound_enabled:process.env.WIS_OUTBOUND_ENABLED==='true',webhooks_enabled:process.env.WIS_WEBHOOKS_ENABLED==='true'},safe_daily_volume:null,provider_plan:false,editable:false});}
     if(resource==='account-limits'&&method==='GET'){auth('read',true);return send(accountLimits(database.prepare("SELECT * FROM snapshots WHERE kind='account_limits' AND resource_id='wis-5679'").get()));}
     if(resource==='account'&&method==='GET'){auth('read',true);const account={};for(const kind of ['profile','status','privacy','business','history','connection'])account[kind]=parseSnapshot(database.prepare("SELECT * FROM snapshots WHERE kind=? AND resource_id='wis-5679'").get(kind));account.avatar=avatarMetadata(ownAvatarTarget());account.updated_at=database.prepare("SELECT max(updated_at) AS value FROM snapshots WHERE resource_id='wis-5679'").get().value;return send(account);}

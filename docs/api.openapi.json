@@ -422,6 +422,17 @@
         ]
       }
     },
+    "/coverage": {
+      "get": {
+        "summary": "Get observed local data coverage",
+        "description": "Returns aggregate entity counts and names of persisted snapshot fields. It never returns message or contact values and never claims complete history.",
+        "responses": {
+          "200": { "description": "Coverage counts, observed snapshot fields, and message type counts" },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Insufficient scope" }
+        }
+      }
+    },
     "/contacts": {
       "get": {
         "summary": "List contacts",
