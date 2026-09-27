@@ -18,6 +18,7 @@ test('contact checks are administrator queued, restricted to known E.164 contact
   assert.equal((await req('/api/v1/sync','POST',{kind:'contact_check',target:'contact-missing'})).status,404);
   assert.equal((await req('/api/v1/sync','POST',{kind:'contact_check',target:'contact-no-phone'})).status,404);
   const queued=await req('/api/v1/sync','POST',{kind:'contact_check',target:'contact-known'});assert.equal(queued.status,202);assert.equal(queued.json.data.target,'contact-known');
+  assert.equal((await req(`/api/v1/sync?id=${queued.json.data.id}`)).json.data.status,'pending');assert.equal((await req(`/api/v1/sync?id=${queued.json.data.id}`, 'GET', null, reader)).status,403);assert.equal((await req('/api/v1/sync?id=missing-command')).status,404);assert.equal((await req('/api/v1/sync?id='+('x'.repeat(101)))).status,400);
   assert.equal((await req('/api/v1/contact-checks?id=contact-known')).json.data.command.id,queued.json.data.id);
   db.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(queued.json.data.id);db.prepare('INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES(?,?,?,?)').run('contact_check','contact-known',JSON.stringify({available:true,status:'registered',exists:true,checked_at:new Date().toISOString()}),new Date().toISOString());
   assert.equal((await req('/api/v1/sync','POST',{kind:'contact_check',target:'contact-known'})).status,429);

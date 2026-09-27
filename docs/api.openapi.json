@@ -2078,20 +2078,20 @@
     },
     "/sync": {
       "get": {
-        "summary": "Administrator read synchronization command queue",
+        "summary": "Administrator read synchronization command queue or one command by ID",
         "responses": {
           "200": {
-            "description": "Local persisted data; no WhatsApp write",
+            "description": "Local persisted data; with id, returns one command status. No WhatsApp write",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
+                      "oneOf": [
+                        { "type": "array", "items": { "type": "object" } },
+                        { "type": "object", "description": "One read command when the id query parameter is supplied" }
+                      ]
                     },
                     "meta": {
                       "type": "object",
@@ -2120,10 +2120,23 @@
           },
           "403": {
             "description": "Insufficient scope"
+          },
+          "400": {
+            "description": "Invalid command ID"
+          },
+          "404": {
+            "description": "Read command not found"
           }
         },
         "parameters": [
-          {
+      {
+        "name": "id",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "maxLength": 100 },
+        "description": "Return one persisted command by exact ID instead of a paginated list"
+      },
+      {
             "name": "limit",
             "in": "query",
             "schema": {
