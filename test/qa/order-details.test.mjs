@@ -1,0 +1,19 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {scryptSync,randomBytes} from 'node:crypto';
+process.env.WIS_DB_PATH=':memory:';
+const {openDatabase}=await import('../../local/db.mjs');
+const {makeServer}=await import('../../local/server.mjs');
+test('order detail reads require a known order and only administrators can queue provider lookup',async()=>{
+ const db=openDatabase(':memory:'),password=randomBytes(20).toString('hex'),salt='order-details';db.prepare("INSERT INTO settings(key,value) VALUES('admin_password',?)").run(salt+':'+scryptSync(password,salt,64).toString('hex'));
+ db.prepare("INSERT INTO messages(id,wa_message_id,direction,type,body,delivery_status,source,created_at) VALUES('order-local','wa-order','in','order','Pedido','delivered','live',?)").run(new Date().toISOString());db.prepare("INSERT INTO messages(id,wa_message_id,direction,type,body,delivery_status,source,created_at) VALUES('text-local','wa-text','in','text','Hola','delivered','live',?)").run(new Date().toISOString());
+ db.prepare('INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES(?,?,?,?)').run('order_details','wa-order',JSON.stringify({message_id:'wa-order',available:true,response_verified:true,price:{total:10,currency:'ARS'},products:[{id:'sku',quantity:1,image_available:true}]}),new Date().toISOString());
+ const server=makeServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let cookie='';const req=async(path,method='GET',body,token)=>{const r=await fetch(base+path,{method,headers:{Origin:base,'Content-Type':'application/json',Cookie:cookie,...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});let json;try{json=await r.json();}catch{}return {status:r.status,json,headers:r.headers};};
+ try{const login=await req('/api/login','POST',{password});cookie=login.headers.get('set-cookie').split(';')[0];const reader=(await req('/api/v1/tokens','POST',{name:'reader',scopes:['read']})).json.data.token;
+  const detail=await req('/api/v1/order-details?message_id=order-local','GET',null,reader);assert.equal(detail.status,200);assert.equal(detail.json.data.available,true);assert.equal(detail.json.data.details.data.products[0].id,'sku');
+  assert.equal((await req('/api/v1/order-details?message_id=text-local','GET',null,reader)).status,404);assert.equal((await req('/api/v1/sync','POST',{kind:'order_details',target:'order-local'},reader)).status,403);
+   const queued=await req('/api/v1/sync','POST',{kind:'order_details',target:'order-local'});assert.equal(queued.status,202);assert.equal(queued.json.data.kind,'order_details');assert.equal(queued.json.data.target,'wa-order');assert.equal((await req('/api/v1/sync','POST',{kind:'order_details',target:'text-local'})).status,404);assert.equal((await req('/api/v1/sync','POST',{kind:'order_details',target:'../wa-order'})).status,400);
+   db.prepare('INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES(?,?,?,?)').run('message','wa-order',JSON.stringify({type:'order',revoked:true}),new Date().toISOString());assert.equal((await req('/api/v1/order-details?message_id=order-local','GET',null,reader)).json.data.available,false);const messageDetail=await req('/api/v1/messages?id=order-local','GET',null,reader);assert.equal(messageDetail.status,200);assert.equal(messageDetail.json.data.order_details,null);
+   db.prepare("UPDATE snapshots SET payload=? WHERE kind='message' AND resource_id='wa-order'").run(JSON.stringify({type:'order',deleted:true}));assert.equal((await req('/api/v1/sync','POST',{kind:'order_details',target:'order-local'})).status,409);assert.equal((await req('/api/v1/order-details?message_id=order-local','GET',null,reader)).json.data.deleted,true);
+ }finally{await new Promise(r=>server.close(r));db.close();}
+});

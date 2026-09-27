@@ -3190,12 +3190,12 @@
       "id": "getorderitems",
       "name": "Get order items",
       "source": "https://whapi.readme.io/reference/getorderitems.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/sync + /api/v1/order-details",
+      "screen": "/#messages",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "test": "local/order-details.test.mjs; test/qa/order-details.test.mjs",
+      "reason": "Consulta manual de artículos de una orden recibida y conocida; Baileys requiere orderId y token temporal en memoria. No se garantiza paridad de contrato ni disponibilidad histórica.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
@@ -3206,7 +3206,7 @@
         ],
         "support": "candidate",
         "reason": "Consulta orderId y tokenBase64; no guardar credencial de pedido ni afirmar listado general.",
-        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+        "next_step": "La respuesta real depende de la credencial temporal recibida y del soporte de WhatsApp. No persistir ni mostrar el token. Validar campos con lectura real únicamente cuando haya un pedido disponible."
       }
     },
     {

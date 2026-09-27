@@ -77,7 +77,7 @@ export function callSnapshot(value,prior={},now=new Date().toISOString()) {
 }
 export function classifyReadError(error) {
   // Never expose provider messages/data: they can contain request material.
-  const local={read_timeout:'read_timeout',previous_read_unresolved:'read_pending',connection_unavailable:'disconnected',connection_changed:'disconnected',capability_unavailable:'method_missing',account_identity_unavailable:'identity_unavailable',invalid_target:'invalid_target',unknown_community:'unknown_target',unknown_newsletter:'unknown_target',unsupported_read_command:'method_missing',newsletter_unavailable:'not_found'};
+  const local={read_timeout:'read_timeout',previous_read_unresolved:'read_pending',connection_unavailable:'disconnected',connection_changed:'disconnected',capability_unavailable:'method_missing',account_identity_unavailable:'identity_unavailable',invalid_target:'invalid_target',unknown_community:'unknown_target',unknown_newsletter:'unknown_target',unsupported_read_command:'method_missing',newsletter_unavailable:'not_found',order_message_unavailable:'order_message_unavailable',order_credential_unavailable:'order_credential_unavailable'};
   const marker=typeof error?.message==='string'?error.message:'';
   const candidate=error?.output?.statusCode ?? error?.statusCode ?? error?.status ?? error?.status_code;
   const status_code=Number.isInteger(candidate) && candidate>=100 && candidate<=599?candidate:null;
@@ -270,6 +270,19 @@ function structuredFields(value,strings=[],numbers=[],booleans=[]) {
   const out={};for(const key of strings)if(Object.hasOwn(value||{},key)&&typeof value[key]==='string')out[key]=value[key].slice(0,8192);
   for(const key of numbers)if(Object.hasOwn(value||{},key)&&typeof value[key]==='number'&&Number.isFinite(value[key]))out[key]=value[key];
   for(const key of booleans)if(Object.hasOwn(value||{},key)&&typeof value[key]==='boolean')out[key]=value[key];return out;
+}
+export function safeOrderDetails(value,observedAt=new Date().toISOString()) {
+  const price=value?.price&&typeof value.price==='object'?value.price:{};
+  const products=Array.isArray(value?.products)?value.products:[];
+  const text=(x,max=200)=>typeof x==='string'?x.slice(0,max):undefined;
+  const amount=x=>typeof x==='number'&&Number.isFinite(x)?x:undefined;
+  return {source:'baileys_getOrderDetails',available:true,response_verified:true,observed_at:observedAt,items_received:Math.min(products.length,100),truncated:products.length>100,
+    price:{...(amount(price.total)!==undefined?{total:amount(price.total)}:{}),...(text(price.currency,20)!==undefined?{currency:text(price.currency,20)}:{})},
+    products:products.slice(0,100).filter(x=>x&&typeof x==='object'&&!Array.isArray(x)).map(x=>({...(text(x.id)!==undefined?{id:text(x.id)}:{}),...(text(x.name,500)!==undefined?{name:text(x.name,500)}:{}),...(amount(x.price)!==undefined?{price:amount(x.price)}:{}),...(text(x.currency,20)!==undefined?{currency:text(x.currency,20)}:{}),...(amount(x.quantity)!==undefined?{quantity:amount(x.quantity)}:{}),image_available:typeof x.imageUrl==='string'&&x.imageUrl.length>0}))};
+}
+export function validOrderDetails(value) {
+  if(!value||!Array.isArray(value.products)||value.products.length===0||!value.price||typeof value.price!=='object'||!Number.isFinite(value.price.total)||typeof value.price.currency!=='string'||!value.price.currency.trim())return false;
+  return value.products.slice(0,100).every(item=>item&&typeof item==='object'&&!Array.isArray(item)&&typeof item.id==='string'&&item.id.trim()&&typeof item.name==='string'&&item.name.trim()&&Number.isFinite(item.price)&&Number.isFinite(item.quantity)&&typeof item.currency==='string'&&item.currency.trim());
 }
 function exactIntegers(value,keys) {
   const output={};for(const key of keys){if(!Object.hasOwn(value||{},key))continue;const input=value[key];let text;
@@ -491,6 +504,18 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('invalid_target');
         const code=await readCall(current,'group_invite',[command.target]);
         snapshot('group_invite',command.target,{code,expires_at:new Date(Date.now()+300000).toISOString(),available:true,response_verified:true,expired:false,stale:false,error:null,status_code:null});
+      } else if(command.kind==='order_details') {
+        if(typeof command.target!=='string'||command.target.length>200)throw Error('invalid_order_message');
+        const prior=db.prepare("SELECT m.wa_message_id,m.type,m.body,m.conversation_id,c.wa_chat_id FROM messages m LEFT JOIN conversations c ON c.id=m.conversation_id WHERE m.wa_message_id=?").get(command.target),previous=db.prepare("SELECT payload FROM snapshots WHERE kind='message' AND resource_id=?").get(command.target);
+        const observed=JSON.parse(previous?.payload||'{}');if(!prior||prior.type!=='order'||!prior.wa_chat_id||observed.type!=='order'||observed.revoked||observed.edited||observed.deleted||prior.body===null)throw Error('order_message_unavailable');
+        const wire=cache.get(command.target),content=wire?.ephemeralMessage?.message||wire?.documentWithCaptionMessage?.message||wire,order=content?.orderMessage;
+        if(!order||typeof order.orderId!=='string'||!/^[-\w.]{1,200}$/.test(order.orderId)||typeof order.token!=='string'||!/^[A-Za-z0-9+/=_-]{1,8192}$/.test(order.token))throw Error('order_credential_unavailable');
+        const details=await readCall(current,'getOrderDetails',[order.orderId,order.token]);
+        if(!validOrderDetails(details))throw Error('invalid_order_details_response');
+        const latest=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='message' AND resource_id=?").get(command.target)?.payload||'{}');
+        const stillKnown=db.prepare("SELECT 1 FROM messages WHERE wa_message_id=? AND type='order' AND body IS NOT NULL").get(command.target);
+        if(!stillKnown||latest.type!=='order'||latest.revoked||latest.edited||latest.deleted)throw Error('order_message_unavailable');
+        snapshot('order_details',command.target,{message_id:command.target,...safeOrderDetails(details)});
       } else if(['community_subgroups','group_requests'].includes(command.kind)) {
         if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('invalid_target');
         if(command.kind==='community_subgroups'&&!db.prepare("SELECT 1 FROM snapshots WHERE resource_id=? AND (kind='community' OR (kind='group' AND json_extract(payload,'$.isCommunity')=1)) LIMIT 1").get(command.target))throw Error('unknown_community');
