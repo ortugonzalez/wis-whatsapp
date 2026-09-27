@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {scryptSync,randomBytes} from 'node:crypto';
+process.env.WIS_DB_PATH=':memory:';
+const {openDatabase}=await import('../../local/db.mjs');
+const {makeServer}=await import('../../local/server.mjs');
+test('special received types are filterable but never accepted for sending',async()=>{
+ const db=openDatabase(':memory:'),password=randomBytes(20).toString('hex'),salt='received-types';db.prepare("INSERT INTO settings(key,value) VALUES('admin_password',?)").run(salt+':'+scryptSync(password,salt,64).toString('hex'));const server=makeServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let cookie='';const req=async(path,method='GET',body,token)=>{const r=await fetch(base+path,{method,headers:{Origin:base,'Content-Type':'application/json',Cookie:cookie,'Idempotency-Key':'special-types-test',...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,json:await r.json(),headers:r.headers};};
+ try{const login=await req('/api/login','POST',{password});cookie=login.headers.get('set-cookie').split(';')[0];const reader=(await req('/api/v1/tokens','POST',{name:'reader',scopes:['read']})).json.data.token;
+ for(const type of ['product','order','event','event_response']){db.prepare('INSERT INTO messages(id,direction,type,body,created_at) VALUES(?,?,?,?,?)').run(type,'in',type,'Observed '+type,new Date().toISOString());const result=await req('/api/v1/messages?type='+type,'GET',null,reader);assert.equal(result.status,200);assert.equal(result.json.meta.total,1);assert.equal(result.json.data[0].type,type);assert.equal((await req('/api/v1/messages?id='+type,'GET',null,reader)).json.data.message.type,type);const send=await req('/api/v1/messages','POST',{to:'+12025550111',type,body:'No send'});assert.equal(send.status,422);assert.equal(send.json.error,'unsupported_type');}
+ assert.equal((await req('/api/v1/messages?type=bad','GET',null,reader)).status,400);assert.equal((await req('/api/v1/messages?type=','GET',null,reader)).status,400);assert.equal(db.prepare('SELECT count(*) AS n FROM operations').get().n,0);
+ }finally{await new Promise(r=>server.close(r));db.close();}
+});

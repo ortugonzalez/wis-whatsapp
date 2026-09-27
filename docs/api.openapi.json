@@ -1279,9 +1279,37 @@
               "type": "string",
               "maxLength": 200
             }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Exact received message type filter; read only, does not enable outbound formats.",
+            "schema": {
+              "enum": [
+                "text",
+                "image",
+                "video",
+                "audio",
+                "document",
+                "sticker",
+                "location",
+                "contact",
+                "poll",
+                "reaction",
+                "button_reply",
+                "list_reply",
+                "poll_update",
+                "unsupported",
+                "unknown",
+                "product",
+                "order",
+                "event",
+                "event_response"
+              ]
+            }
           }
         ],
-        "description": "Without id, q searches body across all conversations unless conversation_id narrows it. Returns total pagination. Message detail never implies complete reaction or history coverage."
+        "description": "Without id, q searches body across all conversations unless conversation_id narrows it. Returns total pagination. Message detail never implies complete reaction or history coverage. Received product/order/event rows retain observed metadata in detail; no order lookup, payment action, event creation or product sending is enabled. POST supported send types remain unchanged."
       },
       "post": {
         "summary": "Queue a message; accepted is not delivered",

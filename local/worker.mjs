@@ -251,8 +251,18 @@ export async function checkedListRead(socket,method) {
 function statusSnapshot(rows) {
   return {items:(Array.isArray(rows)?rows:[]).slice(0,20).map(row=>({id:row.id,status:safeFields(row.status,['status','setAt'])}))};
 }
+function ownScalars(value,keys) {return safeFields(Object.fromEntries(keys.filter(key=>Object.hasOwn(value||{},key)).map(key=>[key,value[key]])),keys);}
+function exactIntegers(value,keys) {
+  const output={};for(const key of keys){if(!Object.hasOwn(value||{},key))continue;const input=value[key];let text;
+    if(typeof input==='number'){if(!Number.isSafeInteger(input))continue;text=String(input);}
+    else if(typeof input==='string'||typeof input==='bigint')text=String(input);
+    else if(input&&typeof input.toString==='function'&&Number.isInteger(input.low)&&Number.isInteger(input.high))text=input.toString();
+    if(typeof text==='string'&&/^-?\d{1,20}$/.test(text)&&BigInt(text)>=-(1n<<63n)&&BigInt(text)<(1n<<63n))output[key]=text;
+  }return output;
+}
 export function normalizeContent(m) {
   if(!m)return null;
+  const bodyText=(...values)=>values.find(value=>typeof value==='string'&&value.length>0)||'';
   const media=['image','audio','document','video','sticker'].find(type=>m[`${type}Message`]);
   if(m.conversation!=null || m.extendedTextMessage) return {type:'text',body:m.conversation || m.extendedTextMessage?.text || '',details:{}};
   if(media) {const value=m[`${media}Message`];return {type:media,body:value.caption || value.fileName || '',details:safeFields(value,['mimetype','fileName','seconds','ptt','width','height','pageCount'])};}
@@ -264,6 +274,10 @@ export function normalizeContent(m) {
   if(m.buttonsResponseMessage)return {type:'button_reply',body:m.buttonsResponseMessage.selectedDisplayText || '',details:safeFields(m.buttonsResponseMessage,['selectedButtonId','selectedDisplayText','type'])};
   if(m.listResponseMessage)return {type:'list_reply',body:m.listResponseMessage.title || '',details:{...safeFields(m.listResponseMessage,['title','description']),selectedRowId:m.listResponseMessage.singleSelectReply?.selectedRowId || null}};
   if(m.pollUpdateMessage)return {type:'poll_update',body:'Respuesta a encuesta (contenido cifrado no interpretado)',details:{key:safeFields(m.pollUpdateMessage.pollCreationMessageKey,['id','remoteJid','fromMe'])}};
+  if(m.productMessage){const value=m.productMessage,p=value.product;const details={...ownScalars(value,['businessOwnerJid','body','footer']),...(p?{product:{...ownScalars(p,['productId','title','description','currencyCode','retailerId','productImageCount']),...exactIntegers(p,['priceAmount1000','salePriceAmount1000'])}}:{}),...(value.catalog?{catalog:ownScalars(value.catalog,['title','description'])}:{})};return {type:'product',body:bodyText(details.body,details.product?.title,details.catalog?.title,'Producto recibido'),details};}
+  if(m.orderMessage){const value=m.orderMessage,details={...ownScalars(value,['orderId','itemCount','message','orderTitle','sellerJid','totalCurrencyCode','messageVersion','catalogType']),...exactIntegers(value,['totalAmount1000'])};if(Object.hasOwn(value,'status')&&[1,2,3].includes(value.status))details.status=value.status;if(Object.hasOwn(value,'surface')&&value.surface===1)details.surface=1;return {type:'order',body:bodyText(details.orderTitle,details.message,'Pedido recibido'),details};}
+  if(m.eventMessage){const value=m.eventMessage,details={...ownScalars(value,['name','description','isCanceled','extraGuestsAllowed','isScheduleCall','hasReminder']),...exactIntegers(value,['startTime','endTime','reminderOffsetSec'])};if(value.location)details.location=ownScalars(value.location,['name','address','degreesLatitude','degreesLongitude']);return {type:'event',body:bodyText(details.name,'Evento recibido'),details};}
+  if(m.eventResponseMessage){const value=m.eventResponseMessage,details=exactIntegers(value,['timestampMs']);if(Object.hasOwn(value,'response')&&[0,1,2,3].includes(value.response))details.response=value.response;if(Object.hasOwn(value,'extraGuestCount')&&Number.isSafeInteger(value.extraGuestCount)&&value.extraGuestCount>=0)details.extraGuestCount=value.extraGuestCount;return {type:'event_response',body:'Respuesta a evento recibida',details};}
   // Protocol and key-distribution envelopes are not user messages and must not leak.
   const unsupported=Object.keys(m).find(k=>k.endsWith('Message') && !['protocolMessage','senderKeyDistributionMessage','messageContextInfo','fastRatchetKeySenderKeyDistributionMessage'].includes(k));
   return unsupported?{type:'unsupported',body:`Contenido disponible: ${unsupported}`,details:{wire_type:unsupported}}:null;
