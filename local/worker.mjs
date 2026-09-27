@@ -482,13 +482,15 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         const value=await avatarCache(remote,{directory:avatarDir,authorized:()=>owns()&&sock===current&&!stopping});
         if(!owns()||sock!==current)throw Error('connection_changed');
         snapshot('avatar',target,{...value,available:true,stale:false,error:null,scope:'profile_picture',last_attempt_at:new Date().toISOString()});
-      } else if(command.kind==='catalog' || command.kind==='collections') {
-        const jid=current.user?.id?.replace(/:\d+(?=@)/,'');
+      } else if(['catalog','collections','contact_catalog'].includes(command.kind)) {
+        const contactCatalog=command.kind==='contact_catalog';
+        const jid=contactCatalog?command.target:current.user?.id?.replace(/:\d+(?=@)/,'');
+        if(contactCatalog&&(!/^[1-9]\d{6,14}@s\.whatsapp\.net$/.test(jid||'')||!db.prepare("SELECT 1 FROM contacts WHERE wa_jid=? OR phone_e164=? LIMIT 1").get(jid,'+'+jid.split('@')[0])))throw Error('invalid_target');
         if(!jid)throw new Error('account_identity_unavailable');
-        const publicScope=Boolean(publicCatalogReaderFactory);
+        const publicScope=!contactCatalog&&Boolean(publicCatalogReaderFactory);
         if(publicScope && (!publicReader || publicReaderJid!==jid)){publicReader=publicCatalogReaderFactory({ownJid:jid});publicReaderJid=jid;}
-        const scope=publicScope?{scope:'public_catalog',known_only:true,source:'public_whatsapp_graphql'}:{};
-        if(command.kind==='catalog') {
+        const scope=contactCatalog?{scope:'contact_catalog',known_only:true,source:'checked_baileys_iq'}:publicScope?{scope:'public_catalog',known_only:true,source:'public_whatsapp_graphql'}:{};
+        if(command.kind!=='collections') {
           const products=new Map();const seenCursors=new Set();let cursor,pages=0,partial=false;
           do {
             const page=publicScope?await readCall(current,'publicCatalog',[{after:cursor || null}]):await readCall(current,'getCatalog',[{jid,limit:100,...(cursor?{cursor}:{})}]);
@@ -556,6 +558,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       if(owns()) {
         const failure=classifyReadError(error);
         db.prepare("UPDATE read_commands SET status='failed',error=?,updated_at=? WHERE id=?").run(failure.code,new Date().toISOString(),command.id);
+        if(command.kind==='contact_catalog'&&/^[1-9]\d{6,14}@s\.whatsapp\.net$/.test(command.target||'')&&db.prepare('SELECT 1 FROM contacts WHERE wa_jid=? OR phone_e164=? LIMIT 1').get(command.target,'+'+command.target.split('@')[0]))snapshot('catalog',command.target,{available:false,stale:true,scope:'contact_catalog',known_only:true,source:'checked_baileys_iq',error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='bot_list')snapshot('bot_list','wis-5679',{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='newsletter_messages')snapshot('newsletter_messages',command.target,{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(['community_subgroups','group_requests'].includes(command.kind))snapshot(command.kind,command.target,{available:false,stale:true,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});

@@ -3071,12 +3071,12 @@
       "id": "getcontactproducts",
       "name": "Get products by Contact ID",
       "source": "https://whapi.readme.io/reference/getcontactproducts.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/contact-products?target=JID",
+      "screen": "/#contacts",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "test": "Fixtures worker/API; docs/contact-catalog.md. Disponibilidad real no garantizada.",
+      "reason": "Lectura manual acotada de catálogo de contacto PN conocido, con aislamiento por propietario. Sin descubrimiento ni soporte directo LID.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
