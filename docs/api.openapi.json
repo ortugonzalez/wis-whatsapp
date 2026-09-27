@@ -3321,7 +3321,7 @@
     "/group-requests": {
       "get": {
         "summary": "Read cached group-requests without remote mutations",
-        "description": "Read scope. Known target required; community-subgroups additionally requires community snapshot or observed isCommunity=true. Explicit allowlist strips invite codes/links/secrets. No remote query on GET. Bounded at2000 entries. Empty not_collected differs from verified complete empty; stale unavailable snapshots remain labeled.",
+        "description": "Read scope. Known target required; community-subgroups additionally requires community snapshot or observed isCommunity=true. Explicit allowlist strips invite codes/links/secrets. No remote query on GET. Bounded at2000 entries. Empty not_collected differs from verified complete empty; stale unavailable snapshots remain labeled. observed_events are separate passive group.join-request evidence, bounded200 rows with history20 each; they never establish the current pending-request list. observed_events_meta includes total,limit,truncated,complete=false,current_pending_inferred=false. IQ requests and availability remain separate even on provider500.",
         "parameters": [
           {
             "name": "target",
@@ -3334,7 +3334,7 @@
         ],
         "responses": {
           "200": {
-            "description": "data target,observed,available,response_verified,stale,truncated,collection_status,updated_at,error plus requests[jid,request_method,request_time] or groups[id,subject,creation,owner,size]"
+            "description": "data target,observed,available,response_verified,stale,truncated,collection_status,updated_at,error plus requests[jid,request_method,request_time] or groups[id,subject,creation,owner,size]; status_code validated100..599 or null; observed_events[id,group_id,participant,author?,participantPn?,authorPn?,action,method,observed_at,updated_at,source,history] and observed_events_meta"
           },
           "400": {
             "description": "Invalid group JID"
@@ -3364,7 +3364,7 @@
         ],
         "responses": {
           "200": {
-            "description": "data target,observed,available,response_verified,stale,truncated,collection_status,updated_at,error plus requests[jid,request_method,request_time] or groups[id,subject,creation,owner,size]"
+            "description": "data target,observed,available,response_verified,stale,truncated,collection_status,updated_at,error plus requests[jid,request_method,request_time] or groups[id,subject,creation,owner,size]; status_code validated100..599 or null"
           },
           "400": {
             "description": "Invalid group JID"

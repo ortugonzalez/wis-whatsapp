@@ -6,4 +6,10 @@ Baileys 7.0.0-rc14 expone lecturas de subgrupos y solicitudes, pero sus parsers 
 
 La disponibilidad depende de la pertenencia a la comunidad, los permisos de la cuenta y la respuesta de WhatsApp. Los datos corresponden a la última consulta; no constituyen una garantía de completitud histórica. Los códigos de invitación y otros campos no permitidos se excluyen del contrato.
 
+Como fuente complementaria se conservan los eventos `group.join-request` entregados por Baileys: solicitud creada, retirada o rechazada. La fecha registrada es la de observación local, porque ese evento no proporciona una fecha del proveedor. Estos eventos se presentan por separado del resultado de la consulta IQ: no demuestran qué solicitudes siguen pendientes y no convierten un error de consulta en una lista completa.
+
+La respuesta `group-requests` incluye `observed_events` con hasta 200 registros y hasta 20 observaciones locales por participante. Los campos de completitud y truncamiento describen este almacenamiento limitado; eventos repetidos o históricos pueden llegar sin identificador ni fecha de origen. No se infiere una cronología del proveedor. El panel conserva el código de diagnóstico validado, sin publicar mensajes de error crudos.
+
+Validación de la alternativa pasiva: 39 pruebas locales aprobadas y revisión independiente de worker/API/interfaz. Chrome mostró el error 500 persistido y la sección separada de eventos vacía. No se repitió la consulta remota ni se provocaron solicitudes de ingreso; los eventos se verificaron con fixtures. La sesión recuperó conexión tras reiniciar, con cero operaciones salientes.
+
 Validación 2026-09-27: 38 pruebas locales y 13 de QA aprobadas, revisión independiente y build válido. En Chrome se consultaron las solicitudes de un grupo conocido: WhatsApp devolvió un error y el panel mostró información no expuesta, sin convertirlo en una lista vacía. No se aprobaron ni rechazaron solicitudes. La lectura de subgrupos se validó con fixtures; no se declara comprobada con una comunidad real en esta instalación.

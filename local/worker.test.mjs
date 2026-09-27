@@ -294,6 +294,19 @@ test('received stories expire, deduplicate and cannot resurrect after revocation
  } finally {await worker.stop();db.close();}
 });
 
+test('passive join events retain bounded observations and never claim current pending membership',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();const dir=mkdtempSync(resolve(tmpdir(),'wis-join-events-')),ev=new EventEmitter();let writes=0;
+ const fake={default:()=>mockRawQueries({ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},groupRequestParticipantsUpdate(){writes++;}}),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth')});
+ try {
+  const base={id:'123@g.us',participant:'456@lid',participantPn:'5491111111111@s.whatsapp.net',author:'789@lid',method:'invite_link',inviteCode:'SECRET'};
+  ev.emit('group.join-request',{...base,action:'created'});ev.emit('group.join-request',{...base,action:'revoked'});
+  const row=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='group_join_event'").get().payload);assert.equal(row.group_id,base.id);assert.equal(row.action,'revoked');assert.equal(row.history.length,2);assert.equal(row.source,'group.join-request');assert.ok(Date.parse(row.observed_at));assert.equal(row.pending,undefined);assert.equal(JSON.stringify(row).includes('SECRET'),false);assert.equal(writes,0);
+  ev.emit('group.join-request',{...base,participant:'https://invalid',action:'created'});assert.equal(db.prepare("SELECT count(*) n FROM snapshots WHERE kind='group_join_event'").get().n,1);
+  ev.emit('group.join-request',{id:base.id,participant:base.participant,action:'created'});const latest=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='group_join_event'").get().payload);assert.equal(latest.author,null);assert.equal(latest.participantPn,null);assert.equal(latest.authorPn,null);assert.equal(latest.method,null);assert.equal(latest.history.length,3);
+ } finally {await worker.stop();db.close();}
+});
+
 test('late provider failure is correlated and sanitized after local read timeout',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();
  const dir=mkdtempSync(resolve(tmpdir(),'wis-late-test-'));const ev=new EventEmitter();let fail;

@@ -593,6 +593,18 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       current.ev.on('contacts.upsert', guarded(contacts=>saveContacts(contacts)));
       current.ev.on('contacts.update', guarded(contacts=>saveContacts(contacts)));
       current.ev.on('lid-mapping.update',guarded(mapping=>saveIdentity(mapping,'lid-mapping.update')));
+      current.ev.on('group.join-request',guarded(value=>{
+        const participant=value?.participant;
+        const participantPattern=/^\d+(?::\d+)?@(s\.whatsapp\.net|lid)$/;
+        if(!/^\d+(?:-\d+)?@g\.us$/.test(value?.id||'')||value.id.length>100||typeof participant!=='string'||participant.length>100||!participantPattern.test(participant)||!['created','revoked','rejected'].includes(value.action))return;
+        const resource=value.id+':'+participant,observed_at=new Date().toISOString();
+        const fields={group_id:value.id,participant,action:value.action,observed_at,source:'group.join-request',author:null,authorPn:null,participantPn:null};
+        if(['invite_link','linked_group_join','non_admin_add'].includes(value.method))fields.method=value.method;
+        for(const key of ['author','authorPn','participantPn'])if(typeof value[key]==='string'&&value[key].length<=100&&participantPattern.test(value[key])&&(key==='author'||value[key].endsWith('@s.whatsapp.net')))fields[key]=value[key];
+        let prior={};try{prior=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='group_join_event' AND resource_id=?").get(resource)?.payload||'{}');}catch{}
+        const history=(Array.isArray(prior.history)?prior.history:[]).filter(x=>['created','revoked','rejected'].includes(x?.action)&&typeof x.observed_at==='string'&&Number.isFinite(Date.parse(x.observed_at))).slice(-19).map(x=>({action:x.action,observed_at:new Date(x.observed_at).toISOString(),...(['invite_link','linked_group_join','non_admin_add'].includes(x.method)?{method:x.method}:{})}));history.push({action:fields.action,...(fields.method?{method:fields.method}:{}),observed_at});
+        snapshot('group_join_event',resource,{...fields,method:fields.method || null,history});
+      }));
       current.ev.on('chats.upsert', guarded(chats=>saveChats(chats)));
       current.ev.on('chats.update', guarded(chats=>saveChats(chats)));
       current.ev.on('groups.upsert', guarded(groups=>saveGroups(groups)));
