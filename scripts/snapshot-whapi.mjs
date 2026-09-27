@@ -11,6 +11,7 @@ const capabilities = entries.map(([, name, url]) => ({
   reason: 'Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.'
 }));
 const implemented = {
+  getcall: ['/api/v1/calls?id=ID', 'Llamadas observadas por la sesión y persistidas localmente; no recupera el historial completo ni inicia llamadas.'],
   checkhealth: ['/api/v1/connections', 'Estado del worker y conexión; no emula wakeup de WHAPI.'],
   loginuser: ['/api/whatsapp/qr', 'QR administrativo temporal; formato propio WIS.'],
   logoutuser: ['/api/whatsapp/logout', 'Cierre administrativo con sesión de navegador.'],

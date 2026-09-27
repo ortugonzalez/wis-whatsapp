@@ -1986,12 +1986,12 @@
       "id": "getcall",
       "name": "Get call information",
       "source": "https://whapi.readme.io/reference/getcall.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/calls?id=ID",
+      "screen": "/#calls",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales de eventos, persistencia y API; llamadas reales no provocadas.",
+      "reason": "Llamadas observadas por la sesión y persistidas localmente; no recupera el historial completo ni inicia llamadas."
     },
     {
       "id": "makecall",

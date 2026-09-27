@@ -5,7 +5,13 @@ import {readFileSync,mkdtempSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {resolve} from 'node:path';
 import {EventEmitter} from 'node:events';
-import {timestamp,identityMatches,acquireLease,mediaFile,runWorker,safeGroup,normalizeContent,classifyReadError,readBudgetMs,checkedBusinessRead,checkedListRead} from './worker.mjs';
+import {timestamp,identityMatches,acquireLease,mediaFile,runWorker,safeGroup,normalizeContent,classifyReadError,readBudgetMs,checkedBusinessRead,checkedListRead,callSnapshot} from './worker.mjs';
+
+test('duplicate call observation preserves full bounded history',()=>{
+ let prior={};for(let n=0;n<50;n++)prior=callSnapshot({id:'call',status:'ringing',date:new Date(1700000000000+n*1000)},prior);
+ const next=callSnapshot({id:'call',status:'ringing',date:new Date(1700000049000)},prior);
+ assert.deepEqual(next.history,prior.history);assert.equal(next.history.length,50);
+});
 function database(){const db=new DatabaseSync(':memory:');db.exec(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));db.prepare("INSERT INTO connections(id,status,updated_at) VALUES('wis-5679','disconnected',?)").run(new Date().toISOString());return db;}
 const leaf=(tag,value)=>({tag,attrs:{},content:Buffer.from(String(value ?? ''))});
 const iq=(tag,content=[])=>({tag:'iq',attrs:{type:'result'},content:[{tag,attrs:{},content}]});
@@ -214,6 +220,23 @@ test('avatar reads require known targets, cache metadata only, and preserve stal
   await command('unknown','123456789@s.whatsapp.net');assert.equal(calls,0);
   await command('own',own);let row=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(own).payload);assert.equal(row.available,true);assert.equal(JSON.stringify(row).includes('SECRET'),false);
   fail=true;await command('missing',own);row=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(own).payload);assert.equal(row.available,false);assert.equal(row.stale,true);assert.equal(row.filename,'example.jpg');assert.equal(row.error,'avatar_unavailable');
+ } finally {await worker.stop();db.close();}
+});
+
+test('observed calls merge durable chronological lifecycle without socket writes or secrets',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();
+ const dir=mkdtempSync(resolve(tmpdir(),'wis-calls-'));const ev=new EventEmitter();let writes=0;
+ const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},rejectCall(){writes++;},sendMessage(){writes++;}};
+ const fake={default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth')});
+ try {
+  const base={id:'call-one',from:'123@s.whatsapp.net',chatId:'123@s.whatsapp.net',isVideo:true,secret:'SECRET'};
+  ev.emit('call',[{...base,status:'offer',date:new Date('2026-01-01T00:00:00Z')}]);
+  ev.emit('call',[{id:base.id,status:'terminate',date:new Date('2026-01-01T00:00:02Z')}]);
+  ev.emit('call',[{id:base.id,status:'ringing',date:new Date('2026-01-01T00:00:01Z')},{id:base.id,status:'ringing',date:new Date('2026-01-01T00:00:01Z')}]);
+  const row=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='call'").get().payload);
+  assert.equal(row.status,'terminate');assert.equal(row.from,base.from);assert.equal(row.isVideo,true);assert.equal(row.date,'2026-01-01T00:00:02.000Z');assert.equal(row.history.length,3);assert.equal(JSON.stringify(row).includes('SECRET'),false);assert.equal(writes,0);
+  ev.emit('call',[{id:'\ninvalid',status:'offer',date:new Date()}]);assert.equal(db.prepare("SELECT count(*) n FROM snapshots WHERE kind='call'").get().n,1);
  } finally {await worker.stop();db.close();}
 });
 

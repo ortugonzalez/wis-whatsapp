@@ -58,6 +58,22 @@ export function safeProduct(product) {
 export function safeNewsletter(value) {
   return {...safeFields(value,['id','owner','name','description','creation_time','subscribers','verification','mute_state']),has_picture:Boolean(value?.picture?.id || value?.picture?.url),thread_metadata:safeFields(value?.thread_metadata,['creation_time','name','description']),reaction_codes:(value?.reaction_codes || []).slice(0,100).map(x=>safeFields(x,['code','count']))};
 }
+export function callSnapshot(value,prior={},now=new Date().toISOString()) {
+  if(typeof value?.id!=='string'||!/^[\x21-\x7e]{1,256}$/.test(value.id))return null;
+  const statuses=['offer','ringing','preaccept','transport','relaylatency','timeout','reject','accept','terminate'];
+  if(!statuses.includes(value.status))return null;
+  let date=null;
+  if(value.date instanceof Date && Number.isFinite(value.date.getTime()))date=value.date.toISOString();
+  else if(typeof value.date==='string' && /^\d{4}-\d\d-\d\dT/.test(value.date) && Number.isFinite(Date.parse(value.date)))date=new Date(value.date).toISOString();
+  const fields=safeFields(value,['id','from','chatId','callerPn','groupJid','isGroup','isVideo','offline','latencyMs']);
+  for(const key of ['from','chatId','callerPn','groupJid'])if(typeof fields[key]!=='string'||fields[key].length>256)delete fields[key];
+  const history=Array.isArray(prior.history)?prior.history.slice(-50).map(x=>safeFields(x,['status','date','observed_at'])):[];
+  if(!history.some(x=>x.status===value.status&&x.date===date))history.push({status:value.status,date,observed_at:now});
+  if(history.length>50)history.shift();
+  const newer=date && (!prior.last_event_at || date>=prior.last_event_at);
+  const base=safeFields(prior,['id','from','chatId','callerPn','groupJid','isGroup','isVideo','offline','latencyMs','status','date','last_event_at']);
+  return {...base,...fields,...(newer||!prior.status?{status:value.status,date,...(date?{last_event_at:date}:{})}:{}),observed_at:now,history};
+}
 export function classifyReadError(error) {
   // Never expose provider messages/data: they can contain request material.
   const local={read_timeout:'read_timeout',previous_read_unresolved:'read_pending',connection_unavailable:'disconnected',connection_changed:'disconnected',capability_unavailable:'method_missing',account_identity_unavailable:'identity_unavailable',invalid_target:'invalid_target',unknown_community:'unknown_target',unknown_newsletter:'unknown_target',unsupported_read_command:'method_missing',newsletter_unavailable:'not_found'};
@@ -568,7 +584,15 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         }
       }));
       current.ev.on('call',guarded(values=>{
-        for(const value of values.slice(0,100))event('call',value.id,safeFields(value,['id','from','chatId','date','status','isVideo','isGroup','offline']));
+        if(!Array.isArray(values))return;
+        for(const value of values.slice(0,100)) {
+          if(!callSnapshot(value))continue;
+          let prior={};try{prior=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='call' AND resource_id=?").get(value.id)?.payload || '{}');}catch{}
+          const merged=callSnapshot(value,prior);
+          db.exec('SAVEPOINT call_observation');
+          try {snapshot('call',value.id,merged);event('call',value.id,{...safeFields(merged,['id','from','chatId','callerPn','groupJid','isVideo','isGroup','offline','latencyMs']),status:value.status,date:callSnapshot(value).date,observed_at:merged.observed_at});db.exec('RELEASE call_observation');}
+          catch(error){db.exec('ROLLBACK TO call_observation');db.exec('RELEASE call_observation');throw error;}
+        }
       }));
       current.ev.on('messages.update', updates => {
         if(!owns() || sock!==current) return;

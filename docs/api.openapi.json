@@ -3090,6 +3090,83 @@
           }
         }
       }
+    },
+    "/calls": {
+      "get": {
+        "summary": "Read locally observed call snapshots and bounded event timeline",
+        "description": "Read scope required. No network fetch or call initiation. Only persisted kind=call snapshots are listed; legacy generic events are not backfilled or merged. Empty results do not prove absence of calls. Detail/list use explicit field allowlists, status is null if unknown, timeline limited50. history_complete always false; source observed_events.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "description": "Observed call ID returns one detail"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Search call id/from/chatId"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "offer",
+                "ringing",
+                "preaccept",
+                "transport",
+                "relaylatency",
+                "timeout",
+                "reject",
+                "accept",
+                "terminate"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data array with pagination meta, or detail object for id. Safe fields id,from,chatId,callerPn,groupJid,isVideo,isGroup,offline,latencyMs,date,status,observed_at,last_event_at,updated_at,history(status,date,observed_at),history_complete,source"
+          },
+          "400": {
+            "description": "Invalid filter"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Read scope required"
+          },
+          "404": {
+            "description": "Call not observed"
+          }
+        }
+      }
     }
   }
 }
