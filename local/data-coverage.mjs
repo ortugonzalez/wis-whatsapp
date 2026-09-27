@@ -2,18 +2,23 @@ const SECRET_FIELD = /(token|secret|password|cookie|qr|credential|authorization|
 
 export function buildDataCoverage(db) {
   const count = (sql) => db.prepare(sql).get().count;
-  const byKind = new Map(db.prepare('SELECT kind,count(*) AS records,max(updated_at) AS last_updated_at FROM snapshots GROUP BY kind ORDER BY kind').all().map(row => [row.kind, { kind: row.kind, records: row.records, last_updated_at: row.last_updated_at, fields: new Set() }]));
-  const fields = db.prepare("SELECT s.kind,j.key AS field FROM snapshots s JOIN json_each(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END) j WHERE json_type(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END)='object' GROUP BY s.kind,j.key ORDER BY s.kind,j.key").all();
+  const byKind = new Map(db.prepare('SELECT kind,count(*) AS records,max(updated_at) AS last_updated_at FROM snapshots GROUP BY kind ORDER BY kind').all().map(row => [row.kind, { kind: row.kind, records: row.records, last_updated_at: row.last_updated_at, fields: new Map() }]));
+  const fields = db.prepare("SELECT s.kind,j.key AS field,count(DISTINCT s.resource_id) AS records FROM snapshots s JOIN json_each(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END) j WHERE json_type(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END)='object' GROUP BY s.kind,j.key ORDER BY s.kind,j.key").all();
   for (const row of fields) {
     const entry = byKind.get(row.kind);
-    if (entry && typeof row.field === 'string' && !SECRET_FIELD.test(row.field)) entry.fields.add(row.field.slice(0, 100));
+    if (entry && typeof row.field === 'string' && !SECRET_FIELD.test(row.field)) entry.fields.set(row.field, row.records);
   }
-  const snapshotKinds = [...byKind.values()].map(item => ({
-    kind: item.kind,
-    records: item.records,
-    last_updated_at: item.last_updated_at,
-    fields: [...item.fields].sort().slice(0, 100),
-  }));
+  const snapshotKinds = [...byKind.values()].map(item => {
+    const visibleFields = [...item.fields].filter(([field]) => field.length <= 100).sort(([a], [b]) => a.localeCompare(b));
+    return {
+      kind: item.kind,
+      records: item.records,
+      last_updated_at: item.last_updated_at,
+      fields: visibleFields.slice(0, 100).map(([field]) => field),
+      field_counts: visibleFields.slice(0, 100).map(([field, records]) => ({ field, records })),
+      omitted_fields: item.fields.size - Math.min(visibleFields.length, 100),
+    };
+  });
   const kindCount = kind => byKind.get(kind)?.records || 0;
   return {
     entities: {

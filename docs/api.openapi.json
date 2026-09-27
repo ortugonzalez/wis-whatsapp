@@ -425,9 +425,9 @@
     "/coverage": {
       "get": {
         "summary": "Get observed local data coverage",
-        "description": "Returns aggregate entity counts and names of persisted snapshot fields. It never returns message or contact values and never claims complete history.",
+        "description": "Returns aggregate entity counts, persisted snapshot field names, and the count of records containing each field. Field names longer than 100 characters or beyond the first 100 names per snapshot kind are omitted and counted. It never returns message or contact values and never claims complete history.",
         "responses": {
-          "200": { "description": "Coverage counts, observed snapshot fields, and message type counts" },
+          "200": { "description": "Coverage counts, observed snapshot fields with per-field record counts, omitted field counts, and message type counts" },
           "401": { "description": "Authentication required" },
           "403": { "description": "Insufficient scope" }
         }
