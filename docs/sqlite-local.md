@@ -14,7 +14,7 @@ rtk npm start
 
 Abrir http://127.0.0.1:3010 en Chrome. SQLite queda en `.local/wis.sqlite`; las credenciales administrativas locales se generan en `.local/admin-access.txt`. Esa carpeta está excluida de Git. `local:setup` restringe su ACL en Windows al propietario y SYSTEM. No publicar ni copiar credenciales al chat.
 
-El panel y worker arrancan juntos. Ctrl+C detiene ambos. Un reinicio no borra la sesión de WhatsApp. Usar el botón de desvinculación únicamente cuando se quiera revocar esa sesión.
+El panel y worker arrancan juntos. Para detenerlos desde otra terminal usar `rtk npm run local:stop`: el supervisor solicita cierre por IPC y permite liberar el bloqueo de la sesión antes de terminar. Ctrl+C también solicita ese cierre cuando llega al supervisor; algunos wrappers de terminal pueden terminar procesos abruptamente, por lo que se prefiere `local:stop`. Un reinicio no borra la sesión de WhatsApp. Usar el botón de desvinculación únicamente cuando se quiera revocar esa sesión.
 
 ## Vinculación
 

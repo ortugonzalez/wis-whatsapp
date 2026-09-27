@@ -477,6 +477,9 @@
           "403": {
             "description": "Scope, origin, consent or opt-out blocked"
           },
+          "404": {
+            "description": "Requested resource has not been observed"
+          },
           "409": {
             "description": "Idempotency conflict, disabled campaign or invalid state"
           },
@@ -507,6 +510,15 @@
           {
             "name": "q",
             "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Local contact UUID: returns contact, profile, presence, conversations and normalized snapshots instead of list",
             "schema": {
               "type": "string",
               "maxLength": 200
@@ -1756,6 +1768,9 @@
           },
           "403": {
             "description": "Insufficient scope"
+          },
+          "404": {
+            "description": "Requested resource has not been observed"
           }
         },
         "parameters": [
@@ -1781,6 +1796,15 @@
           {
             "name": "q",
             "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Known group JID: returns persisted metadata including observed participants instead of list",
             "schema": {
               "type": "string",
               "maxLength": 200
@@ -2050,7 +2074,14 @@
                       "groups",
                       "group",
                       "contact_profile",
-                      "all"
+                      "all",
+                      "catalog",
+                      "collections",
+                      "blocklist",
+                      "communities",
+                      "community",
+                      "newsletter",
+                      "newsletters"
                     ]
                   },
                   "target": {
@@ -2102,7 +2133,8 @@
           "403": {
             "description": "Administrator session and same-origin request required"
           }
-        }
+        },
+        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only."
       }
     },
     "/reference-fields": {
@@ -2194,6 +2226,699 @@
           },
           "400": {
             "description": "Invalid snapshot kind"
+          }
+        }
+      }
+    },
+    "/labels": {
+      "get": {
+        "summary": "Read persisted labels; read scope",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot rows and collection metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        },
+                        "observed": {
+                          "type": "boolean"
+                        },
+                        "last_updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "collection_status": {
+                          "enum": [
+                            "not_collected",
+                            "unavailable",
+                            "truncated",
+                            "complete",
+                            "observed_partial"
+                          ]
+                        },
+                        "summaries": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or administrator session"
+          }
+        }
+      }
+    },
+    "/label-associations": {
+      "get": {
+        "summary": "Read persisted label-associations; read scope",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot rows and collection metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        },
+                        "observed": {
+                          "type": "boolean"
+                        },
+                        "last_updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "collection_status": {
+                          "enum": [
+                            "not_collected",
+                            "unavailable",
+                            "truncated",
+                            "complete",
+                            "observed_partial"
+                          ]
+                        },
+                        "summaries": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or administrator session"
+          }
+        }
+      }
+    },
+    "/communities": {
+      "get": {
+        "summary": "Read persisted communities; read scope",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot rows and collection metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        },
+                        "observed": {
+                          "type": "boolean"
+                        },
+                        "last_updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "collection_status": {
+                          "enum": [
+                            "not_collected",
+                            "unavailable",
+                            "truncated",
+                            "complete",
+                            "observed_partial"
+                          ]
+                        },
+                        "summaries": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or administrator session"
+          }
+        }
+      }
+    },
+    "/channels": {
+      "get": {
+        "summary": "Read persisted channels; read scope",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot rows and collection metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        },
+                        "observed": {
+                          "type": "boolean"
+                        },
+                        "last_updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "collection_status": {
+                          "enum": [
+                            "not_collected",
+                            "unavailable",
+                            "truncated",
+                            "complete",
+                            "observed_partial"
+                          ]
+                        },
+                        "summaries": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or administrator session"
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "Read persisted products; read scope",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot rows and collection metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        },
+                        "observed": {
+                          "type": "boolean"
+                        },
+                        "last_updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "collection_status": {
+                          "enum": [
+                            "not_collected",
+                            "unavailable",
+                            "truncated",
+                            "complete",
+                            "observed_partial"
+                          ]
+                        },
+                        "summaries": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or administrator session"
+          }
+        }
+      }
+    },
+    "/collections": {
+      "get": {
+        "summary": "Read persisted collections; read scope",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot rows and collection metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        },
+                        "observed": {
+                          "type": "boolean"
+                        },
+                        "last_updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "collection_status": {
+                          "enum": [
+                            "not_collected",
+                            "unavailable",
+                            "truncated",
+                            "complete",
+                            "observed_partial"
+                          ]
+                        },
+                        "summaries": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or administrator session"
+          }
+        }
+      }
+    },
+    "/blocklist": {
+      "get": {
+        "summary": "Read persisted blocklist; administrator cookie only",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot rows and collection metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        },
+                        "observed": {
+                          "type": "boolean"
+                        },
+                        "last_updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "collection_status": {
+                          "enum": [
+                            "not_collected",
+                            "unavailable",
+                            "truncated",
+                            "complete",
+                            "observed_partial"
+                          ]
+                        },
+                        "summaries": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or administrator session"
           }
         }
       }

@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-09-27T07:19:02.274Z",
+  "captured_at": "2026-09-27T07:33:28.774Z",
   "source": "https://whapi.readme.io/llms.txt",
   "capabilities": [
     {
@@ -1172,12 +1172,12 @@
       "id": "getnewsletters",
       "name": "Get newsletters",
       "source": "https://whapi.readme.io/reference/getnewsletters.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/channels",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Canales ya conocidos por esta sesión; sin descubrimiento global."
     },
     {
       "id": "createnewsletter",
@@ -1216,12 +1216,12 @@
       "id": "getnewsletter",
       "name": "Get newsletter information",
       "source": "https://whapi.readme.io/reference/getnewsletter.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/channels",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Metadatos de un canal conocido; sin seguirlo ni modificar sus propiedades."
     },
     {
       "id": "deletenewsletter",
@@ -1458,12 +1458,12 @@
       "id": "getproducts",
       "name": "Get products",
       "source": "https://whapi.readme.io/reference/getproducts.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/products",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Catálogo de la cuenta propia mediante lectura limitada; indica disponibilidad y truncamiento."
     },
     {
       "id": "createproduct",
@@ -1568,12 +1568,12 @@
       "id": "getcollectionslist",
       "name": "Get collections",
       "source": "https://whapi.readme.io/reference/getcollectionslist.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/collections",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Colecciones de la cuenta propia; no replica la edición de WHAPI."
     },
     {
       "id": "getcollection",
@@ -1645,12 +1645,12 @@
       "id": "getlabels",
       "name": "Get labels",
       "source": "https://whapi.readme.io/reference/getlabels.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/labels",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Etiquetas recibidas por eventos de WhatsApp; inventario histórico completo no garantizado."
     },
     {
       "id": "createlabel",
@@ -1667,12 +1667,12 @@
       "id": "getlabelassociations",
       "name": "Get objects associated with label",
       "source": "https://whapi.readme.io/reference/getlabelassociations.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/label-associations",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Asociaciones que la sesión haya recibido; no crea ni modifica etiquetas."
     },
     {
       "id": "addlabelassociation",
@@ -1744,23 +1744,23 @@
       "id": "getblacklist",
       "name": "Get blacklist",
       "source": "https://whapi.readme.io/reference/getblacklist.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/blocklist",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Consulta administrativa de bloqueados, sin altas ni bajas."
     },
     {
       "id": "getcommunities",
       "name": "Get communities",
       "source": "https://whapi.readme.io/reference/getcommunities.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/communities",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Comunidades identificadas entre los grupos entregados por WhatsApp."
     },
     {
       "id": "createcommunity",

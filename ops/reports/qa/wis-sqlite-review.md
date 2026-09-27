@@ -1,5 +1,37 @@
 # WIS WhatsApp SQLite — QA independiente
 
+## Validación de respuestas crudas — revisión final
+
+Apto técnicamente para reiniciar el worker en modo lectura. La corrección reemplaza los wrappers que podían convertir un timeout en una lista vacía: catálogo y colecciones requieren un IQ result con contenedor y elementos válidos antes de ejecutar el parser instalado. Bloqueados, grupos y comunidades también validan la respuesta cruda. Undefined se clasifica como read_timeout; un contenedor ausente o incorrecto como invalid_response. Los errores del proveedor sólo conservan código permitido y estado numérico.
+
+El plazo vigente es 30 segundos en la consulta Business y 35 segundos externos; las listas usan 10/12 segundos. Se conserva el bloqueo de una solicitud pendiente y la verificación de sesión propietaria. Sólo las respuestas comprobadas producen response_verified:true. La evidencia anterior de 61,576 segundos no demuestra una respuesta válida ni un catálogo vacío.
+
+Ejecución independiente: `node --test local/worker.test.mjs test/qa/checked-reads.test.mjs test/qa/sqlite-review.test.mjs`, **18/18 PASS**. Se añadieron regresiones independientes para respuesta ausente, contenedor ausente, error 403 sanitizado y contenedores válidos vacíos. QA no accedió a la cuenta real. La disponibilidad real de catálogo/colecciones sigue pendiente de evidencia del proveedor; este dictamen valida el tratamiento de respuestas, no paridad completa ni envíos.
+
+## Plazo específico del catálogo — revisión posterior
+
+Revisión de aislamiento aprobada, pero **aprobación funcional del catálogo retirada** hasta validar la respuesta cruda del proveedor. `readBudgetMs` asigna 75 segundos exclusivamente a getCatalog/getCollections y conserva 12 segundos para las demás consultas. El override de pruebas exige número finito, positivo y como máximo 75000 ms. Se mantiene una única solicitud pendiente por socket, la clasificación sanitizada y la verificación de propietario/socket al completar.
+
+Evidencia independiente: `node --test local/worker.test.mjs`, **10/10 PASS**. El orquestador informó después que Baileys puede absorber un timeout y convertir undefined en productos vacíos. Por ello el evento tardío a los 61,576 segundos **no demuestra una respuesta válida ni un catálogo vacío**. Debe comprobarse el nodo crudo antes del parser y cubrir este caso con una regresión. QA no ejecutó ni repitió esa lectura. Aumentar el plazo por sí solo no resuelve el defecto.
+
+## Diagnóstico sanitizado de lecturas — revisión posterior
+
+Apto para reiniciar el worker actualizado en modo lectura. `classifyReadError` sólo devuelve un código conocido y un estado HTTP entero válido; no persiste mensajes, datos ni trazas del proveedor. Los eventos de resultados tardíos capturan el identificador de comando y método original, verifican propietario/socket vigente y no convierten automáticamente un timeout en una lectura completada. El bloqueo de solicitudes pendientes continúa evitando reintentos simultáneos.
+
+Se detectó y corrigió acceso heredado al prototipo en el mapa de códigos (`constructor`, `__proto__`, etc.); ahora usa `Object.hasOwn`. Se añadió regresión independiente. Ejecución QA: `node --test local/worker.test.mjs test/qa/sqlite-review.test.mjs`, **13/13 PASS**. Incluye error tardío 403 sanitizado, correlación y ausencia de texto sensible. No se consultó ni reintentó catálogo, comunidades o canales de la cuenta real desde QA.
+
+## Catálogo, comunidades y supervisor — revisión posterior
+
+Dictamen: apto para reiniciar la versión ampliada en modo lectura, manteniendo envíos desactivados. No se realizaron consultas ni acciones sobre la cuenta real desde QA.
+
+- Verificados contra la implementación instalada de Baileys los métodos de catálogo propio, colecciones, bloqueados, comunidades y canales conocidos: consultas de lectura, objetivos acotados y listas explícitas de campos. Se excluyen URLs CDN firmadas, credenciales y códigos de invitación.
+- Límites explícitos: hasta tres páginas de catálogo, cien colecciones, veinte canales conocidos y dos mil comunidades; el resultado conserva indicadores de truncamiento/observación parcial.
+- P2 corregido: comunidades abandonadas permanecían como actuales tras una respuesta completa vacía. Ahora la sustitución es transaccional únicamente tras una respuesta válida y completa; fallos y respuestas truncadas preservan registros anteriores.
+- P2 corregido: consultas fallidas no actualizaban disponibilidad. Ahora el resumen registra fallo sanitizado, intento y obsolescencia conservando datos y última consulta exitosa.
+- P2 corregido: segundo inicio podía sobrescribir el PID del supervisor original. Lock exclusivo impide doble supervisor; limpieza de metadatos sólo afecta al propietario. Prueba aislada verifica doble inicio rechazado y cierre IPC de ambos hijos conservando sesión.
+- P2 corregido en explorador: lista de bloqueo aún no consultada se presentaba como no disponible; ahora distingue sin recopilar, indisponible, truncada y parcial. Datos dinámicos y detalles permanecen escapados.
+- Pruebas independientes previas a los últimos ajustes: **14/14 PASS** (backend, worker, supervisor y regresiones QA). Después de las correcciones se reejecutó worker **7/7 PASS**, supervisor **1/1 PASS** y sintaxis de explorer.js. La prueba worker cubre fallo que conserva datos, truncamiento de 2001 comunidades y respuesta completa vacía que elimina registros obsoletos.
+
 ## Ampliación de lectura — revisión posterior
 
 Backend y worker aptos para reinicio con envíos desactivados. Se revisaron tablas adicionales snapshots/events/read_commands, paginación, multimedia autenticada y consultas de metadatos. El esquema es aditivo; la prueba de reapertura conserva contacto y sesión. No se consultó ni alteró la cuenta vinculada durante QA.

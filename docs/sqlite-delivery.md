@@ -10,6 +10,9 @@
 - Recolección real al reiniciar: 436 contactos, 457 conversaciones, 1.438 mensajes y 18 grupos al momento de la comprobación. Las cifras evolucionan con la sincronización.
 - Perfil, estado, privacidad y disponibilidad de perfil comercial consultados. Los valores no expuestos por WhatsApp se distinguen de los disponibles.
 - Dashboard actualizado y verificado en Chrome, con búsqueda/paginación, multimedia privada, grupos, actividad, preferencias editables y catálogo de campos de los 182 métodos de WHAPI.
+- Ampliación con detalles legibles de contactos y participantes, exploradores Business, etiquetas, comunidades y canales. Los comandos de comunidades y canales conocidos finalizaron; una revisión posterior encontró que algunos parsers de Baileys pueden convertir la falta de respuesta en una lista vacía. Por ello la finalización de un comando no se utiliza como prueba de colección completa sin validar la respuesta del protocolo. Catálogo y colecciones devolvieron fallo de lectura; se conserva esa limitación explícita y se añadieron diagnósticos sanitizados y eventos de resultados tardíos.
+- Apagado real por `npm run local:stop` comprobado: salida correcta, lease liberado y bloqueo del supervisor retirado. Reconexión posterior sin QR.
+- Verificación real posterior a los adaptadores comprobados: grupos, comunidades y bloqueados tienen `response_verified: true` y disponibilidad confirmada. El catálogo continúa con `read_timeout`; no se declara catálogo vacío ni paridad de esa función. Colecciones permanece pendiente de una lectura válida.
 - SQLite protegido por ACL local; backup consistente ejecutado.
 - API local, consentimiento/bajas, scopes, revocación, idempotencia, cola y webhooks con entregas desactivadas.
 - Campañas permanecen desactivadas; no se enviaron mensajes.
@@ -19,8 +22,10 @@
 
 `npm run build`, 12 pruebas locales y de QA en la ampliación, y revisión independiente. Ver `ops/reports/qa/wis-sqlite-review.md`. El reinicio con cuenta vinculada ya fue probado. Las pruebas de WhatsApp real de envío y multimedia saliente requieren aprobar los envíos concretos.
 
+Ampliación de exploradores y respuestas comprobadas: 22 pruebas Node aprobadas, más una prueba de paginación del cliente Python. Validación en Chrome del explorador, detalle de grupos y comandos de lectura. No se enviaron mensajes ni se modificaron listas de bloqueo, grupos o productos.
+
 ## Límites actuales
 
-El runtime SQLite inicial administra un usuario administrador y una conexión. No implementa todavía usuarios operadores ni múltiples conexiones. La bandeja consulta el historial disponible; no hay garantía de historial completo. No se declara paridad WHAPI: administración avanzada de grupos, canales, comunidades, catálogo Business, estados publicados y llamadas permanecen pendientes donde lo indica la matriz. Los esquemas de variables WHAPI son referencia, no prueba de implementación. La ejecución de campañas no está implementada. No se habilitaron webhooks externos ni workflows.
+El runtime SQLite inicial administra un usuario administrador y una conexión. No implementa todavía usuarios operadores ni múltiples conexiones. La bandeja consulta el historial disponible; no hay garantía de historial completo. No se declara paridad WHAPI: administración avanzada de grupos, edición de canales/comunidades/catálogo, estados publicados y llamadas permanecen pendientes donde lo indica la matriz. Los esquemas de variables WHAPI son referencia, no prueba de implementación. La ejecución de campañas no está implementada. No se habilitaron webhooks externos ni workflows. Ver `docs/data-explorers.md` para límites de las nuevas lecturas.
 
 El código heredado de Next/Supabase se conserva como referencia en su historial y carpetas, pero no forma parte del arranque activo. El manual vigente es `docs/sqlite-local.md`.

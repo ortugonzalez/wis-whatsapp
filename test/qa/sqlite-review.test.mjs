@@ -5,7 +5,11 @@ import {readFileSync,mkdtempSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {resolve} from 'node:path';
 import {EventEmitter} from 'node:events';
-import {runWorker} from '../../local/worker.mjs';
+import {runWorker,classifyReadError} from '../../local/worker.mjs';
+
+test('QA: provider messages matching Object prototype keys still yield safe error codes',()=>{
+ for(const message of ['__proto__','constructor','toString','hasOwnProperty'])assert.deepEqual(classifyReadError({message,statusCode:403}),{code:'access_denied',status_code:403});
+});
 
 function database(){const db=new DatabaseSync(':memory:');db.exec(readFileSync(new URL('../../local/schema.sql',import.meta.url),'utf8'));db.prepare("INSERT INTO connections(id,status,command,updated_at) VALUES('wis-5679','disconnected','connect',?)").run(new Date().toISOString());return db;}
 test('QA: LID messages persist and receipt statuses fit the current SQLite contract',async()=>{

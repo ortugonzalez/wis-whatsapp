@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node local/start.mjs",
-    "build": "node --check local/server.mjs && node --check local/worker.mjs && node --check local/public/app.js && node --check local/public/live.js",
+    "build": "node --check local/server.mjs && node --check local/worker.mjs && node --check local/public/app.js && node --check local/public/live.js && node --check local/public/explorer.js",
     "start": "node local/start.mjs",
     "lint": "eslint",
     "local:setup": "node local/setup.mjs",
@@ -13,7 +13,9 @@
     "test:worker": "npm --prefix workers/whatsapp-baileys test",
     "legacy:build": "next build",
     "local:backup": "node local/backup.mjs",
-    "test:local": "node --test local/*.test.mjs"
+    "test:local": "node --test local/*.test.mjs",
+    "local:stop": "node local/control.mjs stop",
+    "local:status": "node local/status.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
