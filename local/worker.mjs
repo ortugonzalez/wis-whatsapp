@@ -643,7 +643,22 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         const jid = msg.key?.remoteJid, waId = msg.key?.id;
         if (!jid || !waId) continue;
         if(jid==='status@broadcast'){persistStory(msg,source);continue;}
-        if (db.prepare('SELECT id FROM messages WHERE wa_message_id=?').get(waId)) continue;
+        const prior=db.prepare('SELECT m.*,c.wa_chat_id FROM messages m LEFT JOIN conversations c ON c.id=m.conversation_id WHERE m.wa_message_id=?').get(waId);
+        if(prior){
+          // Enrich only a matching, unchanged row from an already delivered envelope.
+          // Never retrieve media, mutate message rows, or cache duplicated wire data.
+          if(prior.wa_chat_id!==jid||typeof msg.key.fromMe!=='boolean'||prior.direction!==(msg.key.fromMe?'out':'in')||prior.body===null||!Number.isFinite(Date.parse(prior.created_at)))continue;
+          if(db.prepare("SELECT 1 FROM snapshots WHERE kind='message' AND resource_id=?").get(waId))continue;
+          if(db.prepare("SELECT 1 FROM events WHERE (resource_id=? AND kind IN('message.revoked','message.edited')) OR (resource_id=? AND kind='messages.delete_all') LIMIT 1").get(waId,jid))continue;
+          const raw=msg.message,content=raw?.ephemeralMessage?.message||raw?.documentWithCaptionMessage?.message||raw;
+          if(!content||content.viewOnceMessage||content.viewOnceMessageV2||content.viewOnceMessageV2Extension||content.editedMessage||content.protocolMessage)continue;
+          const normalized=normalizeContent(content);
+          if(!normalized||normalized.type!==prior.type||typeof normalized.body!=='string'||normalized.body!==prior.body)continue;
+          const observed_at=new Date().toISOString();
+          const payload={type:normalized.type,details:normalized.details,...messageContext(content),source:prior.source,timestamp:prior.created_at,metadata_backfilled:true,metadata_observed_at:observed_at};
+          db.prepare("INSERT OR IGNORE INTO snapshots(kind,resource_id,payload,updated_at) VALUES('message',?,?,?)").run(waId,JSON.stringify(payload),observed_at);
+          continue;
+        }
         const at = timestamp(msg.messageTimestamp) || (source === 'live' ? new Date().toISOString() : null);
         if (!at) continue;
         const raw = msg.message;
