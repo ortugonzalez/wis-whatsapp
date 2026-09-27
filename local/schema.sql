@@ -15,6 +15,16 @@ CREATE TABLE IF NOT EXISTS campaigns(id TEXT PRIMARY KEY,name TEXT NOT NULL,body
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT,action TEXT NOT NULL,actor TEXT NOT NULL,resource_id TEXT,created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS operations_pending ON operations(status,created_at);
 CREATE INDEX IF NOT EXISTS messages_chat ON messages(conversation_id,created_at);
+-- Additive live-dashboard schema: existing account, messages and sessions remain intact.
+CREATE TABLE IF NOT EXISTS snapshots(kind TEXT NOT NULL,resource_id TEXT NOT NULL,payload TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(kind,resource_id));
+CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,kind TEXT NOT NULL,resource_id TEXT,payload TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS read_commands(id TEXT PRIMARY KEY,kind TEXT NOT NULL,target TEXT,status TEXT NOT NULL DEFAULT 'pending',error TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS events_created ON events(created_at DESC);
+CREATE INDEX IF NOT EXISTS snapshots_kind ON snapshots(kind,updated_at DESC);
+CREATE INDEX IF NOT EXISTS read_commands_pending ON read_commands(status,created_at);
+CREATE TRIGGER IF NOT EXISTS retain_recent_events AFTER INSERT ON events BEGIN
+ DELETE FROM events WHERE id IN(SELECT id FROM events ORDER BY created_at DESC,id DESC LIMIT -1 OFFSET 1000);
+END;
 CREATE TRIGGER IF NOT EXISTS message_created AFTER INSERT ON messages BEGIN
  INSERT INTO webhook_deliveries(id,webhook_id,event_id,event_type,payload,available_at,created_at)
  SELECT lower(hex(randomblob(16))),id,'message.created:'||NEW.id,'message.created',json_object('id','message.created:'||NEW.id,'type','message.created','data',json_object('id',NEW.id,'conversation_id',NEW.conversation_id,'direction',NEW.direction,'type',NEW.type,'body',NEW.body,'delivery_status',NEW.delivery_status)),strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now') FROM webhooks WHERE enabled=1;

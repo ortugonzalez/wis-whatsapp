@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-09-27T06:41:06.688Z",
+  "captured_at": "2026-09-27T07:19:02.274Z",
   "source": "https://whapi.readme.io/llms.txt",
   "capabilities": [
     {
@@ -8,21 +8,21 @@
       "source": "https://whapi.readme.io/reference/checkhealth.md",
       "status": "partial",
       "endpoint": "/api/v1/connections",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Estado del worker y conexión; no emula wakeup de WHAPI."
     },
     {
       "id": "getchannelsettings",
       "name": "Get channel settings",
       "source": "https://whapi.readme.io/reference/getchannelsettings.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/settings",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Preferencias locales de WIS, no configuración remota equivalente WHAPI."
     },
     {
       "id": "resetchannelsettings",
@@ -50,12 +50,12 @@
       "id": "getallowedevents",
       "name": "Get allowed events",
       "source": "https://whapi.readme.io/reference/getallowedevents.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/events",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Actividad local registrada; no replica todo el catálogo de webhooks WHAPI."
     },
     {
       "id": "webhooktest",
@@ -84,10 +84,10 @@
       "name": "Login user with QR-base64",
       "source": "https://whapi.readme.io/reference/loginuser.md",
       "status": "partial",
-      "endpoint": "/settings/whatsapp",
-      "screen": "/dashboard",
+      "endpoint": "/api/whatsapp/qr",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "QR administrativo temporal; formato propio WIS."
     },
     {
@@ -128,33 +128,33 @@
       "name": "Logout user",
       "source": "https://whapi.readme.io/reference/logoutuser.md",
       "status": "partial",
-      "endpoint": "/api/whatsapp/disconnect",
-      "screen": "/dashboard",
+      "endpoint": "/api/whatsapp/logout",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Cierre administrativo con sesión de navegador."
     },
     {
       "id": "getuserprofile",
       "name": "User info",
       "source": "https://whapi.readme.io/reference/getuserprofile.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/account",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Snapshot de perfil de la cuenta vinculada; campos disponibles dependen de WhatsApp."
     },
     {
       "id": "getcontactprofile",
       "name": "Get profile",
       "source": "https://whapi.readme.io/reference/getcontactprofile.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/snapshots",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Snapshots de perfil solicitado por lectura; sin garantía de datos privados."
     },
     {
       "id": "updateuserprofile",
@@ -206,9 +206,9 @@
       "source": "https://whapi.readme.io/reference/getmessages.md",
       "status": "partial",
       "endpoint": "/api/v1/messages",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Mensajes persistidos en WIS, paginación propia."
     },
     {
@@ -217,9 +217,9 @@
       "source": "https://whapi.readme.io/reference/getmessagesbychatid.md",
       "status": "partial",
       "endpoint": "/api/v1/messages",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Filtro por conversación WIS."
     },
     {
@@ -228,9 +228,9 @@
       "source": "https://whapi.readme.io/reference/sendmessagetext.md",
       "status": "partial",
       "endpoint": "/api/v1/messages",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Envío en cola con consentimiento e idempotencia; deshabilitado hasta prueba autorizada."
     },
     {
@@ -239,9 +239,9 @@
       "source": "https://whapi.readme.io/reference/sendmessageimage.md",
       "status": "partial",
       "endpoint": "/api/v1/messages",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Multimedia desde almacenamiento privado WIS; pendiente prueba real."
     },
     {
@@ -283,9 +283,9 @@
       "source": "https://whapi.readme.io/reference/sendmessageaudio.md",
       "status": "partial",
       "endpoint": "/api/v1/messages",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Multimedia desde almacenamiento privado WIS; pendiente prueba real."
     },
     {
@@ -305,9 +305,9 @@
       "source": "https://whapi.readme.io/reference/sendmessagedocument.md",
       "status": "partial",
       "endpoint": "/api/v1/messages",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Multimedia desde almacenamiento privado WIS; pendiente prueba real."
     },
     {
@@ -624,9 +624,9 @@
       "source": "https://whapi.readme.io/reference/getchats.md",
       "status": "partial",
       "endpoint": "/api/v1/conversations",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Conversaciones persistidas."
     },
     {
@@ -679,9 +679,9 @@
       "source": "https://whapi.readme.io/reference/getcontacts.md",
       "status": "partial",
       "endpoint": "/api/v1/contacts",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Contactos persistidos, consentimiento y bajas."
     },
     {
@@ -787,12 +787,12 @@
       "id": "getcontactabout",
       "name": "Get contact about",
       "source": "https://whapi.readme.io/reference/getcontactabout.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/snapshots",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Acerca de cuando WhatsApp permite consultarlo."
     },
     {
       "id": "getidbylid",
@@ -820,12 +820,12 @@
       "id": "getpresence",
       "name": "Get presence",
       "source": "https://whapi.readme.io/reference/getpresence.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/snapshots",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Eventos de presencia entregados por WhatsApp; no seguimiento garantizado."
     },
     {
       "id": "subscribepresence",
@@ -853,12 +853,12 @@
       "id": "getgroups",
       "name": "Get groups",
       "source": "https://whapi.readme.io/reference/getgroups.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/groups",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Metadatos disponibles de grupos participantes, consultados por el worker."
     },
     {
       "id": "creategroup",
@@ -886,12 +886,12 @@
       "id": "getgroup",
       "name": "Get group",
       "source": "https://whapi.readme.io/reference/getgroup.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/groups",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Detalle en snapshot; refresco de lectura mediante /api/v1/sync."
     },
     {
       "id": "updategroupinfo",
@@ -1394,9 +1394,9 @@
       "source": "https://whapi.readme.io/reference/uploadmedia.md",
       "status": "partial",
       "endpoint": "/api/v1/media",
-      "screen": "/dashboard",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": "Compilación y pruebas locales; validación WhatsApp real pendiente.",
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
       "reason": "Carga con alcance de conexión; formato propio WIS."
     },
     {
@@ -1414,12 +1414,12 @@
       "id": "getmedia",
       "name": "Get media",
       "source": "https://whapi.readme.io/reference/getmedia.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/media",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Lectura privada de archivos realmente descargados; medios históricos pueden no estar disponibles."
     },
     {
       "id": "deletemedia",
@@ -1436,12 +1436,12 @@
       "id": "getbusinessprofile",
       "name": "Get business profile",
       "source": "https://whapi.readme.io/reference/getbusinessprofile.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/account",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Snapshot Business si la cuenta y WhatsApp lo permiten; sin edición."
     },
     {
       "id": "editbusinessprofile",

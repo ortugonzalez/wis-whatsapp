@@ -1,5 +1,17 @@
 # WIS WhatsApp SQLite — QA independiente
 
+## Ampliación de lectura — revisión posterior
+
+Backend y worker aptos para reinicio con envíos desactivados. Se revisaron tablas adicionales snapshots/events/read_commands, paginación, multimedia autenticada y consultas de metadatos. El esquema es aditivo; la prueba de reapertura conserva contacto y sesión. No se consultó ni alteró la cuenta vinculada durante QA.
+
+- Los comandos admitidos sólo invocan fetchStatus, fetchPrivacySettings, getBusinessProfile, groupFetchAllParticipating y groupMetadata. El endpoint requiere administrador y valida objetivos existentes. No hay despacho arbitrario de métodos del socket.
+- Los snapshots/eventos usan listas explícitas de campos; quedan fuera credenciales, QR, códigos de invitación y envelopes criptográficos. Un timeout bloquea más lecturas en ese socket hasta que se resuelva la consulta pendiente, evitando acumulación de solicitudes.
+- Las consultas paginadas parametrizan búsqueda y límites; la descarga de archivos verifica autenticación y ruta real dentro del directorio de multimedia.
+- Corregidos durante revisión: horarios comerciales estructurados y fechas de estado descartados por el normalizador; búsqueda de una operación antigua aplicada después del límite de 100 registros.
+- Ejecución independiente: backend (2), worker (6) y QA SQLite (3), **11/11 PASS**. Regresión adicional `test/qa/api-expansion.test.mjs`, **1/1 PASS**: operación antigua entre 130 registros, paginación y denegación de cuenta/sync a token de lectura, snapshot reservado y traversal multimedia.
+- Esta aprobación técnica cubre lectura y almacenamiento local. No certifica todas las funciones WHAPI ni habilita mutaciones de cuenta, publicaciones, campañas o envíos. QA visual del panel ampliado se informa por separado.
+- Panel ampliado revisado estáticamente: campos, JSON y referencia WHAPI escapados; multimedia usa endpoint local autenticado; detalles de esquemas se solicitan al abrir un método. Se detectó y corrigió un P2: refrescar más de 200 conversaciones enviaba un límite inválido; ahora se consultan tramos de hasta 200 y se deduplican por ID. `node --check local/public/live.js` aprobado. No se operó el navegador ni la cuenta desde QA.
+
 Fecha: 2026-09-27. Alcance: runtime activo `local/`, esquema SQLite, panel estático, scripts locales y dispatcher. No se usaron Supabase, Docker, Chrome ni conexiones reales a WhatsApp durante QA.
 
 ## Dictamen para inicio local

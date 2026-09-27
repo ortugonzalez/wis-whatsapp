@@ -1,12 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {scryptSync,randomBytes} from 'node:crypto';
+import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {resolve} from 'node:path';
 process.env.WIS_DB_PATH=':memory:';
 const {openDatabase}=await import('./db.mjs');
 const {makeServer}=await import('./server.mjs');
 test('local HTTP authorization, consent, queue transaction, replay and private QR',async()=>{
  const database=openDatabase(':memory:');const salt='test-salt',password=randomBytes(20).toString('hex');database.prepare("INSERT INTO settings(key,value) VALUES('admin_password',?)").run(salt+':'+scryptSync(password,salt,64).toString('hex'));
- const server=makeServer(database);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let cookie='';
+ const temp=await mkdtemp(resolve(tmpdir(),'wis-backend-test-'));const server=makeServer(database,{stateDir:temp});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let cookie='';
  const call=async(path,method='GET',body,token,headers={})=>{const response=await fetch(base+path,{method,headers:{...(cookie?{Cookie:cookie}:{}),Origin:base,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...headers},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,json:await response.json(),headers:response.headers};};
  const original=process.env.WIS_OUTBOUND_ENABLED;
  try{
@@ -27,5 +30,18 @@ test('local HTTP authorization, consent, queue transaction, replay and private Q
   database.prepare("INSERT INTO contacts(id,wa_jid,created_at) VALUES('lid','123@lid',?)").run(new Date().toISOString());
   database.prepare("UPDATE operations SET status='delivered' WHERE id=?").run(first.json.data.id);database.prepare("UPDATE operations SET status='read' WHERE id=?").run(first.json.data.id);
   database.prepare("INSERT INTO webhooks(id,url,secret,enabled,created_at) VALUES('test','https://example.com','test',1,?)").run(new Date().toISOString());database.prepare("UPDATE messages SET delivery_status='read' WHERE id=?").run(first.json.data.message_id);assert.equal(database.prepare('SELECT count(*) AS n FROM webhook_deliveries').get().n,1);
- }finally{if(original===undefined)delete process.env.WIS_OUTBOUND_ENABLED;else process.env.WIS_OUTBOUND_ENABLED=original;await new Promise(r=>server.close(r));database.close();}
+  for(let i=0;i<70;i++)database.prepare('INSERT INTO contacts(id,display_name,created_at) VALUES(?,?,?)').run('page-'+String(i).padStart(3,'0'),'Pagination contact '+i,new Date().toISOString());
+  const paged=await call('/api/v1/contacts?q=Pagination&limit=10&offset=20');assert.equal(paged.json.meta.total,70);assert.equal(paged.json.data.length,10);assert.equal(paged.json.meta.has_more,true);
+  assert.equal((await call('/api/v1/contacts?limit=0')).status,400);assert.equal((await call('/api/v1/contacts?q=%25')).json.meta.total,0);
+  assert.equal((await call('/api/v1/overview')).json.data.counts.contacts,72);
+  database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('profile','wis-5679',?,?)").run(JSON.stringify({name:'Local account'}),new Date().toISOString());
+  database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('group','1@g.us',?,?)").run(JSON.stringify({subject:'Actual group',participants:[]}),new Date().toISOString());
+  assert.equal((await call('/api/v1/account')).json.data.profile.data.name,'Local account');assert.equal((await call('/api/v1/groups?q=Actual')).json.meta.total,1);
+  const sync=await call('/api/v1/sync','POST',{kind:'groups'});assert.equal(sync.status,202);assert.equal((await call('/api/v1/sync','POST',{kind:'groups'})).json.data.id,sync.json.data.id);assert.equal(database.prepare("SELECT command FROM connections WHERE id='wis-5679'").get().command,null);
+  assert.equal((await call('/api/v1/sync','POST',{kind:'send'})).status,400);assert.equal((await call('/api/v1/settings','PATCH',{outbound_enabled:true})).status,400);assert.equal((await call('/api/v1/settings','PATCH',{poll_seconds:20})).json.data.poll_seconds,20);
+  for(let i=0;i<1002;i++)database.prepare('INSERT INTO events(id,kind,payload,created_at) VALUES(?,?,?,?)').run('event-'+i,'test','{}',new Date().toISOString());assert.equal((await call('/api/v1/events?limit=5')).json.meta.total,1000);
+  await mkdir(resolve(temp,'media'));await writeFile(resolve(temp,'media','local-test.pdf'),'%PDF-1.7\n');
+  assert.equal((await fetch(base+'/api/v1/media?path=local-test.pdf')).status,401);const download=await fetch(base+'/api/v1/media?path=local-test.pdf',{headers:{Cookie:cookie}});assert.equal(download.status,200);assert.equal(download.headers.get('content-type'),'application/pdf');assert.equal((await call('/api/v1/media?path=..%2Fadmin-access.txt')).status,400);
+ }finally{if(original===undefined)delete process.env.WIS_OUTBOUND_ENABLED;else process.env.WIS_OUTBOUND_ENABLED=original;await new Promise(r=>server.close(r));database.close();await rm(temp,{recursive:true,force:true});}
 });
+test('reopening additive schema preserves existing contact and session state',async()=>{const temp=await mkdtemp(resolve(tmpdir(),'wis-migration-test-'));try{const file=resolve(temp,'test.sqlite');let database=openDatabase(file);database.prepare("INSERT INTO contacts(id,phone_e164,display_name,created_at) VALUES('keep','+12025550111','Existing data',?)").run(new Date().toISOString());database.prepare("INSERT INTO sessions(token_hash,expires_at) VALUES('session','2099-01-01T00:00:00Z')").run();database.close();database=openDatabase(file);assert.equal(database.prepare("SELECT display_name FROM contacts WHERE id='keep'").get().display_name,'Existing data');assert.equal(database.prepare('SELECT count(*) AS n FROM sessions').get().n,1);assert.equal(database.prepare('SELECT count(*) AS n FROM snapshots').get().n,0);database.close();}finally{await rm(temp,{recursive:true,force:true});}});

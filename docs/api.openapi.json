@@ -3,7 +3,7 @@
   "info": {
     "title": "WIS WhatsApp API",
     "version": "1.1.0",
-    "description": "Local SQLite API for one WIS connection wis-5679. Bearer tokens have explicit scopes. Admin cookies and same-origin Origin are required for administration. Sends and webhook delivery are disabled by default."
+    "description": "Local SQLite API for one WIS connection wis-5679. Bearer tokens have explicit scopes. Admin cookies and same-origin Origin are required for administration. Sends and webhook delivery are disabled by default. Live dashboard pagination preserves data arrays and adds top-level meta. Snapshots are observed data, never a claim of complete WhatsApp history. Sync queues read-only work and does not activate outbound."
   },
   "servers": [
     {
@@ -427,7 +427,7 @@
         "summary": "List contacts",
         "responses": {
           "200": {
-            "description": "Scoped data",
+            "description": "Local persisted data; no WhatsApp write",
             "content": {
               "application/json": {
                 "schema": {
@@ -436,13 +436,27 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Contact"
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        }
                       }
                     }
-                  },
-                  "required": [
-                    "data"
-                  ]
+                  }
                 }
               }
             }
@@ -469,7 +483,36 @@
           "503": {
             "description": "Database unavailable"
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ]
       },
       "post": {
         "summary": "Create contact and record consent provenance",
@@ -1026,7 +1069,7 @@
         "summary": "List conversations",
         "responses": {
           "200": {
-            "description": "Scoped data",
+            "description": "Local persisted data; no WhatsApp write",
             "content": {
               "application/json": {
                 "schema": {
@@ -1037,11 +1080,25 @@
                       "items": {
                         "type": "object"
                       }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        }
+                      }
                     }
-                  },
-                  "required": [
-                    "data"
-                  ]
+                  }
                 }
               }
             }
@@ -1071,19 +1128,41 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "limit",
             "in": "query",
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
             }
           },
           {
-            "name": "before",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "q",
             "in": "query",
             "schema": {
               "type": "string",
-              "format": "date-time"
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "all",
+                "direct",
+                "group"
+              ]
             }
           }
         ]
@@ -1094,7 +1173,7 @@
         "summary": "List messages",
         "responses": {
           "200": {
-            "description": "Scoped data",
+            "description": "Local persisted data; no WhatsApp write",
             "content": {
               "application/json": {
                 "schema": {
@@ -1105,11 +1184,25 @@
                       "items": {
                         "type": "object"
                       }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        }
+                      }
                     }
-                  },
-                  "required": [
-                    "data"
-                  ]
+                  }
                 }
               }
             }
@@ -1139,19 +1232,37 @@
         },
         "parameters": [
           {
-            "name": "conversation_id",
+            "name": "limit",
             "in": "query",
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
             }
           },
           {
-            "name": "before",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "q",
             "in": "query",
             "schema": {
               "type": "string",
-              "format": "date-time"
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "conversation_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ]
@@ -1472,6 +1583,30 @@
             }
           }
         }
+      },
+      "get": {
+        "summary": "Authenticated local media; filename only, symlinks cannot leave media storage",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary local media"
+          },
+          "400": {
+            "description": "Invalid filename"
+          },
+          "404": {
+            "description": "Media absent"
+          }
+        }
       }
     },
     "/capabilities": {
@@ -1517,6 +1652,548 @@
           },
           "503": {
             "description": "Database unavailable"
+          }
+        }
+      }
+    },
+    "/overview": {
+      "get": {
+        "summary": "Real aggregate counts across all persisted rows",
+        "responses": {
+          "200": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
+          }
+        }
+      }
+    },
+    "/account": {
+      "get": {
+        "summary": "Administrator account snapshots; unknown sections are null",
+        "responses": {
+          "200": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
+          }
+        }
+      }
+    },
+    "/groups": {
+      "get": {
+        "summary": "Persisted group metadata snapshots",
+        "responses": {
+          "200": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "summary": "Recent sanitized local events, retention 1000",
+        "responses": {
+          "200": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/settings": {
+      "get": {
+        "summary": "Administrator local display preferences, never credentials or production toggles",
+        "responses": {
+          "200": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Persist display preferences only",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "poll_seconds": {
+                    "type": "integer",
+                    "minimum": 5,
+                    "maximum": 60
+                  },
+                  "default_page_size": {
+                    "enum": [
+                      25,
+                      50,
+                      100,
+                      200
+                    ]
+                  },
+                  "theme": {
+                    "enum": [
+                      "light",
+                      "dark",
+                      "system"
+                    ]
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid local request"
+          },
+          "403": {
+            "description": "Administrator session and same-origin request required"
+          }
+        }
+      }
+    },
+    "/sync": {
+      "get": {
+        "summary": "Administrator read synchronization command queue",
+        "responses": {
+          "200": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "Queue read-only account/group refresh; no sends or remote mutations",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "account",
+                      "groups",
+                      "group",
+                      "contact_profile",
+                      "all"
+                    ]
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Existing group/contact JID required for targeted reads"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid local request"
+          },
+          "403": {
+            "description": "Administrator session and same-origin request required"
+          }
+        }
+      }
+    },
+    "/reference-fields": {
+      "get": {
+        "summary": "WHAPI structural field reference: summary or one method",
+        "responses": {
+          "200": {
+            "description": "Local persisted data; no WhatsApp write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Exact WHAPI method reference ID; omission returns summaries only",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/snapshots": {
+      "get": {
+        "summary": "Read allowlisted persisted metadata snapshots; excludes administrator account privacy",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "contact",
+                "contact_profile",
+                "chat",
+                "group",
+                "presence",
+                "message"
+              ]
+            }
+          },
+          {
+            "name": "resource_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data array of kind/resource_id/data/updated_at; top-level pagination meta"
+          },
+          "400": {
+            "description": "Invalid snapshot kind"
           }
         }
       }
