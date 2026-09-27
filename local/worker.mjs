@@ -96,6 +96,19 @@ export function readBudgetMs(method, override) {
   // Business adapter uses an explicit 30s provider timeout, with a 5s outer margin.
   return ['getCatalog','getCollections'].includes(method)?35000:12000;
 }
+export async function checkedGroupInvite(socket,target) {
+  if(!/^\d+(?:-\d+)?@g\.us$/.test(target||''))throw Error('invalid_target');
+  const reply=await socket.query({tag:'iq',attrs:{to:target,type:'get',xmlns:'w:g2'},content:[{tag:'invite',attrs:{}}]},10000);
+  if(!reply)throw Error('read_timeout');
+  const nodes=Array.isArray(reply.content)?reply.content:[],error=nodes.find(x=>x?.tag==='error');
+  if(reply.attrs?.type==='error'||error){const code=Number(error?.attrs?.code);throw Object.assign(Error('provider_error'),{statusCode:Number.isInteger(code)&&code>=100&&code<=599?code:undefined});}
+  const invites=nodes.filter(x=>x?.tag==='invite');
+  if(reply.tag!=='iq'||reply.attrs?.type!=='result'||invites.length!==1||typeof invites[0].attrs?.code!=='string'||!/^[A-Za-z0-9]{10,128}$/.test(invites[0].attrs.code))throw Error('invalid_response');
+  return invites[0].attrs.code;
+}
+export function expireGroupInvites(db,now=new Date().toISOString()) {
+  db.prepare("UPDATE snapshots SET payload=json_set(payload,'$.code',NULL,'$.expires_at',NULL,'$.available',json('false'),'$.expired',json('true'),'$.stale',json('false')),updated_at=? WHERE kind='group_invite' AND (json_extract(payload,'$.expires_at') IS NULL OR json_extract(payload,'$.expires_at')<=?) AND json_extract(payload,'$.code') IS NOT NULL").run(now,now);
+}
 export async function checkedGroupRead(socket,method,target) {
   if(!['community_subgroups','group_requests'].includes(method)||!/^\d+(?:-\d+)?@g\.us$/.test(target||''))throw Error('invalid_target');
   const tag=method==='community_subgroups'?'sub_groups':'membership_approval_requests',child=method==='community_subgroups'?'group':'membership_approval_request';
@@ -373,7 +386,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     if(unresolvedRead?.socket===current)throw new Error('previous_read_unresolved');
     const business=['getCatalog','getCollections'].includes(name);
     const publicRead=['publicCatalog','publicCollections'].includes(name);
-    const groupRead=['community_subgroups','group_requests'].includes(name);
+    const groupRead=['community_subgroups','group_requests','group_invite'].includes(name);
     const limitsRead=['account_quota','account_timelock'].includes(name);
     const newsletterRead=name==='newsletter_messages';
     const botRead=name==='bot_list';
@@ -386,7 +399,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       const pending={socket:current};unresolvedRead=pending;
       // Local timeout does not cancel Baileys' IQ request. Block further reads until
       // that request settles (or a different socket takes over), avoiding fan-out.
-      const request=Promise.resolve().then(()=>botRead?checkedBotList(current):newsletterRead?checkedNewsletterMessages(current,args[0]):limitsRead?checkedAccountLimits(current,name==='account_quota'?'quota':'timelock'):groupRead?checkedGroupRead(current,name,args[0]):publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
+      const request=Promise.resolve().then(()=>name==='group_invite'?checkedGroupInvite(current,args[0]):botRead?checkedBotList(current):newsletterRead?checkedNewsletterMessages(current,args[0]):limitsRead?checkedAccountLimits(current,name==='account_quota'?'quota':'timelock'):groupRead?checkedGroupRead(current,name,args[0]):publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
         if(timedOut && diagnostic && owns() && sock===current)event('read.late_completed',diagnosticResource,{...diagnostic,result:'response_received_after_timeout'});
         return value;
       },error=>{
@@ -468,6 +481,10 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         for(const kind of ['quota','timelock']){try{data[kind]=await readCall(current,'account_'+kind);}catch(error){const failure=classifyReadError(error);data[kind]={available:false,response_verified:false,error:failure.code,status_code:failure.status_code};}}
         if(!owns()||sock!==current)throw Error('connection_changed');
         snapshot('account_limits','wis-5679',{...data,partial:!data.quota.available||!data.timelock.available,observed_at:new Date().toISOString()});
+      } else if(command.kind==='group_invite') {
+        if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('invalid_target');
+        const code=await readCall(current,'group_invite',[command.target]);
+        snapshot('group_invite',command.target,{code,expires_at:new Date(Date.now()+300000).toISOString(),available:true,response_verified:true,expired:false,stale:false,error:null,status_code:null});
       } else if(['community_subgroups','group_requests'].includes(command.kind)) {
         if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('invalid_target');
         if(command.kind==='community_subgroups'&&!db.prepare("SELECT 1 FROM snapshots WHERE resource_id=? AND (kind='community' OR (kind='group' AND json_extract(payload,'$.isCommunity')=1)) LIMIT 1").get(command.target))throw Error('unknown_community');
@@ -561,6 +578,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(command.kind==='contact_catalog'&&/^[1-9]\d{6,14}@s\.whatsapp\.net$/.test(command.target||'')&&db.prepare('SELECT 1 FROM contacts WHERE wa_jid=? OR phone_e164=? LIMIT 1').get(command.target,'+'+command.target.split('@')[0]))snapshot('catalog',command.target,{available:false,stale:true,scope:'contact_catalog',known_only:true,source:'checked_baileys_iq',error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='bot_list')snapshot('bot_list','wis-5679',{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='newsletter_messages')snapshot('newsletter_messages',command.target,{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
+        if(command.kind==='group_invite')snapshot('group_invite',command.target,{code:null,expires_at:null,available:false,response_verified:false,stale:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(['community_subgroups','group_requests'].includes(command.kind))snapshot(command.kind,command.target,{available:false,stale:true,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='avatar') {
           const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(command.target);
@@ -900,6 +918,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       if(!acquireLease(db,owner)) {deadline=0;closeSocket();return;}
       deadline=Date.now()+25000;
       expireStories();
+      expireGroupInvites(db);
       recoverIdentities();
       const c=connection();
       if(c.qr_expires_at && c.qr_expires_at<=new Date().toISOString())patch({qr_payload:null,qr_expires_at:null});

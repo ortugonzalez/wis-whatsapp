@@ -2149,7 +2149,8 @@
                       "account_limits",
                       "newsletter_messages",
                       "bot_list",
-                      "contact_catalog"
+                      "contact_catalog",
+                      "group_invite"
                     ]
                   },
                   "target": {
@@ -2202,7 +2203,7 @@
             "description": "Administrator session and same-origin request required"
           }
         },
-        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available. account_limits accepts only kind, with no target or extra properties; reads own account limits without changing any sending gate. newsletter_messages accepts only kind/target for an already observed channel; administrator-only fixed 50-message read. No subscribe or receipt operation. bot_list accepts only kind, with no target or extra fields. Administrator manual read of provider catalog only. contact_catalog accepts only kind/target with exact known contact PN JID; administrator manual read only, no LID inference or arbitrary owner URL."
+        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available. account_limits accepts only kind, with no target or extra properties; reads own account limits without changing any sending gate. newsletter_messages accepts only kind/target for an already observed channel; administrator-only fixed 50-message read. No subscribe or receipt operation. bot_list accepts only kind, with no target or extra fields. Administrator manual read of provider catalog only. contact_catalog accepts only kind/target with exact known contact PN JID; administrator manual read only, no LID inference or arbitrary owner URL. group_invite accepts kind/target only for known group, administrator manual get of existing invite credential; never revokes or joins. Code is temporary private data."
       }
     },
     "/reference-fields": {
@@ -3879,6 +3880,39 @@
           },
           "404": {
             "description": "Contact not known"
+          }
+        }
+      }
+    },
+    "/group-invite": {
+      "get": {
+        "summary": "Administrator-only temporary invitation code for a known group",
+        "description": "Credential response is no-store. API returns code only when verified available, last_success_at is not future and expiry is future within five minutes of success. Missing, invalid, expired or failed credentials return null, regardless of worker cleanup. No API token access, no generic snapshots or events exposure. No link creation, join, revoke or publication.",
+        "parameters": [
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Code or null with sanitized availability/expiry metadata"
+          },
+          "400": {
+            "description": "Invalid group JID"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrator browser session required"
+          },
+          "404": {
+            "description": "Unknown group"
           }
         }
       }

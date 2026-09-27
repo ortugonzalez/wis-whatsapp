@@ -1955,12 +1955,12 @@
       "id": "getgroupinvite",
       "name": "Get group invite",
       "source": "https://whapi.readme.io/reference/getgroupinvite.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/group-invite?target=JID",
+      "screen": "/#groups",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "test": "Fixtures worker/API; docs/group-invite-read.md. No probado con un enlace real.",
+      "reason": "Consulta manual administrativa con caché temporal; sin revocación ni aceptación. Disponibilidad real pendiente.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [

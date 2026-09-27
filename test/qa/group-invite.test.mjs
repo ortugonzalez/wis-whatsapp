@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {scryptSync,randomBytes} from 'node:crypto';
+process.env.WIS_DB_PATH=':memory:';
+const {openDatabase}=await import('../../local/db.mjs');
+const {makeServer}=await import('../../local/server.mjs');
+test('group invitation credential is administrative, bounded by TTL, never generic-readable',async()=>{
+ const db=openDatabase(':memory:'),password=randomBytes(20).toString('hex'),salt='invite-test';db.prepare("INSERT INTO settings(key,value) VALUES('admin_password',?)").run(salt+':'+scryptSync(password,salt,64).toString('hex'));const server=makeServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let cookie='';const req=async(path,method='GET',body,token)=>{const r=await fetch(base+path,{method,headers:{Origin:base,'Content-Type':'application/json',Cookie:cookie,...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,json:await r.json(),headers:r.headers};};
+ try{assert.equal((await req('/api/v1/group-invite?target=1@g.us')).status,401);const login=await req('/api/login','POST',{password});cookie=login.headers.get('set-cookie').split(';')[0];const reader=(await req('/api/v1/tokens','POST',{name:'reader',scopes:['read']})).json.data.token;assert.equal((await req('/api/v1/group-invite?target=1@g.us','GET',null,reader)).status,403);assert.equal((await req('/api/v1/group-invite?target=1@g.us')).status,404);
+ db.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('group','1@g.us','{}',?)").run(new Date().toISOString());const cmd=await req('/api/v1/sync','POST',{kind:'group_invite',target:'1@g.us'});assert.equal(cmd.status,202);assert.equal((await req('/api/v1/sync','POST',{kind:'group_invite',target:'1@g.us'},reader)).status,403);
+ const code='TestCredential123456',success=new Date().toISOString(),expiry=new Date(Date.now()+299000).toISOString();db.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('group_invite','1@g.us',?,?)").run(JSON.stringify({code,available:true,response_verified:true,last_success_at:success,expires_at:expiry}),success);const active=await req('/api/v1/group-invite?target=1@g.us');assert.equal(active.json.data.code,code);assert.match(active.headers.get('cache-control'),/no-store/);assert.equal((await req('/api/v1/snapshots?kind=group_invite')).status,400);
+ for(const expires_at of [new Date(Date.now()-1).toISOString(),'invalid',new Date(Date.now()+600000).toISOString()]){db.prepare("UPDATE snapshots SET payload=json_set(payload,'$.expires_at',?) WHERE kind='group_invite'").run(expires_at);assert.equal((await req('/api/v1/group-invite?target=1@g.us')).json.data.code,null);}
+ const audit=db.prepare('SELECT * FROM audit').all();assert.equal(JSON.stringify(audit).includes(code),false);assert.equal(JSON.stringify((await req('/api/v1/events')).json).includes(code),false);assert.equal((await req('/api/v1/group-invite?target=1@g.us','POST',{})).status,404);
+ }finally{await new Promise(r=>server.close(r));db.close();}
+});

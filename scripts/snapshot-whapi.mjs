@@ -14,6 +14,7 @@ function validateEntries(entries){
  const ids=new Set();for(const row of entries){if(!row||typeof row.id!=='string'||! /^[a-z0-9][a-z0-9_-]*$/.test(row.id)||typeof row.name!=='string'||!row.name.trim()||typeof row.source!=='string'||! /^https:\/\/whapi\.readme\.io\/reference\/[a-z0-9][a-z0-9_-]*(?:\.md)?$/.test(row.source)||row.source.split('/').pop().replace(/\.md$/,'')!==row.id)throw new Error('Invalid WHAPI entry');if(ids.has(row.id))throw new Error('Duplicate WHAPI ID: '+row.id);ids.add(row.id);}
 }
 const implemented = {
+  getgroupinvite: ['/api/v1/group-invite?target=JID', 'Lectura administrativa manual del enlace de un grupo conocido, con caché temporal de cinco minutos. No revoca enlaces ni acepta invitaciones; disponibilidad sujeta al proveedor.'],
   getcontactproducts: ['/api/v1/contact-products?target=JID', 'Catálogo consultado manualmente de un contacto PN ya conocido. Hasta tres páginas, con disponibilidad y propietario explícitos; sin descubrimiento de números ni soporte LID directo.'],
   getbotlist: ['/api/v1/bots', 'Listado consultado de bots que WhatsApp informa para la cuenta, con identificadores y persona disponibles. No configura automatizaciones ni inicia conversaciones.'],
   getproduct: ['/api/v1/products?id=ID', 'Detalle exacto de producto persistido y alcance del catálogo consultado. Sin consulta individual remota, imágenes ni edición; validación real pendiente en esta cuenta.'],
