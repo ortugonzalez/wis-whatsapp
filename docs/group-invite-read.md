@@ -4,6 +4,8 @@ El detalle de un grupo conocido ofrece una consulta manual del enlace que devuel
 
 La API `GET /api/v1/group-invite?target=JID` y la solicitud `group_invite` requieren sesión de administrador. Los tokens de lectura no tienen acceso. La respuesta solo puede exponer el código durante cinco minutos; el servidor comprueba el vencimiento aunque el worker no esté ejecutando su limpieza. Un error elimina el código de la respuesta disponible, sin reutilizar un enlace anterior como actual.
 
+La consulta inversa usa `POST /api/v1/group-invite-info` con `{"invite_code":"..."}`. Lee metadatos mediante `groupGetInviteInfo`, normaliza los campos conocidos de WHAPI y muestra las variables disponibles desde el detalle de grupo. El código se transmite solo por memoria entre la API y el worker; no se guarda en SQLite, auditoría ni logs. Requiere sesión de administrador, acepta solo el código sin URL y limita cada cuenta administrativa a una solicitud cada cinco segundos. La lista de participantes se limita a 4096 y la equivalencia de `name_at`, `participantsCount` y `ephemeral` sigue pendiente de contraste con una respuesta real autorizada.
+
 El panel muestra texto sin navegación externa automática. Oculta el enlace al vencer, al abandonar la vista o ante errores de lectura. No lo incluye en eventos, auditorías ni documentación. La caché vive en la base local protegida y fuera de Git; su vencimiento lógico no constituye borrado forense de páginas SQLite ni de copias previas.
 
 Referencia: https://whapi.readme.io/reference/getgroupinvite (2026-09-27). La disponibilidad depende de permisos del grupo y de WhatsApp. No se declara equivalencia completa ni garantía de acceso.

@@ -29,3 +29,15 @@ test('known group manual invite expires and failure clears credential without ev
  assert.equal(JSON.stringify(db.prepare('SELECT * FROM events').all()).includes(code),false);
  }finally{await worker.stop();db.close();}
 });
+
+test('metadata lookup by invite code uses Baileys once and leaves the supplied code out of SQLite',async()=>{
+ const db=new DatabaseSync(':memory:');db.exec(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));const now=new Date().toISOString(),code='OpaqueInviteCode';
+ db.prepare("INSERT INTO connections(id,expected_phone_e164,command,updated_at) VALUES(?,?,'connect',?)").run('wis-5679','+5491111115679',now);
+ const ev=new EventEmitter();let calls=0;
+ const metadata={id:'12345@g.us',subject:'Equipo',subjectTime:1700000000,creation:1600000000,owner:'123@s.whatsapp.net',size:1,ephemeralDuration:0,participants:[{id:'123@s.whatsapp.net',admin:'superadmin'}]};
+ const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},groupGetInviteInfo:async received=>{calls++;assert.equal(received,code);return metadata;}};
+ const fake={default:()=>socket,useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(mkdtempSync(resolve(tmpdir(),'wis-group-info-')),'auth'),readIntervalMs:0});
+ try{ev.emit('connection.update',{connection:'open'});await new Promise(resolve=>setTimeout(resolve,25));db.prepare("UPDATE connections SET status='connected',phone=? WHERE id='wis-5679'").run('5491111115679');const result=await worker.lookupGroupMetadataByInviteCode(code);assert.equal(calls,1);assert.equal(result.data.name,'Equipo');assert.equal(result.data.participants[0].rank,'creator');assert.equal(result.meta.response_verified,true);assert.equal(db.prepare('SELECT count(*) AS n FROM read_commands WHERE target=?').get(code).n,0);assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE payload LIKE ?").get('%'+code+'%').n,0);}
+ finally{await worker.stop();db.close();}
+});

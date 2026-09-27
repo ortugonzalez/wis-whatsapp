@@ -2189,12 +2189,12 @@
       "id": "getgroupmetadatabyinvitecode",
       "name": "Get group info by invite code",
       "source": "https://whapi.readme.io/reference/getgroupmetadatabyinvitecode.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
-      "baileys": null,
-      "test": null,
-      "reason": "Pendiente. La lectura WIS group_invite obtiene temporalmente el código de invitación de un grupo conocido (JID); no consulta metadata a partir de un código entrante y no demuestra equivalencia con este método WHAPI.",
+      "status": "partial",
+      "endpoint": "POST /api/v1/group-invite-info",
+      "screen": "/messages#group-details",
+      "baileys": "groupGetInviteInfo",
+      "test": "local/group-invite-info.test.mjs",
+      "reason": "Consulta administrativa temporal por código con campos mapeados desde Baileys. Sin verificacion live del contrato en una respuesta real; participantes limitados a 4096 y campos opcionales segun lo que devuelva Baileys.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
@@ -2203,9 +2203,9 @@
             "file": "node_modules/baileys/lib/Socket/index.d.ts"
           }
         ],
-        "support": "candidate",
-        "reason": "Baileys declara groupGetInviteInfo(inviteCode), distinto de la consulta WIS group_invite que obtiene un código desde el JID de un grupo. El flujo WIS existente no llama a groupGetInviteInfo.",
-        "next_step": "Implementar una lectura administrativa dedicada, probar y filtrar los campos de respuesta frente al esquema WHAPI, y asegurar que el inviteCode no se persista ni aparezca en logs. La existencia del método Baileys no acredita paridad."
+        "support": "partial",
+        "reason": "Implementado con lectura Baileys independiente del flujo que obtiene una invitacion desde el JID de un grupo; el codigo viaja solo por memoria y la respuesta se normaliza a los campos WHAPI conocidos.",
+        "next_step": "Validar los campos mapeados contra una respuesta real autorizada y comparar semantica de participantesCount, name_at y ephemeral antes de declarar equivalencia."
       }
     },
     {

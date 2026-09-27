@@ -127,3 +127,24 @@ test('local HTTP authorization, consent, queue transaction, replay and private Q
  }finally{if(original===undefined)delete process.env.WIS_OUTBOUND_ENABLED;else process.env.WIS_OUTBOUND_ENABLED=original;await new Promise(r=>server.close(r));database.close();await rm(temp,{recursive:true,force:true});}
 });
 test('reopening additive schema preserves existing contact and session state',async()=>{const temp=await mkdtemp(resolve(tmpdir(),'wis-migration-test-'));try{const file=resolve(temp,'test.sqlite');let database=openDatabase(file);database.prepare("INSERT INTO contacts(id,phone_e164,display_name,created_at) VALUES('keep','+12025550111','Existing data',?)").run(new Date().toISOString());database.prepare("INSERT INTO sessions(token_hash,expires_at) VALUES('session','2099-01-01T00:00:00Z')").run();database.close();database=openDatabase(file);assert.equal(database.prepare("SELECT display_name FROM contacts WHERE id='keep'").get().display_name,'Existing data');assert.equal(database.prepare('SELECT count(*) AS n FROM sessions').get().n,1);assert.equal(database.prepare('SELECT count(*) AS n FROM snapshots').get().n,0);database.close();}finally{await rm(temp,{recursive:true,force:true});}});
+
+test('group invite metadata lookup is administrator-only, transient and rate-limited',async()=>{
+ const database=openDatabase(':memory:'),salt='invite-test-salt',password=randomBytes(20).toString('hex'),code='OpaqueInviteCode';
+ database.prepare("INSERT INTO settings(key,value) VALUES('admin_password',?)").run(salt+':'+scryptSync(password,salt,64).toString('hex'));
+ const temp=await mkdtemp(resolve(tmpdir(),'wis-group-invite-api-'));let calls=0;
+ const server=makeServer(database,{stateDir:temp,lookupGroupInviteInfo:{lookup:async value=>{calls++;assert.equal(value,code);return {data:{id:'12345@g.us',name:'Equipo'},meta:{response_verified:true}};},close(){}}});
+ await new Promise(resolveServer=>server.listen(0,'127.0.0.1',resolveServer));const base='http://127.0.0.1:'+server.address().port;let cookie='';
+ const call=async(path,method='GET',body,token)=>{const response=await fetch(base+path,{method,headers:{...(cookie?{Cookie:cookie}:{}),...(token?{Authorization:'Bearer '+token}:{}),Origin:base,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,json:await response.json(),headers:response.headers};};
+ try{
+  assert.equal((await call('/api/v1/group-invite-info','POST',{invite_code:code})).status,401);
+  const login=await call('/api/login','POST',{password});assert.equal(login.status,200);cookie=login.headers.get('set-cookie').split(';')[0];
+  const reader=(await call('/api/v1/tokens','POST',{name:'invite reader',scopes:['read']})).json.data.token;
+  assert.equal((await call('/api/v1/group-invite-info','POST',{invite_code:code},reader)).status,403);
+  assert.equal((await call('/api/v1/group-invite-info','POST',{invite_code:'https://chat.whatsapp.com/'+code})).status,400);
+  const lookup=await call('/api/v1/group-invite-info','POST',{invite_code:code});assert.equal(lookup.status,200);assert.equal(lookup.json.data.name,'Equipo');assert.equal(calls,1);
+  assert.equal((await call('/api/v1/group-invite-info','POST',{invite_code:code})).status,429);assert.equal(calls,1);
+  assert.equal(database.prepare('SELECT count(*) AS n FROM read_commands WHERE target=?').get(code).n,0);
+  assert.equal(database.prepare('SELECT count(*) AS n FROM snapshots WHERE payload LIKE ?').get('%'+code+'%').n,0);
+  assert.equal(database.prepare('SELECT count(*) AS n FROM audit WHERE resource_id=? OR action LIKE ?').get(code,'%'+code+'%').n,0);
+ }finally{await new Promise(resolveServer=>server.close(resolveServer));database.close();await rm(temp,{recursive:true,force:true});}
+});

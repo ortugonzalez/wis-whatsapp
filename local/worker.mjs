@@ -3,6 +3,7 @@ import { LOCAL_LIMITS } from './limits.mjs';
 import { createPublicCatalogReader } from './catalog-http.mjs';
 import { createWebhookDispatcher } from './webhooks.mjs';
 import { cacheAvatar } from './avatars.mjs';
+import { groupMetadataByInviteCode, validGroupInviteCode } from './group-invite-info.mjs';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -649,6 +650,15 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     if(!owns())return;
     db.prepare("UPDATE snapshots SET payload=json_set(payload,'$.body',NULL,'$.expired',json('true')),updated_at=? WHERE kind='story' AND json_extract(payload,'$.expires_at')<=? AND json_extract(payload,'$.expired') IS NOT 1").run(new Date().toISOString(),new Date().toISOString());
   }
+  async function lookupGroupMetadataByInviteCode(inviteCode) {
+    if(!validGroupInviteCode(inviteCode))throw new Error('invalid_invite_code');
+    if(readBusy)throw new Error('previous_read_unresolved');
+    const current=sock;
+    if(!current||!owns()||connection().status!=='connected')throw new Error('connection_unavailable');
+    readBusy=true;lastReadAt=Date.now();
+    try{return groupMetadataByInviteCode(await readCall(current,'groupGetInviteInfo',[inviteCode]));}
+    finally{readBusy=false;}
+  }
   function revokeStory(key) {
     if(!owns()||!key?.id)return;
     if(typeof key.id!=='string'||!/^[\x21-\x7e]{1,256}$/.test(key.id))return;
@@ -1011,7 +1021,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   const onSignal=()=>void stop();
   process.once('SIGINT',onSignal);process.once('SIGTERM',onSignal);
   await tick();
-  return {stop,drainReads};
+  return {stop,drainReads,lookupGroupMetadataByInviteCode};
 }
 
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
@@ -1024,6 +1034,16 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
   const baileys=await import(pathToFileURL(requireWorker.resolve('baileys')).href);
   const pino=requireWorker('pino');
   runWorker({db:openDatabase(),baileys,logger:pino({level:'silent'}),publicCatalogReaderFactory:createPublicCatalogReader}).then(worker=>{
-    process.on('message',message=>{if(message?.type==='wis.shutdown')void worker.stop().then(()=>process.exit(0));});
+    process.on('message',message=>{
+      if(message?.type==='wis.shutdown')void worker.stop().then(()=>process.exit(0));
+      if(message?.type==='wis.group_invite_info.lookup'&&typeof message.request_id==='string'){
+        void worker.lookupGroupMetadataByInviteCode(message.invite_code).then(result=>{
+          if(process.connected)process.send({type:'wis.group_invite_info.result',request_id:message.request_id,result},()=>{});
+        }).catch(error=>{
+          const code=['read_timeout','previous_read_unresolved','connection_unavailable','connection_changed','capability_unavailable','invalid_group_metadata_response','invalid_invite_code'].includes(error?.message)?error.message:classifyReadError(error).code;
+          if(process.connected)process.send({type:'wis.group_invite_info.result',request_id:message.request_id,error:code},()=>{});
+        });
+      }
+    });
   }).catch(()=>{console.error('worker_start_failed');process.exitCode=1;});
 }
