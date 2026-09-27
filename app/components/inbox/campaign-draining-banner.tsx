@@ -23,9 +23,11 @@ export function CampaignDrainingBanner({
 }: Props) {
   const [draining, setDraining] = useState(initialDraining);
 
-  useEffect(() => {
+  const [source, setSource] = useState({initialDraining, sectorId});
+  if (source.initialDraining !== initialDraining || source.sectorId !== sectorId) {
+    setSource({initialDraining, sectorId});
     setDraining(initialDraining);
-  }, [initialDraining, sectorId]);
+  }
 
   useEffect(() => {
     let cancelled = false;

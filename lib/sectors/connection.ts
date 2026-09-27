@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Fallback slug for worker / legacy callers; app UI uses the active-sector cookie. */
-export const DEFAULT_SECTOR_SLUG = "sector-a";
+export const DEFAULT_SECTOR_SLUG = "wis-5679";
 
 export type ChannelProvider = "baileys" | "kapso";
 
@@ -19,6 +19,9 @@ export type ConnectionBySector = {
   sector_id: string;
   status: ConnectionStatus;
   qr_payload: string | null;
+  qr_expires_at: string | null;
+  expected_phone_e164: string | null;
+  updated_at: string;
   phone: string | null;
   last_error: string | null;
   labels_write_enabled: boolean;
@@ -26,7 +29,7 @@ export type ConnectionBySector = {
 };
 
 const CONNECTION_SELECT =
-  "id, sector_id, status, qr_payload, phone, last_error, labels_write_enabled, kapso_phone_number_id";
+  "id, sector_id, status, qr_payload, qr_expires_at, expected_phone_e164, updated_at, phone, last_error, labels_write_enabled, kapso_phone_number_id";
 
 export async function fetchSectorBySlug(
   supabase: SupabaseClient,
@@ -51,7 +54,12 @@ export async function fetchConnectionBySectorId(
     .eq("sector_id", sectorId)
     .maybeSingle();
   if (error) throw error;
-  return data;
+  if (data) return data;
+  // Operators can read status through a narrow RPC; QR access stays admin-only.
+  const { data: metadata, error: metadataError } = await supabase.rpc("wis_connection_metadata", { p_sector_id: sectorId });
+  if (metadataError) throw metadataError;
+  const safe = Array.isArray(metadata) ? metadata[0] : metadata;
+  return safe ? { ...safe, qr_payload: null } as ConnectionBySector : null;
 }
 
 export async function fetchConnectionBySectorSlug(

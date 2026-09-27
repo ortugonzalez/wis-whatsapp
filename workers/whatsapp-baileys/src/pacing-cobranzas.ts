@@ -113,66 +113,6 @@ function cacheTtlMs(): number {
   return Number.isFinite(n) && n >= 5_000 ? n : DEFAULT_CACHE_MS;
 }
 
-function cobranzasPoliticaUrl(sectorSlug: string): string | null {
-  const base = process.env.COBRANZAS_SITE_URL?.trim().replace(/\/$/, "");
-  if (!base) return null;
-  const u = new URL("/api/internal/wa-politica", `${base}/`);
-  u.searchParams.set("sector_slug", sectorSlug);
-  return u.toString();
-}
-
-async function fetchCobranzasPolitica(
-  sectorSlug: string,
-): Promise<WorkerPacingConfig | null> {
-  const url = cobranzasPoliticaUrl(sectorSlug);
-  const secret = process.env.WA_POLITICA_WORKER_SECRET?.trim();
-  if (!url || !secret) return null;
-
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "x-wa-politica-worker-secret": secret,
-      },
-      signal: ac.signal,
-    });
-    if (!res.ok) {
-      console.warn(
-        JSON.stringify({
-          event: "wa_politica_pull_http",
-          status: res.status,
-          sectorSlug,
-        }),
-      );
-      return null;
-    }
-    const body = (await res.json()) as {
-      ok?: boolean;
-      politica?: Record<string, unknown>;
-    };
-    if (!body?.ok || !body.politica) return null;
-    return mapCobranzasPoliticaToConfig(body.politica);
-  } catch (e) {
-    console.warn(
-      JSON.stringify({
-        event: "wa_politica_pull_error",
-        sectorSlug,
-        error: e instanceof Error ? e.message : String(e),
-      }),
-    );
-    return null;
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-/**
- * Política de campaña para el slug del mensaje (o SECTOR_SLUG del proceso).
- * Cache por slug; si pull falla → env WA_PACING_*.
- */
 export async function resolveCampaignPacing(
   clientRef: unknown,
 ): Promise<ResolvedCampaignPacing> {
@@ -181,7 +121,7 @@ export async function resolveCampaignPacing(
     try {
       sectorSlug = workerSectorSlug();
     } catch {
-      sectorSlug = "contable";
+      sectorSlug = "wis";
     }
   }
 
@@ -189,17 +129,6 @@ export async function resolveCampaignPacing(
   const hit = cache.get(sectorSlug);
   if (hit && hit.expiresAt > now) {
     return { cfg: hit.cfg, source: hit.source, sectorSlug };
-  }
-
-  const pulled = await fetchCobranzasPolitica(sectorSlug);
-  if (pulled) {
-    const entry: CacheEntry = {
-      cfg: pulled,
-      source: "cobranzas",
-      expiresAt: now + cacheTtlMs(),
-    };
-    cache.set(sectorSlug, entry);
-    return { cfg: pulled, source: "cobranzas", sectorSlug };
   }
 
   const cfg = loadWorkerPacingConfig();

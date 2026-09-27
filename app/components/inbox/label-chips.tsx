@@ -35,9 +35,11 @@ export function ConversationLabelEditor({
   const rootRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
-  useEffect(() => {
+  const [previousAssignedIds, setPreviousAssignedIds] = useState(assignedIds);
+  if (previousAssignedIds !== assignedIds) {
+    setPreviousAssignedIds(assignedIds);
     setAssigned(new Set(assignedIds));
-  }, [assignedIds]);
+  }
 
   useEffect(() => {
     if (!menuOpen) return;

@@ -12,18 +12,20 @@ export function useSignedMediaUrl(
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(path));
+  const [source, setSource] = useState({path, expiresSec});
+  if (source.path !== path || source.expiresSec !== expiresSec) {
+    setSource({path, expiresSec});
+    setUrl(null);
+    setError(null);
+    setLoading(Boolean(path));
+  }
 
   useEffect(() => {
     if (!path) {
-      setUrl(null);
-      setError(null);
-      setLoading(false);
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     const supabase = createClient();
 
     void (async () => {

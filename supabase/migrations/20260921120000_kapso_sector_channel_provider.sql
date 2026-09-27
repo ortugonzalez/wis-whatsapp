@@ -24,35 +24,3 @@ comment on column public.whatsapp_connections.kapso_phone_number_id is
 
 comment on table public.whatsapp_connections is
   'One connection row per sector. Baileys: session/QR. Kapso: WABA status + kapso_phone_number_id (ADR 008).';
-
-insert into public.sectors (slug, display_name, channel_provider)
-values ('kapso-8257', 'Cobranzas · Kapso', 'kapso')
-on conflict (slug) do update
-set
-  display_name = excluded.display_name,
-  channel_provider = excluded.channel_provider,
-  updated_at = now();
-
-insert into public.whatsapp_connections (sector_id, status, phone, kapso_phone_number_id)
-select s.id, 'disconnected', '+5493469698257', null
-from public.sectors s
-where s.slug = 'kapso-8257'
-  and not exists (
-    select 1 from public.whatsapp_connections c where c.sector_id = s.id
-  );
-
-update public.whatsapp_connections c
-set
-  phone = coalesce(c.phone, '+5493469698257'),
-  updated_at = now()
-from public.sectors s
-where c.sector_id = s.id
-  and s.slug = 'kapso-8257';
-
-insert into public.sector_memberships (profile_id, sector_id)
-select p.id, s.id
-from public.profiles p
-cross join public.sectors s
-where s.slug = 'kapso-8257'
-  and lower(p.email) = lower('soporte@acebal.gob.ar')
-on conflict (profile_id, sector_id) do nothing;

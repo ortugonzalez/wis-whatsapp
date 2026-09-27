@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Composer,
   type ComposerEnqueueFailure,
@@ -60,11 +60,13 @@ export function ThreadWithComposer({
     initialKapsoWindowOpen,
   );
 
-  useEffect(() => {
+  const [source, setSource] = useState({conversationId, initialKapsoWindowOpen});
+  if (source.conversationId !== conversationId || source.initialKapsoWindowOpen !== initialKapsoWindowOpen) {
+    setSource({conversationId, initialKapsoWindowOpen});
     setLocalMessages([]);
     setQuote(null);
     setKapsoWindowOpen(initialKapsoWindowOpen);
-  }, [conversationId, initialKapsoWindowOpen]);
+  }
 
   const bumpComposerFocus = useCallback(() => {
     setFocusSignal((n) => n + 1);

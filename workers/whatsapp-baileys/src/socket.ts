@@ -1,3 +1,6 @@
+import { resolve, parse, join } from "node:path";
+import { hasLease, identityMatches } from "./safety.js";
+import { fetchConnection } from "./db.js";
 import makeWASocket, {
   DisconnectReason,
   makeCacheableSignalKeyStore,
@@ -28,6 +31,9 @@ export type SocketHandles = {
   sock: WASocket | null;
   messageCache: MessageCache;
   starting: boolean;
+  stopped?: boolean;
+  reconnectAttempts?: number;
+  nextReconnectAt?: number;
 };
 
 const logLevel = process.env.BAILEYS_LOG_LEVEL || "silent";
@@ -67,11 +73,13 @@ function resetHistoryUnreadState() {
 function authDir(): string {
   const dir = process.env.WHATSAPP_AUTH_DIR;
   if (!dir) throw new Error("Missing WHATSAPP_AUTH_DIR");
-  return dir;
+  const absolute = resolve(dir);
+  if (absolute === parse(absolute).root || absolute === process.cwd() || existsSync(join(absolute, "package.json")) || existsSync(join(absolute, ".git"))) throw new Error("unsafe_auth_directory");
+  return absolute;
 }
 
 export function ensureAuthDir() {
-  mkdirSync(authDir(), { recursive: true });
+  mkdirSync(authDir(), { recursive: true, mode: 0o700 });
 }
 
 export function wipeAuthDir() {
@@ -88,7 +96,7 @@ export async function startSocket(
   opts: { forceQr: boolean },
 ): Promise<void> {
   // Guard tick + soft-reconnect setTimeout from opening two sockets.
-  if (handles.starting || handles.sock) return;
+  if (handles.starting || handles.sock || handles.stopped || !hasLease() || Date.now() < (handles.nextReconnectAt ?? 0)) return;
   handles.starting = true;
 
   try {
@@ -98,7 +106,7 @@ export async function startSocket(
     ensureAuthDir();
 
     const { state, saveCreds } = await useMultiFileAuthState(authDir());
-    const logger = pino({ level: logLevel });
+    const logger = pino({ level: "silent" });
 
     const sock = makeWASocket({
       auth: {
@@ -129,15 +137,19 @@ export async function startSocket(
 
     sock.ev.on("creds.update", saveCreds);
 
+    let inboundQueue = Promise.resolve();
+    const enqueueInbound = (messages: import("baileys").WAMessage[], source: "live" | "import") => {
+      inboundQueue = inboundQueue.then(() => handleInboundMessages(sock, supabase, messages, source)).catch(() => { console.error("inbound_queue_failed"); });
+    };
     sock.ev.on("messages.upsert", ({ messages, type }) => {
       // notify = inbound live; append = own sends (forward, device) — not history backfill.
       if (type === "notify") {
-        void handleInboundMessages(sock, supabase, messages);
+        enqueueInbound(messages, "live");
         return;
       }
       if (type === "append") {
         const own = messages.filter((m) => m.key.fromMe);
-        if (own.length) void handleInboundMessages(sock, supabase, own);
+        if (own.length) enqueueInbound(own, "live");
       }
     });
 
@@ -155,13 +167,13 @@ export async function startSocket(
 
     sock.ev.on("labels.edit", (label) => {
       void handleLabelsEdit(supabase, label).catch((err) => {
-        console.error("labels_edit_error", err);
+        console.error("labels_edit_error");
       });
     });
 
     sock.ev.on("labels.association", (payload) => {
       void handleLabelsAssociation(supabase, payload).catch((err) => {
-        console.error("labels_association_error", err);
+        console.error("labels_association_error");
       });
     });
 
@@ -177,7 +189,7 @@ export async function startSocket(
           source: "chats.update",
           trustReadZero: true,
         }).catch((err) => {
-          console.error("chats_update_unread_sync_error", err);
+          console.error("chats_update_unread_sync_error");
         });
       }
     });
@@ -195,7 +207,7 @@ export async function startSocket(
           unreadCount,
           source: "chats.upsert",
         }).catch((err) => {
-          console.error("chats_upsert_unread_sync_error", err);
+          console.error("chats_upsert_unread_sync_error");
         });
       }
       if (synced) {
@@ -210,23 +222,24 @@ export async function startSocket(
 
     sock.ev.on("contacts.upsert", (contacts) => {
       void handleContactsUpsert(sock, supabase, contacts).catch((err) => {
-        console.error("contacts_upsert_error", err);
+        console.error("contacts_upsert_error");
       });
     });
 
     sock.ev.on("contacts.update", (updates) => {
       void handleContactsUpdate(sock, supabase, updates).catch((err) => {
-        console.error("contacts_update_error", err);
+        console.error("contacts_update_error");
       });
     });
 
     // S9: agenda names often arrive here on link/reconnect, not only contacts.upsert.
     // Contacts only for history — plus unreadCount from chats (no message backfill).
-    sock.ev.on("messaging-history.set", ({ contacts, chats, progress, isLatest }) => {
+    sock.ev.on("messaging-history.set", ({ contacts, chats, messages, progress, isLatest }) => {
+      if (messages?.length) enqueueInbound(messages, "import");
       if (contacts?.length) {
         void handleContactsUpsert(sock, supabase, contacts, "history").catch(
           (err) => {
-            console.error("history_contacts_error", err);
+            console.error("history_contacts_error");
           },
         );
         console.log(
@@ -256,7 +269,7 @@ export async function startSocket(
               source: "history",
               trustReadZero: false,
             }).catch((err) => {
-              console.error("history_chat_unread_sync_error", err);
+              console.error("history_chat_unread_sync_error");
             }),
           );
         }
@@ -287,7 +300,7 @@ export async function startSocket(
                 trustReadZero: true,
               });
             } catch (err) {
-              console.error("history_chat_unread_reconcile_error", err);
+              console.error("history_chat_unread_reconcile_error");
             }
           }
         })();
@@ -303,22 +316,35 @@ export async function startSocket(
     });
 
     sock.ev.on("connection.update", async (update) => {
+      if (handles.sock !== sock || handles.stopped || !hasLease()) return;
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
         await patchConnection(supabase, {
           status: "qr_pending",
           qr_payload: qr,
+          qr_expires_at: new Date(Date.now() + 60000).toISOString(),
           last_error: null,
         });
       }
 
       if (connection === "open") {
+        handles.reconnectAttempts = 0;
         const phone =
-          sock.user?.id?.split(":")[0] ?? sock.user?.id ?? null;
+          sock.user?.id?.split(":")[0]?.split("@")[0] ?? null;
+        const configured = await fetchConnection(supabase);
+        const expected = process.env.WHATSAPP_EXPECTED_PHONE_E164 || configured?.expected_phone_e164;
+        if (expected && !identityMatches(phone, expected)) {
+          handles.stopped = true;
+          handles.sock = null;
+          sock.end(new Error("identity_mismatch"));
+          await patchConnection(supabase, {status: "disconnected", qr_payload: null, qr_expires_at: null, phone, last_error: "identity_mismatch"});
+          return;
+        }
         await patchConnection(supabase, {
           status: "connected",
           qr_payload: null,
+          qr_expires_at: null,
           phone,
           last_error: null,
         });
@@ -350,7 +376,7 @@ export async function startSocket(
               JSON.stringify({ event: "labels_app_state_resync", mode: "snapshot" }),
             );
           } catch (err) {
-            console.error("labels_app_state_resync_failed", err);
+            console.error("labels_app_state_resync_failed");
           }
         })();
       }
@@ -373,18 +399,16 @@ export async function startSocket(
           return;
         }
 
-        // Soft reconnect: keep connected (or leave qr_pending if never opened).
-        // Never flash qr_pending while multi-file auth is still valid.
+        handles.reconnectAttempts = (handles.reconnectAttempts ?? 0) + 1;
+        const exhausted = handles.reconnectAttempts > 5;
+        handles.stopped = exhausted;
+        handles.nextReconnectAt = Date.now() + Math.min(60000, 3000 * 2 ** (handles.reconnectAttempts - 1));
         await patchConnection(supabase, {
-          last_error: "Reconectando…",
+          status: exhausted ? "disconnected" : "qr_pending",
+          qr_payload: null, qr_expires_at: null,
+          last_error: exhausted ? "reconnect_exhausted_restart_required" : "reconnecting",
         });
-        setTimeout(() => {
-          void startSocket(supabase, handles, { forceQr: false }).catch(
-            (err) => {
-              console.error("reconnect_failed", err);
-            },
-          );
-        }, 3000);
+
       }
     });
   } finally {
@@ -396,6 +420,7 @@ export async function stopSocketLogout(
   supabase: SupabaseClient,
   handles: SocketHandles,
 ) {
+  handles.stopped = true;
   const sock = handles.sock;
   handles.sock = null;
   try {

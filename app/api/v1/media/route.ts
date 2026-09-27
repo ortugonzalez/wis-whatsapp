@@ -1,0 +1,4 @@
+import {randomUUID} from 'node:crypto';
+import {ApiError,check,context,endpoint,result} from '@/lib/api/core';
+export const POST=endpoint(async r=>{const c=await context(r,'send');if(Number(r.headers.get('content-length'))>10*1024*1024)throw new ApiError(413,'file_too_large');const form=await r.formData();const file=form.get('file');if(!(file instanceof File)||file.size>10*1024*1024)throw new ApiError(400,'invalid_file');const extensions:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','audio/ogg':'ogg','audio/mpeg':'mp3','audio/mp4':'m4a','application/pdf':'pdf'};const ext=extensions[file.type];if(!ext)throw new ApiError(415,'unsupported_media');const path=c.sectorId+'/'+randomUUID()+'.'+ext;const {error}=await c.db.storage.from('whatsapp-media').upload(path,file,{contentType:file.type,upsert:false});check(error);return result({media_bucket_path:path,mime_type:file.type,size:file.size},201);});
+

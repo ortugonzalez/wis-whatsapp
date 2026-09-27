@@ -1,3 +1,4 @@
+import { assertOutboundAllowed } from "./safety.js";
 import type { WAMessage, WAMessageKey, WASocket } from "baileys";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -207,14 +208,17 @@ export async function drainChatReadOps(
           }
         }
         if (receiptKeys.length) {
+          await assertOutboundAllowed(supabase);
           await sock.readMessages(receiptKeys);
         }
+        await assertOutboundAllowed(supabase);
         await sock.chatModify(
           { markRead: true, lastMessages: waLastMessages },
           chatJid,
         );
         expectNativeReadEcho(row.conversation_id);
       } else {
+        await assertOutboundAllowed(supabase);
         await sock.chatModify(
           { markRead: false, lastMessages: waLastMessages },
           chatJid,
@@ -237,7 +241,7 @@ export async function drainChatReadOps(
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("chat_read_op_failed", msg);
+      console.error("chat_read_op_failed");
       if (row.attempts >= 2) {
         await markOpFailed(supabase, row.id, msg);
       } else {

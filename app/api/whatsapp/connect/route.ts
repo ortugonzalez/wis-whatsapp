@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/whatsapp/admin";
 
 /** Admin: request QR / (re)link. Worker sees qr_pending and publishes QR. */
-export async function POST() {
+export async function POST(request: Request) {
+  if (request.headers.get("origin") !== new URL(request.url).origin) return NextResponse.json({error:"invalid_origin"},{status:403});
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -58,6 +59,7 @@ export async function POST() {
     .update({
       status: "qr_pending",
       qr_payload: null,
+      qr_expires_at: null,
       last_error: null,
     })
     .eq("sector_id", current.sector_id)

@@ -148,8 +148,5 @@ grant select, insert, update, delete on table public.profiles to authenticated;
 grant all on table public.profiles to service_role;
 revoke all on table public.profiles from anon;
 
--- Seed: admin (Google Workspace municipal); agent demo — reemplazar email (S8).
-insert into public.profiles (email, slug, first_name, last_name, role, is_active)
-values
-  ('soporte@acebal.gob.ar', 'soporte', 'Soporte', 'Acebal', 'admin', true),
-  ('agente-demo@example.com', 'agente-demo', 'Agente', 'Demo', 'agent', true);
+
+-- WIS: administrator is provisioned locally by bootstrap-local.mjs.

@@ -76,12 +76,12 @@ async function maybeFetchAvatar(
         upsert: true,
       });
     if (error) {
-      console.error("avatar_upload_error", error.message);
+      console.error("avatar_upload_error");
       return null;
     }
     return path;
   } catch (err) {
-    console.error("avatar_fetch_error", err);
+    console.error("avatar_fetch_error");
     return null;
   }
 }

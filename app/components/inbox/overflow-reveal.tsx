@@ -7,7 +7,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type FocusEvent,
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
@@ -187,7 +186,7 @@ export function OverflowReveal({
     close();
   };
 
-  const onFocus = (_e: FocusEvent<HTMLElement>) => {
+  const onFocus = () => {
     if (!prefersDesktopReveal()) return;
     tryOpen();
   };

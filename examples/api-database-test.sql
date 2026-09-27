@@ -1,0 +1,45 @@
+-- Local isolated DB only. Everything rolls back. No worker may run during this test.
+begin;
+do $$
+declare sector uuid; connection uuid; contact uuid; operation uuid; failure boolean; claimed integer; replay public.whatsapp_outbox; hook uuid; delivery uuid;
+begin
+ if has_table_privilege('authenticated','public.wis_api_tokens','SELECT') then raise exception 'tokens exposed'; end if;
+ if has_table_privilege('authenticated','public.wis_webhooks','SELECT') then raise exception 'webhook secrets exposed'; end if;
+ if has_function_privilege('authenticated','public.wis_acquire_worker_lease(uuid,text,integer)','EXECUTE') then raise exception 'lease exposed'; end if;
+ insert into public.sectors(slug,display_name) values('wis-test-'||replace(gen_random_uuid()::text,'-',''),'Local rollback test') returning id into sector;
+ insert into public.whatsapp_connections(sector_id,status) values(sector,'disconnected') returning id into connection;
+ if not public.wis_acquire_worker_lease(connection,'one',30) then raise exception 'first lease failed'; end if;
+ if public.wis_acquire_worker_lease(connection,'two',30) then raise exception 'duplicate owner accepted'; end if;
+ perform public.wis_release_worker_lease(connection,'two');
+ if public.wis_acquire_worker_lease(connection,'two',30) then raise exception 'wrong owner released'; end if;
+ perform public.wis_release_worker_lease(connection,'one');
+ if not public.wis_acquire_worker_lease(connection,'two',30) then raise exception 'lease release failed'; end if;
+ failure:=false;
+ begin insert into public.whatsapp_outbox(sector_id,to_e164,body) values(sector,'+12025550123','local test'); exception when others then failure:=true; end;
+ if not failure then raise exception 'missing consent accepted'; end if;
+ insert into public.contacts(sector_id,phone_e164,consent_at,consent_source,consent_scope) values(sector,'+12025550123',now(),'local-test','local-test') returning id into contact;
+ replay:=public.wis_enqueue_message(sector,null,null,'test-key','hash','+12025550123','text','local test',null);
+ operation:=replay.id;
+ if replay.message_id is null or replay.conversation_id is null then raise exception 'message linkage missing'; end if;
+ replay:=public.wis_enqueue_message(sector,null,null,'test-key','hash','+12025550123','text','local test',null);
+ if replay.id<>operation then raise exception 'idempotency RPC created duplicate'; end if;
+ failure:=false;
+ begin insert into public.whatsapp_outbox(sector_id,to_e164,body,idempotency_key) values(sector,'+12025550123','other','test-key'); exception when unique_violation then failure:=true; end;
+ if not failure then raise exception 'duplicate idempotency accepted'; end if;
+ update public.whatsapp_outbox set status='outcome_unknown' where id=operation;
+ insert into public.whatsapp_outbox(sector_id,to_e164,body) values(sector,'+12025550123','queued before optout');
+ insert into public.contacts(sector_id,phone_e164,consent_at,consent_source,consent_scope) values(sector,'+12025550124',now(),'local-test','local-test');
+ insert into public.whatsapp_outbox(sector_id,to_e164,body) values(sector,'+12025550124','valid remains claimable');
+ update public.contacts set opted_out_at=now() where id=contact;
+ select count(*) into claimed from public.claim_whatsapp_outbox(20,sector);
+ if claimed<>1 then raise exception 'revoked recipient blocked valid queue'; end if;
+ failure:=false;
+ begin insert into public.whatsapp_outbox(sector_id,to_e164,body) values(sector,'+12025550123','blocked'); exception when others then failure:=true; end;
+ if not failure then raise exception 'optout accepted'; end if;
+ insert into public.wis_webhooks(sector_id,url,secret) values(sector,'https://example.com','local-test') returning id into hook;
+ insert into public.wis_webhook_deliveries(webhook_id,event_id,event_type,payload,status,attempts,available_at) values(hook,gen_random_uuid(),'test','{}','sending',5,now()-interval '10 minutes') returning id into delivery;
+ perform public.wis_claim_webhooks();
+ if (select status from public.wis_webhook_deliveries where id=delivery)<>'failed' then raise exception 'fifth abandoned delivery stranded'; end if;
+ raise notice 'PASS: private credentials, exclusive lease, consent, idempotency, ambiguous result, optout';
+end $$;
+rollback;

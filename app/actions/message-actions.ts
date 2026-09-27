@@ -54,6 +54,7 @@ export async function forwardMessage(input: {
   sourceConversationId: string;
   targetConversationId: string;
 }): Promise<MessageActionResult> {
+  if (process.env.WIS_OUTBOUND_ENABLED !== "true") return {ok:false,error:"Operaciones de WhatsApp pausadas."};
   const { sector } = await requireActiveSector();
   const supabase = await createClient();
 
@@ -112,6 +113,7 @@ export async function deleteMessageForMe(input: {
   messageId: string;
   conversationId: string;
 }): Promise<MessageActionResult> {
+  if (process.env.WIS_OUTBOUND_ENABLED !== "true") return {ok:false,error:"Operaciones de WhatsApp pausadas."};
   const { sector } = await requireActiveSector();
   const supabase = await createClient();
 
@@ -144,6 +146,7 @@ export async function deleteMessageForEveryone(input: {
   messageId: string;
   conversationId: string;
 }): Promise<MessageActionResult> {
+  if (process.env.WIS_OUTBOUND_ENABLED !== "true") return {ok:false,error:"Operaciones de WhatsApp pausadas."};
   const { sector } = await requireActiveSector();
   const supabase = await createClient();
 

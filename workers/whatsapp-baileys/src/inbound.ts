@@ -1,3 +1,4 @@
+import { messageTimestampIso } from "./history.js";
 import {
   downloadMediaMessage,
   getContentType,
@@ -30,7 +31,7 @@ import { setCrmWaUnreadLabel } from "./labels.js";
 import { resolveWorkerSectorId } from "./sector.js";
 
 const WHATSAPP_MEDIA_BUCKET = "whatsapp-media";
-const mediaLogger = pino({ level: process.env.BAILEYS_LOG_LEVEL || "silent" });
+const mediaLogger = pino({ level: "silent" });
 
 function unwrapContent(
   message: WAMessage["message"],
@@ -277,13 +278,13 @@ async function uploadMedia(
         upsert: false,
       });
     if (error) {
-      console.error("inbound_media_upload_failed", error.message);
+      console.error("inbound_media_upload_failed");
       return null;
     }
     return path;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("inbound_media_download_failed", message);
+    console.error("inbound_media_download_failed");
     return null;
   }
 }
@@ -292,13 +293,14 @@ export async function handleInboundMessages(
   sock: WASocket,
   supabase: SupabaseClient,
   messages: WAMessage[],
+  source: "live" | "import" = "live",
 ) {
   for (const msg of messages) {
     try {
-      await handleOne(sock, supabase, msg);
+      await handleOne(sock, supabase, msg, source);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("inbound_handler_error", message);
+      console.error("inbound_handler_error", { code: "message_persistence_failed", source });
     }
   }
 }
@@ -307,7 +309,10 @@ async function handleOne(
   sock: WASocket,
   supabase: SupabaseClient,
   msg: WAMessage,
+  source: "live" | "import",
 ) {
+  const messageAt = messageTimestampIso(msg.messageTimestamp);
+  if (source === "import" && !messageAt) return;
   const fromMe = Boolean(msg.key.fromMe);
   const remoteJid = msg.key.remoteJid;
   if (!remoteJid) return;
@@ -392,7 +397,7 @@ async function handleOne(
   if (isGroup) {
     let title: string | null = null;
     try {
-      const meta = await sock.groupMetadata(waChatId);
+      const meta = source === "live" ? await sock.groupMetadata(waChatId) : null;
       title = meta?.subject?.trim() || null;
     } catch {
       title = null;
@@ -401,6 +406,7 @@ async function handleOne(
       waChatId,
       title,
       preview,
+      messageAt: messageAt ?? undefined,
     });
     conversationId = upserted.conversationId;
     if (!fromMe) {
@@ -420,11 +426,12 @@ async function handleOne(
       phoneE164: identities.phoneE164,
       pushName,
       preview,
+      messageAt: messageAt ?? undefined,
     });
     conversationId = upserted.conversationId;
   }
 
-  const mediaPath = await uploadMedia(
+  const mediaPath = source === "import" ? null : await uploadMedia(
     sock,
     supabase,
     msg,
@@ -461,7 +468,8 @@ async function handleOne(
     media_bucket_path: mediaPath,
     sent_by: null,
     delivery_status: delivery,
-    source: "live",
+    source,
+    ...(messageAt ? { created_at: messageAt } : {}),
     wa_sender_jid: waSenderJid,
     wa_sender_name: waSenderName,
     quoted_message_id: quote.quoted_message_id,
@@ -487,13 +495,13 @@ async function handleOne(
   );
 
   // Native WA unread ≠ labels.association for «No leídos»; mirror on inbound.
-  if (!fromMe && inserted) {
+  if (source === "live" && !fromMe && inserted) {
     try {
       await setCrmWaUnreadLabel(supabase, conversationId, true, "inbound", {
         writeBackWa: true,
       });
     } catch (err) {
-      console.error("inbound_unread_label_sync_failed", err);
+      console.error("inbound_unread_label_sync_failed");
     }
   }
 }

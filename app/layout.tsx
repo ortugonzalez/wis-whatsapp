@@ -6,12 +6,12 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "WhatsApp CRM",
-  description: "Multi-agent shared inbox for WhatsApp Business",
-  applicationName: "WhatsApp CRM",
+  title: "WIS · WhatsApp",
+  description: "Panel privado de WhatsApp e integraciones WIS",
+  applicationName: "WIS WhatsApp",
   appleWebApp: {
     capable: true,
-    title: "WhatsApp CRM",
+    title: "WIS WhatsApp",
     statusBarStyle: "default",
   },
 };
@@ -27,7 +27,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="es" className={inter.variable}>
       <body className="min-h-dvh antialiased">
         <RegisterServiceWorker />
         {children}

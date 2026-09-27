@@ -1,3 +1,4 @@
+import { assertOutboundAllowed } from "./safety.js";
 import { jidNormalizedUser, type WASocket } from "baileys";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -703,8 +704,10 @@ export async function drainLabelOps(
       }
 
       if (row.op === "add") {
+        await assertOutboundAllowed(supabase);
         await sock.addChatLabel(conv.wa_chat_id, row.wa_label_id);
       } else {
+        await assertOutboundAllowed(supabase);
         await sock.removeChatLabel(conv.wa_chat_id, row.wa_label_id);
       }
       await markLabelOpDone(supabase, row.id);
@@ -718,7 +721,7 @@ export async function drainLabelOps(
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("label_op_failed", msg);
+      console.error("label_op_failed");
       // attempts already incremented at claim; failed→pending was missing so
       // attempts>=2 never fired — requeue once, then fail + degrade.
       if (row.attempts >= 2) {
@@ -868,6 +871,7 @@ export async function drainLabelCatalogOps(
         await markCatalogOpFailed(supabase, row.id, `unsupported_op:${row.op}`);
         continue;
       }
+      await assertOutboundAllowed(supabase);
       await sock.addLabel(meJid, {
         id: row.wa_label_id,
         name: row.name,
@@ -910,7 +914,7 @@ export async function drainLabelCatalogOps(
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("label_catalog_create_failed", msg);
+      console.error("label_catalog_create_failed");
       if (row.attempts >= 2) {
         await markCatalogOpFailed(supabase, row.id, msg);
         const { data: existingFail, error: failAttrsErr } = await supabase
@@ -919,7 +923,7 @@ export async function drainLabelCatalogOps(
           .eq("id", row.label_id)
           .maybeSingle();
         if (failAttrsErr) {
-          console.error("label_catalog_attrs_read_failed", failAttrsErr.message);
+          console.error("label_catalog_attrs_read_failed");
         } else {
           const failAttrs =
             existingFail?.attrs && typeof existingFail.attrs === "object"
@@ -937,7 +941,7 @@ export async function drainLabelCatalogOps(
             })
             .eq("id", row.label_id);
           if (failUpdErr) {
-            console.error("label_catalog_attrs_update_failed", failUpdErr.message);
+            console.error("label_catalog_attrs_update_failed");
           }
         }
         console.log(

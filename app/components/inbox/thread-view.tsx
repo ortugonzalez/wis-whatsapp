@@ -235,26 +235,21 @@ export function ThreadView({
   const [teamReadVia, setTeamReadVia] = useState(initialTeamReadVia);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLUListElement>(null);
-  const conversationRef = useRef(conversationId);
+  const [source, setSource] = useState({conversationId, initial, initialTeamReadAt, initialTeamReadByName, initialTeamReadVia});
+  const [readOnOpen, setReadOnOpen] = useState({conversationId, initiallyUnread});
+  if (readOnOpen.conversationId !== conversationId) setReadOnOpen({conversationId, initiallyUnread});
   const holdUnreadRef = useRef(false);
   const markingRef = useRef(false);
   const onInboundRef = useRef(onInboundMessage);
-  onInboundRef.current = onInboundMessage;
+  useLayoutEffect(() => { onInboundRef.current = onInboundMessage; }, [onInboundMessage]);
 
-  useEffect(() => {
-    if (conversationRef.current !== conversationId) {
-      conversationRef.current = conversationId;
-      setRows(initial);
-      setTeamReadAt(initialTeamReadAt);
-      setTeamReadByName(initialTeamReadByName);
-      setTeamReadVia(initialTeamReadVia);
-      return;
-    }
-    setRows((prev) => mergeThreadRows(initial, prev));
+  if (source.conversationId !== conversationId || source.initial !== initial || source.initialTeamReadAt !== initialTeamReadAt || source.initialTeamReadByName !== initialTeamReadByName || source.initialTeamReadVia !== initialTeamReadVia) {
+    setSource({conversationId, initial, initialTeamReadAt, initialTeamReadByName, initialTeamReadVia});
+    setRows(source.conversationId !== conversationId ? initial : mergeThreadRows(initial, rows));
     setTeamReadAt(initialTeamReadAt);
     setTeamReadByName(initialTeamReadByName);
     setTeamReadVia(initialTeamReadVia);
-  }, [conversationId, initial, initialTeamReadAt, initialTeamReadByName, initialTeamReadVia]);
+  }
 
   const displayRows = useMemo(
     () => mergeThreadRows(rows, localMessages),
@@ -402,7 +397,7 @@ export function ThreadView({
       // Only on conversation open. Do not re-run when initiallyUnread flips
       // after «Marcar no leído» (that would undo the WA write).
       if (
-        !initiallyUnread ||
+        !readOnOpen.initiallyUnread ||
         holdUnreadRef.current ||
         isTeamUnreadHeld(conversationId) ||
         markingRef.current
@@ -420,7 +415,7 @@ export function ThreadView({
     }
 
     // Defer so holdTeamUnread() from the same click lands first.
-    // initiallyUnread is read from this conversation open only (not when it
+    // readOnOpen captures this conversation open only (not when it
     // flips after mark-unread on the same mount).
     const timer = window.setTimeout(() => {
       void advanceRead();
@@ -429,7 +424,7 @@ export function ThreadView({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [conversationId]);
+  }, [conversationId, readOnOpen.initiallyUnread]);
 
   useEffect(() => {
     const supabase = createClient();

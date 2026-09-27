@@ -1,0 +1,21 @@
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { sign } from './webhook-dispatcher.mjs';
+const workflow=JSON.parse(readFileSync(new URL('./n8n-receive-webhook.json',import.meta.url),'utf8'));
+const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
+const verify=new AsyncFunction('require','$input','$env','Buffer',workflow.nodes[1].parameters.jsCode);
+const require=createRequire(import.meta.url);
+test('inactive n8n receiver accepts original signed bytes and rejects altered or expired payload',async()=>{
+  assert.equal(workflow.active,false);
+  const secret='offline-test-only', timestamp=String(Math.floor(Date.now()/1000));
+  const raw=JSON.stringify({id:'offline-event',type:'message.created'});
+  const item={json:{body:raw,headers:{'x-wis-timestamp':timestamp,'x-wis-event-id':'offline-event','x-wis-signature':'sha256='+sign(secret,timestamp,raw)}}};
+  const run=()=>verify.call({},require,{first:()=>item},{WIS_WEBHOOK_SECRET:secret},Buffer);
+  assert.equal((await run())[0].json.verified,true);
+  item.json.body=raw+' ';
+  await assert.rejects(run(),/Firma/);
+  item.json.body=raw;item.json.headers['x-wis-timestamp']='1';
+  await assert.rejects(run(),/autorizado/);
+});

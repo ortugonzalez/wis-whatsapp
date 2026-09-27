@@ -1,0 +1,2 @@
+import {check,context,endpoint,result} from '@/lib/api/core';
+export const GET=endpoint(async r=>{const c=await context(r);const u=new URL(r.url);let q=c.db.from('conversations').select('*').eq('sector_id',c.sectorId).order('created_at',{ascending:false}).limit(50);if(u.searchParams.get('id'))q=q.eq('id',u.searchParams.get('id'));if(u.searchParams.get('before'))q=q.lt('created_at',u.searchParams.get('before'));const {data,error}=await q;check(error);return result(data);});

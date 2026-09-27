@@ -8,6 +8,8 @@ export type ConnectionRow = {
   id: string;
   status: "disconnected" | "qr_pending" | "connected";
   qr_payload: string | null;
+  qr_expires_at?: string | null;
+  expected_phone_e164?: string | null;
   phone: string | null;
   last_error: string | null;
   circuit_open_until?: string | null;
@@ -30,6 +32,7 @@ export type OutboxRow = {
   status: string;
   attempts: number;
   client_ref?: unknown;
+  purpose?: string;
   /** Campaign label to assign after sent (S27). */
   crm_label_id?: string | null;
 };
@@ -52,7 +55,7 @@ export async function fetchConnection(
   const { data, error } = await supabase
     .from("whatsapp_connections")
     .select(
-      "id, status, qr_payload, phone, last_error, circuit_open_until, circuit_reason, sends_today, sends_today_date, last_send_at",
+      "id, status, qr_payload, qr_expires_at, expected_phone_e164, phone, last_error, circuit_open_until, circuit_reason, sends_today, sends_today_date, last_send_at",
     )
     .eq("sector_id", sectorId)
     .maybeSingle();
@@ -94,6 +97,7 @@ export async function patchConnection(
       ConnectionRow,
       | "status"
       | "qr_payload"
+      | "qr_expires_at"
       | "phone"
       | "last_error"
       | "circuit_open_until"
@@ -117,7 +121,7 @@ export async function reclaimOrphanSending(supabase: SupabaseClient) {
   const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   const { error } = await supabase
     .from("whatsapp_outbox")
-    .update({ status: "pending", last_error: "reclaimed_orphan_sending" })
+    .update({ status: "outcome_unknown", last_error: "interrupted_send_requires_reconciliation" })
     .eq("sector_id", sectorId)
     .eq("status", "sending")
     .lt("updated_at", cutoff);
@@ -507,7 +511,8 @@ export type LiveMessageRow = {
   media_bucket_path: string | null;
   sent_by: null;
   delivery_status: "pending" | "sent" | "delivered" | "read" | "failed";
-  source: "live";
+  source: "live" | "import";
+  created_at?: string;
   wa_sender_jid?: string | null;
   wa_sender_name?: string | null;
   quoted_message_id?: string | null;
@@ -634,6 +639,7 @@ export async function upsertContactConversation(
     phoneE164: string | null;
     pushName: string;
     preview: string;
+    messageAt?: string;
   },
 ): Promise<{ contactId: string; conversationId: string }> {
   let contactId = await findContactId(supabase, input);
@@ -694,7 +700,7 @@ export async function upsertContactConversation(
     throw new Error("contact_upsert_failed");
   }
 
-  const now = new Date().toISOString();
+  const now = input.messageAt ?? new Date().toISOString();
 
   let conversationId: string | null = await mergeDirectConversationsForContact(
     supabase,
@@ -724,7 +730,8 @@ export async function upsertContactConversation(
         kind: "direct",
         wa_chat_id: input.waChatId,
       })
-      .eq("id", conversationId);
+      .eq("id", conversationId)
+      .or(`last_message_at.is.null,last_message_at.lte.${now}`);
     if (error) throw error;
     return { contactId, conversationId };
   }
@@ -753,9 +760,10 @@ export async function upsertGroupConversation(
     waChatId: string;
     title: string | null;
     preview: string;
+    messageAt?: string;
   },
 ): Promise<{ conversationId: string }> {
-  const now = new Date().toISOString();
+  const now = input.messageAt ?? new Date().toISOString();
   const sectorId = await resolveWorkerSectorId(supabase);
   const { data: existingConv, error: convLookupErr } = await supabase
     .from("conversations")
@@ -777,7 +785,8 @@ export async function upsertGroupConversation(
     const { error } = await supabase
       .from("conversations")
       .update(patch)
-      .eq("id", existingConv.id);
+      .eq("id", existingConv.id)
+      .or(`last_message_at.is.null,last_message_at.lte.${now}`);
     if (error) throw error;
     return { conversationId: existingConv.id as string };
   }

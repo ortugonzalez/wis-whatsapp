@@ -1,0 +1,1526 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "WIS WhatsApp API",
+    "version": "1.0.0",
+    "description": "Bearer tokens are sector-scoped. Token administration and campaigns require an admin cookie session and same-origin Origin on mutations. No endpoint enables campaign execution or webhook delivery."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3010/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    },
+    {
+      "cookieAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "Supabase session cookie"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Connection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sector_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "disconnected",
+              "qr_pending",
+              "connected"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expected_phone_e164": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Contact": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phone_e164": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "consent_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "consent_source": {
+            "type": "string"
+          },
+          "consent_scope": {
+            "type": "string"
+          },
+          "opted_out_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "ContactInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phone_e164": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "consent_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "consent_source": {
+            "type": "string"
+          },
+          "consent_scope": {
+            "type": "string"
+          },
+          "opted_out_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MessageInput": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "pattern": "^\\+[1-9][0-9]{6,14}$"
+          },
+          "type": {
+            "enum": [
+              "text",
+              "image",
+              "audio",
+              "document"
+            ]
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "media_bucket_path": {
+            "type": "string"
+          },
+          "purpose": {
+            "const": "transactional"
+          }
+        },
+        "required": [
+          "to",
+          "type"
+        ]
+      },
+      "Operation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "sending",
+              "sent",
+              "failed",
+              "outcome_unknown"
+            ]
+          },
+          "to_e164": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "wa_message_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TokenInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "scopes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "read",
+                "send",
+                "contacts:write",
+                "webhooks:write"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "scopes"
+        ]
+      },
+      "Token": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revoked_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CampaignInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "contact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 1000
+          },
+          "daily_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "window_start": {
+            "type": "string",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          },
+          "window_end": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "body",
+          "contact_ids",
+          "daily_limit",
+          "window_start",
+          "window_end"
+        ]
+      },
+      "CampaignAction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "enum": [
+              "preview",
+              "approve",
+              "pause"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "action"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/connections": {
+      "get": {
+        "summary": "List connections",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Connection"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ]
+      }
+    },
+    "/contacts": {
+      "get": {
+        "summary": "List contacts",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Contact"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create contact and record consent provenance",
+        "responses": {
+          "201": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Contact"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactInput"
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update contact; id required; removing opt-out forbidden",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Contact"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/operations": {
+      "get": {
+        "summary": "List operations",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Operation"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ]
+      }
+    },
+    "/tokens": {
+      "get": {
+        "summary": "List tokens",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Token"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        }
+      },
+      "post": {
+        "summary": "Admin cookie only: issue token shown once",
+        "responses": {
+          "201": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "token": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenInput"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Revoke token or delete webhook",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "revoked": {
+                          "type": "boolean"
+                        },
+                        "deleted": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "summary": "List webhooks",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Webhook"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Revoke token or delete webhook",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "revoked": {
+                          "type": "boolean"
+                        },
+                        "deleted": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create disabled webhook; secret shown once",
+        "responses": {
+          "201": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "enabled": {
+                          "const": false
+                        },
+                        "secret": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "url"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "summary": "List conversations",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ]
+      }
+    },
+    "/messages": {
+      "get": {
+        "summary": "List messages",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "Queue a message; accepted is not delivered",
+        "responses": {
+          "202": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Operation"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/campaigns": {
+      "get": {
+        "summary": "List campaigns",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create draft without sending",
+        "responses": {
+          "201": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "const": "draft"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignInput"
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Preview, approve draft, pause; execution remains disabled",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignAction"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media": {
+      "post": {
+        "summary": "Upload private media (10 MiB maximum)",
+        "responses": {
+          "201": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "media_bucket_path": {
+                          "type": "string"
+                        },
+                        "mime_type": {
+                          "type": "string"
+                        },
+                        "size": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "summary": "Read coverage and limitations",
+        "responses": {
+          "200": {
+            "description": "Scoped data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Scope, origin, consent or opt-out blocked"
+          },
+          "409": {
+            "description": "Idempotency conflict, disabled campaign or invalid state"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        }
+      }
+    }
+  }
+}

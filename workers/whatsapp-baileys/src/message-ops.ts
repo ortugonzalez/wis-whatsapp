@@ -1,3 +1,4 @@
+import { assertOutboundAllowed } from "./safety.js";
 import type { WAMessage, WASocket } from "baileys";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { insertLiveMessage, markMessageDeleted, type LiveMessageRow } from "./db.js";
@@ -177,7 +178,7 @@ export async function reclaimOrphanMessageOps(supabase: SupabaseClient) {
   const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   const { error } = await supabase
     .from("whatsapp_message_ops")
-    .update({ status: "pending", last_error: "reclaimed_orphan_sending" })
+    .update({ status: "failed", last_error: "outcome_unknown_requires_reconciliation" })
     .eq("sector_id", sectorId)
     .eq("status", "sending")
     .lt("updated_at", cutoff);
@@ -260,6 +261,7 @@ export async function drainMessageOps(
   supabase: SupabaseClient,
   messageCache: MessageCache,
 ) {
+  await assertOutboundAllowed(supabase);
   await reclaimOrphanMessageOps(supabase);
   const rows = await claimMessageOps(supabase, 5);
 
@@ -305,6 +307,7 @@ export async function drainMessageOps(
           await markMessageOpFailed(supabase, row.id, "missing_target_wa_chat_id");
           continue;
         }
+        await assertOutboundAllowed(supabase, { conversationId: row.target_conversation_id });
         const sent = await sock.sendMessage(targetJid, { forward: waMessage });
         const newWaId = sent?.key?.id;
         if (!newWaId) {
@@ -333,6 +336,7 @@ export async function drainMessageOps(
           );
           continue;
         }
+        await assertOutboundAllowed(supabase);
         await sock.sendMessage(chatJid, { delete: waMessage.key });
         await markMessageDeleted(supabase, { messageId: row.message_id });
         console.log(
@@ -342,6 +346,7 @@ export async function drainMessageOps(
           }),
         );
       } else {
+        await assertOutboundAllowed(supabase);
         await sock.chatModify(
           {
             delete: true,
@@ -366,12 +371,8 @@ export async function drainMessageOps(
       await markMessageOpDone(supabase, row.id);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("message_op_failed", msg);
-      if (row.attempts >= 2) {
-        await markMessageOpFailed(supabase, row.id, msg);
-      } else {
-        await requeueMessageOp(supabase, row.id, msg);
-      }
+      console.error("message_op_failed");
+      await markMessageOpFailed(supabase, row.id, "outcome_unknown_requires_reconciliation");
     }
   }
 }

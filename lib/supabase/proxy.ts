@@ -1,7 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSetupState } from "@/app/setup/health";
 
 export async function updateSession(request: NextRequest) {
+  // API v1 performs its own scoped Bearer/session authorization and returns JSON.
+  if (request.nextUrl.pathname.startsWith("/api/v1/")) {
+    return NextResponse.next({ request });
+  }
+  if (request.nextUrl.pathname === "/setup") return NextResponse.next({request});
+  const setupState = await getSetupState();
+  if (setupState === "missing_configuration" || setupState === "local_unavailable") {
+    const setupUrl = request.nextUrl.clone();
+    setupUrl.pathname = "/setup";
+    setupUrl.search = "";
+    return NextResponse.redirect(setupUrl);
+  }
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -80,7 +93,7 @@ export async function updateSession(request: NextRequest) {
       url.searchParams.set("error", "unauthorized");
       return redirectWithSession(url);
     }
-    url.pathname = "/";
+    url.pathname = "/dashboard";
     return redirectWithSession(url);
   }
 

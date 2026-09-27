@@ -1,0 +1,6 @@
+import {randomBytes} from 'node:crypto';
+import {ApiError,body,check,context,endpoint,hash,result,scopes,uuid} from '@/lib/api/core';
+export const GET=endpoint(async r=>{const c=await context(r,'read',true);const {data,error}=await c.db.from('wis_api_tokens').select('id,name,scopes,created_at,expires_at,revoked_at').eq('sector_id',c.sectorId);check(error);return result(data);});
+export const POST=endpoint(async r=>{const c=await context(r,'read',true);const b=await body(r);if(typeof b.name!=='string'||!b.name.trim()||b.name.length>80||!Array.isArray(b.scopes)||!b.scopes.length||b.scopes.some(s=>!scopes.includes(s)))throw new ApiError(400,'invalid_token_parameters');const token='wis_'+randomBytes(32).toString('base64url');const {data,error}=await c.db.from('wis_api_tokens').insert({sector_id:c.sectorId,name:b.name,scopes:b.scopes,token_hash:hash(token)}).select('id').single();check(error);return result({...data,token},201);});
+export const DELETE=endpoint(async r=>{const c=await context(r,'read',true);const id=uuid(new URL(r.url).searchParams.get('id'));const {error}=await c.db.from('wis_api_tokens').update({revoked_at:new Date().toISOString()}).eq('id',id).eq('sector_id',c.sectorId);check(error);return result({revoked:true});});
+

@@ -1,3 +1,4 @@
+import { assertOutboundAllowed } from "./safety.js";
 import type { WAMessage, WASocket } from "baileys";
 import { WAMessageStatus } from "baileys";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -94,6 +95,9 @@ async function downloadMedia(
   supabase: SupabaseClient,
   path: string,
 ): Promise<Buffer> {
+  const sectorId = await resolveWorkerSectorId(supabase);
+  const ownership = await supabase.rpc("wis_media_sector", { p_name: path });
+  if (ownership.error || ownership.data !== sectorId) throw new Error("media_sector_mismatch");
   const { data, error } = await supabase.storage
     .from(MEDIA_BUCKET)
     .download(path);
@@ -197,7 +201,9 @@ async function sendRow(
   row: OutboxRow,
   messageCache: MessageCache,
 ): Promise<boolean> {
+  let wireAttempted = false;
   try {
+    await assertOutboundAllowed(supabase, { phone: row.to_e164, conversationId: row.conversation_id, campaign: row.purpose === "campaign" || isCobranzasCampaignRef(row.client_ref) });
     let jid: string;
     if (row.to_jid) {
       if (row.conversation_id) {
@@ -265,6 +271,8 @@ async function sendRow(
         await markOutboxFailed(supabase, row.id, "empty_text", row.message_id);
         return false;
       }
+      await assertOutboundAllowed(supabase, { phone: row.to_e164, conversationId: row.conversation_id, campaign: row.purpose === "campaign" || isCobranzasCampaignRef(row.client_ref) });
+      wireAttempted = true;
       sent = await sock.sendMessage(jid, { text: row.body }, opts);
     } else if (
       row.type === "image" ||
@@ -288,7 +296,9 @@ async function sendRow(
         "archivo";
 
       if (row.type === "image") {
-        sent = await sock.sendMessage(
+        await assertOutboundAllowed(supabase, { phone: row.to_e164, conversationId: row.conversation_id, campaign: row.purpose === "campaign" || isCobranzasCampaignRef(row.client_ref) });
+      wireAttempted = true;
+      sent = await sock.sendMessage(
           jid,
           {
             image: buffer,
@@ -319,7 +329,7 @@ async function sendRow(
             );
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            console.error("outbox_audio_transcode_failed", msg);
+            console.error("outbox_audio_transcode_failed");
             await markOutboxFailed(
               supabase,
               row.id,
@@ -331,7 +341,9 @@ async function sendRow(
         } else {
           seconds = await audioDurationSec(buffer, ext);
         }
-        sent = await sock.sendMessage(
+        await assertOutboundAllowed(supabase, { phone: row.to_e164, conversationId: row.conversation_id, campaign: row.purpose === "campaign" || isCobranzasCampaignRef(row.client_ref) });
+      wireAttempted = true;
+      sent = await sock.sendMessage(
           jid,
           {
             audio: audioBuffer,
@@ -342,7 +354,9 @@ async function sendRow(
           opts,
         );
       } else {
-        sent = await sock.sendMessage(
+        await assertOutboundAllowed(supabase, { phone: row.to_e164, conversationId: row.conversation_id, campaign: row.purpose === "campaign" || isCobranzasCampaignRef(row.client_ref) });
+      wireAttempted = true;
+      sent = await sock.sendMessage(
           jid,
           {
             document: buffer,
@@ -366,15 +380,7 @@ async function sendRow(
     if (id && sent?.message) {
       messageCache.set(id, sent.message);
     }
-    if (!id) {
-      await markOutboxFailed(
-        supabase,
-        row.id,
-        "missing_wa_message_id",
-        row.message_id,
-      );
-      return false;
-    }
+    if (!id) throw new Error("missing_wa_message_id");
     await markOutboxSent(supabase, row.id, id, row.message_id, {
       countDailyCap: isCobranzasCampaignRef(row.client_ref),
     });
@@ -384,34 +390,11 @@ async function sendRow(
     return true;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (isRateLimitError(err)) {
-      const { cfg, source } = await resolveCampaignPacing(row.client_ref);
-      const until = new Date(
-        Date.now() + cfg.circuit429BackoffMin * 60_000,
-      ).toISOString();
-      await patchConnection(supabase, {
-        circuit_open_until: until,
-        circuit_reason: "429",
-        last_error: `rate_limited: backoff ${cfg.circuit429BackoffMin}min (${source})`,
-      });
-      // Devolver a pending para no quemar attempts en caliente.
-      await supabase
-        .from("whatsapp_outbox")
-        .update({
-          status: "pending",
-          last_error: "429_circuit_open",
-          attempts: Math.max(0, row.attempts - 1),
-        })
-        .eq("id", row.id);
-      return false;
-    }
-    await markOutboxFailed(supabase, row.id, msg, row.message_id);
-    if (msg.startsWith("not_on_whatsapp:") && row.to_e164) {
-      await cleanupNotOnWhatsAppOrphan(supabase, {
-        conversationId: row.conversation_id,
-        messageId: row.message_id,
-        toE164: row.to_e164,
-      });
+    if (wireAttempted) {
+      const { error } = await supabase.from("whatsapp_outbox").update({status: "outcome_unknown", last_error: "wire_result_requires_reconciliation"}).eq("id", row.id).eq("status", "sending");
+      if (error) throw error;
+    } else {
+      await markOutboxFailed(supabase, row.id, "preflight_rejected:" + (/^[a-z_]+$/.test(msg) ? msg : "validation_failed"), row.message_id);
     }
     return false;
   }
@@ -438,6 +421,7 @@ export async function drainOutbox(
   supabase: SupabaseClient,
   messageCache: MessageCache,
 ) {
+  await assertOutboundAllowed(supabase);
   const conn = await fetchConnection(supabase);
   if (!conn || conn.status !== "connected") return;
 
@@ -792,7 +776,7 @@ export async function handleMessageDeletes(
     if (!data?.id || data.deleted_at) continue;
     const { error } = await supabase.from("messages").delete().eq("id", data.id);
     if (error) {
-      console.error("message_delete_crm_failed", error.message);
+      console.error("message_delete_crm_failed");
       continue;
     }
     console.log(

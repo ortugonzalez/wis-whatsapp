@@ -46,6 +46,7 @@ export async function sendOutboundMessage(input: {
   /** CRM message id to reply to (same conversation). */
   quotedMessageId?: string | null;
 }): Promise<SendMessageResult> {
+  if (process.env.WIS_OUTBOUND_ENABLED !== "true") return {ok:false,error:"Envíos pausados. Se requiere aprobación y habilitación explícita."};
   const { profile, sector } = await requireActiveSector();
   const supabase = await createClient();
 
@@ -235,6 +236,7 @@ export async function retryOutboundMessage(input: {
   conversationId: string;
   messageId: string;
 }): Promise<SendMessageResult> {
+  if (process.env.WIS_OUTBOUND_ENABLED !== "true") return {ok:false,error:"Envíos pausados. Reconciliá el resultado antes de reintentar."};
   const { profile, sector } = await requireActiveSector();
   const supabase = await createClient();
 

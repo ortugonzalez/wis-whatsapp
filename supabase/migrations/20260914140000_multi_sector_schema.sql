@@ -20,8 +20,7 @@ create trigger sectors_set_updated_at
   execute function public.set_updated_at();
 
 insert into public.sectors (slug, display_name) values
-  ('contable', 'Contable'),
-  ('eq-tecnico-centros', 'Equipo técnico · centros');
+  ('contable', 'WIS · 5679');
 
 create table public.sector_memberships (
   id uuid primary key default gen_random_uuid(),

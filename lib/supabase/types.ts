@@ -131,6 +131,8 @@ export type WhatsappConnection = {
   sector_id: string;
   status: WhatsappConnectionStatus;
   qr_payload: string | null;
+  qr_expires_at: string | null;
+  expected_phone_e164: string | null;
   phone: string | null;
   last_error: string | null;
   labels_write_enabled: boolean;

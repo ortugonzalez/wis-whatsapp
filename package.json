@@ -1,30 +1,39 @@
 {
-  "name": "whatsapp-ui-template",
+  "name": "wis-whatsapp-local",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 127.0.0.1 --port 3010",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start --hostname 127.0.0.1 --port 3010",
+    "lint": "eslint",
+    "local:db": "supabase start",
+    "local:setup": "node scripts/bootstrap-local.mjs",
+    "local:stop": "supabase stop",
+    "worker": "npm --prefix workers/whatsapp-baileys start",
+    "test:api": "node --test examples/webhook-dispatcher.test.mjs examples/n8n-contract.test.mjs",
+    "test:worker": "npm --prefix workers/whatsapp-baileys test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
-    "next": "16.3.2",
+    "next": "16.3.6",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.2",
+    "eslint-config-next": "16.3.6",
+    "supabase": "2.118.0",
     "tailwindcss": "^4",
+    "tsx": "4.20.6",
     "typescript": "^5"
   }
 }

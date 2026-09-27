@@ -62,7 +62,7 @@ export function SectorSwitcher({
         return;
       }
       // Hard navigate: remount Realtime + drop client inbox cache.
-      window.location.href = "/";
+      window.location.assign(new URL("/", window.location.href).href);
     } catch {
       setError("No se pudo cambiar de sector.");
       setPending(false);

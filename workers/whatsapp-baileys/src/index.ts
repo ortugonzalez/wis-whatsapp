@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
+import { setLeaseDeadline, hasLease, assertOutboundAllowed } from "./safety.js";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { createWorkerSupabase, fetchConnection, peekWorkerPending } from "./db.js";
+import { createWorkerSupabase, fetchConnection, patchConnection, peekWorkerPending } from "./db.js";
 import { drainOutbox, msUntilCampaignCooldownEnds } from "./outbox.js";
 import { drainLabelOps, drainLabelCatalogOps } from "./labels.js";
 import { drainMessageOps } from "./message-ops.js";
@@ -96,6 +98,9 @@ async function main() {
     starting: false,
   };
 
+  const leaseOwner = randomUUID();
+  let leaseConnectionId: string | null = null;
+  let observedStatus: string | null = null;
   let tickBusy = false;
   let pendingWake: string | null = null;
   let wakeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -116,6 +121,21 @@ async function main() {
         return;
       }
 
+      observedStatus = conn.status;
+      const { data: acquired, error: leaseError } = await supabase.rpc("wis_acquire_worker_lease", {p_connection_id: conn.id, p_owner: leaseOwner, p_ttl_seconds: 45});
+      if (leaseError || !acquired) {
+        setLeaseDeadline(0);
+        handles.stopped = true;
+        handles.sock?.end(new Error("worker_lease_lost"));
+        handles.sock = null;
+        return;
+      }
+      leaseConnectionId = conn.id;
+      setLeaseDeadline(Date.now() + 35000);
+      if (conn.qr_payload && conn.qr_expires_at && Date.parse(conn.qr_expires_at) <= Date.now()) {
+        await patchConnection(supabase, {qr_payload: null, qr_expires_at: null});
+      }
+      if (conn.status === "qr_pending" && !conn.last_error) handles.stopped = false;
       if (conn.status === "disconnected") {
         if (handles.sock) {
           await stopSocketLogout(supabase, handles);
@@ -128,6 +148,8 @@ async function main() {
       }
 
       if (conn.status === "connected" && handles.sock) {
+        if (process.env.WIS_OUTBOUND_ENABLED !== "true") return;
+        await assertOutboundAllowed(supabase);
         // S33: peek once; skip empty drains on idle safety poll (Realtime still wakes on INSERT).
         const peek = await peekWorkerPending(supabase, sectorId);
         if (peek.catalog_ops) {
@@ -154,7 +176,7 @@ async function main() {
         }
       }
     } catch (err) {
-      console.error("tick_error", { reason, err });
+      console.error("tick_error", { reason, code: "worker_operation_failed" });
     } finally {
       tickBusy = false;
       if (pendingWake && !stopping) {
@@ -194,7 +216,7 @@ async function main() {
     ch = ch.on(
       "postgres_changes",
       { event: "UPDATE", schema: "public", table: "whatsapp_connections" },
-      () => scheduleTick("rt_update:whatsapp_connections"),
+      (payload) => { if (payload.new.status !== observedStatus) scheduleTick("rt_update:whatsapp_connections"); },
     );
 
     channel = ch.subscribe((status, err) => {
@@ -219,8 +241,16 @@ async function main() {
 
   const safetyTimer = setInterval(() => {
     void tick("safety_poll");
-  }, safetyPollMs);
+  }, 15000);
 
+  const leaseWatchdog = setInterval(() => {
+    if (handles.sock && !hasLease()) {
+      handles.stopped = true;
+      const socket = handles.sock;
+      handles.sock = null;
+      socket.end(new Error("worker_lease_expired"));
+    }
+  }, 1000);
   await tick("startup");
 
   const shutdown = async (signal: string) => {
@@ -228,6 +258,12 @@ async function main() {
     stopping = true;
     console.log(JSON.stringify({ event: "worker_shutdown", signal }));
     clearInterval(safetyTimer);
+    clearInterval(leaseWatchdog);
+    handles.stopped = true;
+    setLeaseDeadline(0);
+    handles.sock?.end(new Error("worker_shutdown"));
+    handles.sock = null;
+    if (leaseConnectionId) await supabase.rpc("wis_release_worker_lease", { p_connection_id: leaseConnectionId, p_owner: leaseOwner });
     if (wakeTimer) clearTimeout(wakeTimer);
     if (channel) {
       await supabase.removeChannel(channel);
@@ -245,6 +281,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error("worker_start_failed_check_local_configuration");
   process.exit(1);
 });

@@ -50,7 +50,7 @@ export function InboxHeader({
       <div className="safe-pad-x mx-auto flex max-w-6xl items-center justify-between gap-3 py-2.5 sm:py-3">
         <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
           <Link
-            href="/"
+            href="/dashboard"
             className="inline-flex min-h-11 min-w-11 shrink-0 items-center active:opacity-80"
           >
             <svg
@@ -70,11 +70,11 @@ export function InboxHeader({
           </Link>
           <div className="min-w-0">
             <p className="font-heading text-base font-bold leading-tight text-[var(--color-text-primary)] sm:text-lg">
-              WhatsApp CRM
+              WIS · WhatsApp
             </p>
             <p className="truncate text-xs text-[var(--color-text-muted)]">
               {name} · {sector.display_name} · {profile.role}
-              {channelStatus ? ` · channel ${channelStatus}` : ""}
+              {channelStatus ? ` · ${channelStatus}` : ""}
             </p>
           </div>
         </div>
@@ -92,13 +92,13 @@ export function InboxHeader({
                 href="/settings/users"
                 className="btn inline-flex min-h-11 items-center px-3 py-1.5 text-sm"
               >
-                Users
+                Usuarios
               </Link>
               <Link
                 href="/settings/whatsapp"
                 className="btn inline-flex min-h-11 items-center px-3 py-1.5 text-sm"
               >
-                Channel
+                Conexión
               </Link>
             </>
           ) : null}
@@ -107,7 +107,7 @@ export function InboxHeader({
               type="submit"
               className="btn inline-flex min-h-11 items-center px-3 py-1.5 text-sm"
             >
-              Sign out
+              Cerrar sesión
             </button>
           </form>
         </div>
@@ -120,7 +120,7 @@ export function InboxHeader({
             <SectorSwitcher
               sectors={memberships}
               activeSectorId={sector.id}
-              triggerLabel="Account"
+              triggerLabel="Cuenta"
             />
           ) : null}
           <button
@@ -167,7 +167,7 @@ export function InboxHeader({
                     className="flex min-h-11 items-center px-3 text-sm font-semibold text-[var(--color-text-primary)] active:bg-[color-mix(in_srgb,var(--color-accent)_10%,white)]"
                     onClick={() => setMenuOpen(false)}
                   >
-                    Users
+                    Usuarios
                   </Link>
                   <Link
                     href="/settings/whatsapp"
@@ -175,7 +175,7 @@ export function InboxHeader({
                     className="flex min-h-11 items-center px-3 text-sm font-semibold text-[var(--color-text-primary)] active:bg-[color-mix(in_srgb,var(--color-accent)_10%,white)]"
                     onClick={() => setMenuOpen(false)}
                   >
-                    Channel
+                    Conexión
                   </Link>
                 </>
               ) : null}
@@ -185,7 +185,7 @@ export function InboxHeader({
                   role="menuitem"
                   className="flex min-h-11 w-full items-center px-3 text-left text-sm font-semibold text-[var(--color-text-primary)] active:bg-[color-mix(in_srgb,var(--color-accent)_10%,white)]"
                 >
-                  Sign out
+                  Cerrar sesión
                 </button>
               </form>
             </div>

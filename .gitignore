@@ -42,3 +42,7 @@ supabase/.temp
 workers/**/auth/
 workers/**/.wwebjs_auth/
 **/WHATSAPP_AUTH*/
+.local/
+backups/
+__pycache__/
+*.pyc

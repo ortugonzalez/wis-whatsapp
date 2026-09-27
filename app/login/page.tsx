@@ -1,62 +1,11 @@
-import Image from "next/image";
-import { signInWithGoogle } from "./actions";
-
-type LoginPageProps = {
-  searchParams: Promise<{ error?: string }>;
-};
-
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+import { signInWithPassword } from "./actions";
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-
-  let message: string | null = null;
-  if (error === "unauthorized") {
-    message =
-      "Your Google account is not authorized. Ask the admin to add you to the allowlist.";
-  } else if (error === "no_sector") {
-    message =
-      "Your user has no sector assigned. Ask the admin to add you to a sector.";
-  } else if (error === "oauth") {
-    message = "Could not start Google login. Try again.";
-  } else if (error === "auth") {
-    message = "Session exchange failed. Try again.";
-  }
-
-  return (
-    <main
-      className="safe-pad-x mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-6"
-      style={{
-        paddingTop: "max(2rem, var(--safe-top))",
-        paddingBottom: "max(2rem, var(--safe-bottom))",
-      }}
-    >
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-[var(--color-text-primary)]">
-            WhatsApp CRM
-          </h1>
-          <p className="text-[var(--color-text-secondary)]">
-            Sign in with your authorized Google account.
-          </p>
-        </div>
-      </div>
-
-      {message ? (
-        <p
-          className="rounded-xl border border-[color-mix(in_srgb,var(--color-danger)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_10%,white)] px-3 py-2 text-sm text-[var(--color-danger)]"
-          role="alert"
-        >
-          {message}
-        </p>
-      ) : null}
-
-      <form action={signInWithGoogle}>
-        <button
-          type="submit"
-          className="btn-solid min-h-11 w-full px-4 py-3 text-base"
-        >
-          Continue with Google
-        </button>
-      </form>
-    </main>
-  );
+  const messages: Record<string, string> = { credentials: "No se pudo iniciar sesión. Revisá tu correo y contraseña.", unauthorized: "Tu usuario no está autorizado. Contactá al administrador.", no_sector: "Tu usuario no tiene una conexión asignada." };
+  return <main className="flex min-h-dvh items-center justify-center bg-slate-950 p-6"><section className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
+    <div className="mb-8"><p className="mb-3 text-sm font-bold tracking-widest text-emerald-700">WIS / WHATSAPP</p><h1 className="text-3xl font-bold text-slate-900">Tu espacio de conexión.</h1><p className="mt-3 text-slate-600">Ingresá al panel local con tu usuario autorizado.</p></div>
+    {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{messages[error] ?? "No se pudo completar el acceso."}</p>}
+    <form action={signInWithPassword} className="space-y-5"><label className="block text-sm font-medium">Correo<input name="email" type="email" autoComplete="username" required maxLength={254} className="mt-2 w-full rounded-xl border border-slate-300 p-3" /></label><label className="block text-sm font-medium">Contraseña<input name="password" type="password" autoComplete="current-password" required maxLength={1024} className="mt-2 w-full rounded-xl border border-slate-300 p-3" /></label><button className="w-full rounded-xl bg-emerald-700 p-3 font-semibold text-white">Ingresar al panel</button></form>
+    <p className="mt-6 text-xs text-slate-500">Acceso privado · Sesiones administradas desde el servidor local.</p>
+  </section></main>;
 }

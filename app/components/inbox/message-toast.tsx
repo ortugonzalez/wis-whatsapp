@@ -8,11 +8,15 @@ type Props = {
 };
 
 export function MessageToast({ message, onDone }: Props) {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(Boolean(message));
+  const [previousMessage, setPreviousMessage] = useState(message);
+  if (previousMessage !== message) {
+    setPreviousMessage(message);
+    setVisible(Boolean(message));
+  }
 
   useEffect(() => {
     if (!message) return;
-    setVisible(true);
     const timer = window.setTimeout(() => {
       setVisible(false);
       onDone?.();

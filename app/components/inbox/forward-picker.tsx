@@ -34,12 +34,14 @@ export function ForwardPicker({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
+  const [previousOpen, setPreviousOpen] = useState(open);
+  if (previousOpen !== open) {
+    setPreviousOpen(open);
     if (!open) {
       setQuery("");
       setError(null);
     }
-  }, [open]);
+  }
 
   useEffect(() => {
     if (!open) return;

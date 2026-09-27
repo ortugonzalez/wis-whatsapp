@@ -1,4 +1,12 @@
-# whatsapp-ui-template
+# WIS WhatsApp local
+
+Implementación WIS sobre `mocte201/whatsapp-ui-template`. Guía vigente: [Operación local](docs/wis-local-runbook.md), [API](docs/api.md), [OpenAPI](docs/api.openapi.json).
+
+El panel y el worker compilan. Los envíos y las campañas están deshabilitados. La conexión real requiere Supabase local disponible y que el propietario escanee el QR; no se declara vinculada la línea 5679 ni paridad completa con WHAPI.
+
+El contenido que sigue describe la plantilla original como referencia histórica. Para WIS usar los comandos y puertos del runbook, nunca los destinos ni configuraciones históricas.
+
+## Plantilla de origen
 
 Multi-agent WhatsApp CRM template — shared inbox for WhatsApp Business numbers.
 
