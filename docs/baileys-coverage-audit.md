@@ -15,6 +15,10 @@ Después de regenerar el inventario WHAPI o cambiar Baileys, revisar los mapeos 
 rtk proxy node scripts/merge-baileys-audit.mjs
 ```
 
+El generador `snapshot-whapi.mjs` conserva la auditoría previa por ID y su fecha original; regenerar el índice no equivale a revisarlo nuevamente. Los métodos nuevos quedan pendientes y sin auditoría. Los cambios de descripción o contrato requieren revisión aunque mantengan el ID. El generador rechaza índices vacíos, duplicados o inválidos antes de reemplazar el archivo mediante renombrado atómico, y resuelve las rutas desde el proyecto independientemente del directorio de ejecución. Las pruebas de regresión usan datos ficticios sin consultar WhatsApp ni modificar la matriz real.
+
 No se usó esta auditoría para enviar mensajes, cambiar perfiles, modificar grupos o activar integraciones. Las pruebas reales con efectos externos siguen sujetas a aprobación específica. El catálogo en el panel muestra el análisis y el próximo paso sin habilitar acciones nuevas.
+
+Si el índice omite un ID previamente inventariado, la regeneración se detiene y conserva el archivo anterior. Una eliminación real requiere revisar el cambio de catálogo antes de ajustar el inventario; una respuesta parcial nunca debe borrar silenciosamente auditorías. Regresión del generador: tres pruebas aprobadas; suite QA local: 16 pruebas aprobadas.
 
 Revisión 2026-09-27 sobre Baileys 7.0.0-rc14: 182 métodos cubiertos, 134 candidatos técnicos, 22 responsabilidades locales y 26 sin método público identificado. Las tres particiones y el generador/interfaz recibieron revisión independiente. Validación de referencias completa y build aprobados. Chrome mostró 182 filas, búsqueda y evidencia desplegable. Los estados de implementación permanecen en 43 parciales y 139 pendientes; no hubo reinicio ni operaciones remotas.
