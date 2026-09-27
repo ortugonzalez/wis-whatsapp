@@ -1,0 +1,136 @@
+{
+  "name": "WIS · observaciones locales · primera página parcial",
+  "active": false,
+  "nodes": [
+    {
+      "id": "manual",
+      "name": "Manual · solo lectura local",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "guide",
+      "name": "Configuración y alcance parcial",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -300
+      ],
+      "parameters": {
+        "width": 850,
+        "height": 240,
+        "content": "## Preparación manual · workflow desactivado\nSeleccioná en cada HTTP Request una credencial Header Auth de n8n: encabezado Authorization con Bearer seguido de un token WIS existente con permiso read. No pegues el token en el workflow. No se incluye ninguna credencial.\nAdaptá la URL al host accesible desde n8n; 127.0.0.1 apunta al propio proceso o contenedor de n8n.\nCada consulta obtiene solo la primera página (50 registros). Revisá meta.total y meta.has_more; este ejemplo NO recorre páginas ni representa el historial completo. Calls son eventos observados, identities son relaciones locales (pueden ser desconocidas o contradictorias), stories solo estados vigentes persistidos. No marca estados vistos. No envía mensajes ni modifica WhatsApp. Ejecutar manualmente requiere acceso a la API local."
+      }
+    },
+    {
+      "id": "calls",
+      "name": "Llamadas observadas · primera página parcial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        -40
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:3010/api/v1/calls?limit=50&offset=0",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Elegí una credencial Header Auth con permiso read. Solo eventos persistidos; no historial completo. Revisá meta.has_more."
+    },
+    {
+      "id": "identities",
+      "name": "Identidades locales · primera página parcial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        160
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:3010/api/v1/identities?limit=50&offset=0",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Elegí una credencial Header Auth con permiso read. Revisá status y candidate_pns; no inferir teléfonos desde LID. Revisá meta.has_more."
+    },
+    {
+      "id": "stories",
+      "name": "Estados vigentes observados · primera página parcial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        360
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:3010/api/v1/stories?limit=50&offset=0",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Elegí una credencial Header Auth con permiso read. Solo estados vigentes al consultar; no marca vistos. Respetá expires_at y evitá conservar contenido vencido. Revisá meta.has_more."
+    }
+  ],
+  "connections": {
+    "Manual · solo lectura local": {
+      "main": [
+        [
+          {
+            "node": "Llamadas observadas · primera página parcial",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Identidades locales · primera página parcial",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estados vigentes observados · primera página parcial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  }
+}

@@ -38,4 +38,6 @@ Las acciones administrativas permiten borrador, previsualización, aprobación d
 
 `examples/python_client.py` consume la misma API que el panel; `iter_records` recorre páginas. La base recibe eventos nuevos durante una exportación: deduplicar por ID y reconciliar cambios. Los workflows n8n se importan desactivados. Si n8n corre en otra máquina o contenedor, su `localhost` no apunta a esta instalación; el acceso remoto autenticado y HTTPS se preparará antes de desplegar.
 
+La [guía de observaciones](read-observations.md) muestra cómo consultar llamadas, identidades y estados desde Python y el workflow manual `n8n-read-observations.json`, sin crear una conexión de WhatsApp adicional.
+
 Pruebas vigentes: `npm run test:local`, `npm run test:api` y pruebas Python en `examples`. El SQL histórico basado en PostgreSQL no es una migración ni una prueba del runtime SQLite.
