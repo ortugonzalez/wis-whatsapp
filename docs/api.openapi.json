@@ -2872,7 +2872,7 @@
     "/blocklist": {
       "get": {
         "summary": "Read persisted blocklist; administrator cookie only",
-        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "description": "Administrator-only persisted blocklist. A failed refresh preserves earlier rows: stale marks retained information, last_success_at dates its last successful read, last_attempt_at dates the latest attempt, and error is a sanitized code. Retained rows do not prove current blocking state. GET performs no provider request or account mutation.",
         "parameters": [
           {
             "name": "q",
@@ -2954,6 +2954,29 @@
                           "items": {
                             "type": "object"
                           }
+                        },
+                        "stale": {
+                          "type": "boolean"
+                        },
+                        "error": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "last_attempt_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "last_success_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
                         }
                       }
                     }
