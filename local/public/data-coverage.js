@@ -38,7 +38,7 @@ async function insertDataCoverage(epoch=viewEpoch){
   const coverage=await api('/api/v1/coverage','GET',undefined,{timeoutMs:5000});
   if(state.page!=='overview'||epoch!==viewEpoch||request!==dataCoverageRequest||anchor!==document.querySelector('.stats'))return;
   const section=document.createElement('section');section.id='data-coverage';section.className='card spaced';
-  const entityLabels={contacts:'Contactos',conversations:'Conversaciones',groups:'Grupos',identity_links:'Vínculos LID / PN',messages:'Mensajes'};
+  const entityLabels={contacts:'Contactos',conversations:'Conversaciones',groups:'Grupos',identity_observations:'Observaciones de identidad',messages:'Mensajes'};
   const entityRows=Object.entries(coverage.entities||{}).map(([name,row])=>[esc(entityLabels[name]||name),row.known??row.stored??0,row.with_whatsapp_id??'—',row.metadata_records??row.chat_metadata_records??'—']);
   const readRows=(coverage.read_commands||[]).map(row=>[esc(row.kind),esc(({pending:'Encolada',running:'En curso',done:'Completada',failed:'Fallida'})[row.status]||row.status),row.count,esc(row.last_updated_at?fmt(row.last_updated_at):'—')]);
   const fieldRows=(coverage.snapshot_kinds||[]).map(row=>{const fields=(row.field_counts||[]).map(item=>`${item.field} (${item.records}/${row.records}; snapshot actualizado ${item.snapshot_updated_at?fmt(item.snapshot_updated_at):'sin fecha'})`).join(', ')||(row.fields||[]).join(', ')||'Sin campos observados';return [esc(row.kind),row.records,esc(row.last_updated_at?fmt(row.last_updated_at):'—'),esc(fields+(row.omitted_fields?` · ${row.omitted_fields} nombres omitidos por límite`:'' )+(row.field_inventory_truncated?' · inventario de campos limitado':''))];});
