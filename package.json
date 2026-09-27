@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node local/start.mjs",
-    "build": "node --check local/server.mjs && node --check local/worker.mjs && node --check local/webhooks.mjs && node --check local/avatars.mjs && node --check local/public/app.js && node --check local/public/live.js && node --check local/public/explorer.js && node --check local/public/messages.js && node --check local/public/integrations.js && node --check local/public/avatars.js && node --check local/public/calls.js && node --check local/public/identities.js && node --check local/public/stories.js && node --check local/public/communities.js && node --check local/public/capability-audit.js && node --check local/public/account-limits.js && node --check local/public/chat-details.js && node --check local/public/bots.js && node --check local/public/contact-catalog.js && node --check local/public/group-invite.js && node --check local/public/limits.js && node --check local/limits.mjs",
+    "build": "node --check local/server.mjs && node --check local/worker.mjs && node --check local/webhooks.mjs && node --check local/avatars.mjs && node --check local/public/app.js && node --check local/public/live.js && node --check local/public/explorer.js && node --check local/public/messages.js && node --check local/public/integrations.js && node --check local/public/avatars.js && node --check local/public/calls.js && node --check local/public/identities.js && node --check local/public/stories.js && node --check local/public/communities.js && node --check local/public/capability-audit.js && node --check local/public/account-limits.js && node --check local/public/chat-details.js && node --check local/public/bots.js && node --check local/public/contact-catalog.js && node --check local/public/group-invite.js && node --check local/public/limits.js && node --check local/limits.mjs && node --check local/supervisor.mjs && node --check local/start.mjs && node --check local/control.mjs",
     "start": "node local/start.mjs",
     "lint": "eslint",
     "local:setup": "node local/setup.mjs",
@@ -16,7 +16,8 @@
     "local:backup:check": "node local/backup-check.mjs",
     "test:local": "node --test local/*.test.mjs",
     "local:stop": "node local/control.mjs stop",
-    "local:status": "node local/status.mjs"
+    "local:status": "node local/status.mjs",
+    "local:reload-api": "node local/control.mjs reload-api"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
