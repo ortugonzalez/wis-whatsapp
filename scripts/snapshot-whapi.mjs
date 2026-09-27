@@ -79,6 +79,7 @@ export function buildSnapshot(entries, previous = {}, capturedAt = new Date().to
  const capabilities=entries.map(entry=>{
   const row={...entry,status:'pending',endpoint:null,screen:'/dashboard',baileys:null,test:null,reason:'Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.'};
   if(implemented[row.id]){row.status='partial';row.endpoint=implemented[row.id][0];row.reason=implemented[row.id][1];row.screen='/#capabilities';row.test='Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.';}
+  if(row.id==='getlimits'){row.status='unsupported';row.endpoint='/api/v1/limits';row.reason='Los límites consumidos/restantes de planes sandbox y trial de WHAPI pertenecen a ese proveedor y no existen en WIS. El endpoint local muestra solo restricciones técnicas propias; no es equivalente ni indica un volumen seguro de mensajes.';row.test='Referencia WHAPI getlimits revisada 2026-09-27 y docs/local-limits.md';row.screen='/#settings';}
   const existing=prior.get(row.id);if(existing&&Object.hasOwn(existing,'baileys_audit'))row.baileys_audit=structuredClone(existing.baileys_audit);
   return row;
  });

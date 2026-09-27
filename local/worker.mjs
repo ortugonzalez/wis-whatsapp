@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { LOCAL_LIMITS } from './limits.mjs';
 import { createPublicCatalogReader } from './catalog-http.mjs';
 import { createWebhookDispatcher } from './webhooks.mjs';
 import { cacheAvatar } from './avatars.mjs';
@@ -461,13 +462,13 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         const oldest=db.prepare("SELECT wa_message_id,direction,created_at FROM messages WHERE conversation_id=? AND wa_message_id IS NOT NULL AND wa_message_id!='' AND direction IN ('in','out') ORDER BY created_at ASC LIMIT 1").get(chat.id);
         const millis=Date.parse(oldest?.created_at);
         if(!oldest || !Number.isFinite(millis) || millis<=0)throw new Error('invalid_target');
-        snapshot('history_request',command.id,{target:command.target,conversation_id:chat.id,status:'requesting',requested_count:50,oldest_message_id:oldest.wa_message_id,oldest_timestamp:oldest.created_at,requested_at:new Date().toISOString(),complete:false});
+        snapshot('history_request',command.id,{target:command.target,conversation_id:chat.id,status:'requesting',requested_count:LOCAL_LIMITS.history_request_messages,oldest_message_id:oldest.wa_message_id,oldest_timestamp:oldest.created_at,requested_at:new Date().toISOString(),complete:false});
         // Installed Baileys copies the argument to oldestMsgTimestampMs, so use
         // milliseconds. This is a peer history request, never a chat send/read receipt.
-        const requestId=await readCall(current,'fetchMessageHistory',[50,{remoteJid:command.target,id:oldest.wa_message_id,fromMe:oldest.direction==='out'},millis]);
+        const requestId=await readCall(current,'fetchMessageHistory',[LOCAL_LIMITS.history_request_messages,{remoteJid:command.target,id:oldest.wa_message_id,fromMe:oldest.direction==='out'},millis]);
         if(typeof requestId!=='string' || !requestId)throw new Error('invalid_history_response');
         snapshot('history_request',command.id,{request_id:requestId,status:'requested',request_accepted_at:new Date().toISOString(),complete:false});
-        event('history.requested',command.target,{command_id:command.id,request_id:requestId,requested_count:50,complete:false});
+        event('history.requested',command.target,{command_id:command.id,request_id:requestId,requested_count:LOCAL_LIMITS.history_request_messages,complete:false});
       } else if(command.kind==='bot_list') {
         if(command.target)throw Error('invalid_target');
         const result=await readCall(current,'bot_list');

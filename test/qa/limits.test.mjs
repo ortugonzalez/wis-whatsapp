@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {scryptSync,randomBytes} from 'node:crypto';
+process.env.WIS_DB_PATH=':memory:';
+const {openDatabase}=await import('../../local/db.mjs');
+const {makeServer}=await import('../../local/server.mjs');
+const {LOCAL_LIMITS}=await import('../../local/limits.mjs');
+test('reported local limits match enforced pagination, text and upload boundaries',async()=>{
+ const db=openDatabase(':memory:'),password=randomBytes(20).toString('hex'),salt='limits-test';db.prepare("INSERT INTO settings(key,value) VALUES('admin_password',?)").run(salt+':'+scryptSync(password,salt,64).toString('hex'));const server=makeServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let cookie='';const req=async(path,method='GET',body,token)=>{const r=await fetch(base+path,{method,headers:{Origin:base,'Content-Type':'application/json',Cookie:cookie,'Idempotency-Key':'limits-test',...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,json:await r.json(),headers:r.headers};};
+ try{assert.equal((await req('/api/v1/limits')).status,401);const login=await req('/api/login','POST',{password});cookie=login.headers.get('set-cookie').split(';')[0];const reader=(await req('/api/v1/tokens','POST',{name:'reader',scopes:['read']})).json.data.token;assert.equal((await req('/api/v1/limits','GET',null,reader)).status,403);const report=(await req('/api/v1/limits')).json.data;assert.deepEqual(report.limits,LOCAL_LIMITS);assert.equal(report.provider_plan,false);assert.equal(report.safe_daily_volume,null);assert.equal((await req('/api/v1/limits','PATCH',{})).status,404);
+ assert.equal((await req('/api/v1/messages')).json.meta.limit,LOCAL_LIMITS.page_default);assert.equal((await req('/api/v1/messages?limit='+LOCAL_LIMITS.page_max)).status,200);assert.equal((await req('/api/v1/messages?limit='+(LOCAL_LIMITS.page_max+1))).status,400);assert.equal((await req('/api/v1/messages?q='+'x'.repeat(LOCAL_LIMITS.search_max_chars+1))).status,400);
+ const text=await req('/api/v1/messages','POST',{to:'+12025550111',body:'x'.repeat(LOCAL_LIMITS.text_max_chars+1)});assert.equal(text.json.error,'invalid_body');const exact=await req('/api/v1/messages','POST',{to:'+12025550111',body:'x'.repeat(LOCAL_LIMITS.text_max_chars)});assert.notEqual(exact.json.error,'invalid_body');
+ const tooLarge=Buffer.alloc(LOCAL_LIMITS.media_upload_bytes+1).toString('base64');const media=await req('/api/v1/media','POST',{mime_type:'application/pdf',base64:tooLarge});assert.equal(media.status,413);assert.equal(media.json.error,'invalid_media_size');const maxSize=Buffer.alloc(LOCAL_LIMITS.media_upload_bytes).toString('base64');const signature=await req('/api/v1/media','POST',{mime_type:'application/pdf',base64:maxSize});assert.equal(signature.status,415);assert.equal(signature.json.error,'media_signature_mismatch');assert.equal(db.prepare('SELECT count(*) AS n FROM operations').get().n,0);
+ }finally{await new Promise(r=>server.close(r));db.close();}
+});

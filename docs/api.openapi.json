@@ -3916,6 +3916,23 @@
           }
         }
       }
+    },
+    "/limits": {
+      "get": {
+        "summary": "Administrator local implementation limits and read-only gates",
+        "description": "Local configuration, not WHAPI plan quotas or a safe daily volume. Fields are byte counts except *_chars (JavaScript UTF-16 length), page counts and history_request_messages. Upload limit applies decoded bytes with a separate base64 character and JSON-body cap. No mutation endpoint. Flags report configuration, not permission to send.",
+        "responses": {
+          "200": {
+            "description": "data: source local_config, limits object, flags outbound_enabled/webhooks_enabled, safe_daily_volume:null, provider_plan:false, editable:false"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrator browser session required"
+          }
+        }
+      }
     }
   }
 }

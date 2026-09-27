@@ -29,3 +29,9 @@ test('partial indexes cannot erase previously audited methods; fresh inventories
   assert.deepEqual(result.capabilities.map(row=>row.id), ['getchat','newmethod']);
   assert.equal(Object.hasOwn(result,'baileys_audit'), false);
 });
+test('local operational limits do not become implemented WHAPI subscription quotas', () => {
+  const result = buildSnapshot(parseEntries('- [Get limits](https://whapi.readme.io/reference/getlimits)'));
+  assert.equal(result.capabilities[0].status, 'unsupported');
+  assert.equal(result.capabilities[0].endpoint, '/api/v1/limits');
+  assert.match(result.capabilities[0].reason, /no es equivalente/);
+});
