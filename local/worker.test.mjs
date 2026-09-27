@@ -5,7 +5,15 @@ import {readFileSync,mkdtempSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {resolve} from 'node:path';
 import {EventEmitter} from 'node:events';
-import {timestamp,identityMatches,acquireLease,mediaFile,runWorker,safeGroup,normalizeContent,classifyReadError,readBudgetMs,checkedBusinessRead,checkedListRead,callSnapshot} from './worker.mjs';
+import {timestamp,identityMatches,acquireLease,mediaFile,runWorker,safeGroup,normalizeContent,classifyReadError,readBudgetMs,checkedBusinessRead,checkedListRead,callSnapshot,checkedGroupRead} from './worker.mjs';
+
+test('checked group lists require verified container and never turn timeout into empty data',async()=>{
+ for(const value of [undefined,{tag:'iq',attrs:{type:'result'},content:[]}])await assert.rejects(checkedGroupRead({query:async()=>value},'community_subgroups','123@g.us'));
+ const query=async(node,timeout)=>{assert.equal(node.attrs.type,'get');assert.equal(timeout,10000);return {tag:'iq',attrs:{type:'result'},content:[{tag:node.content[0].tag,attrs:{},content:[]}]};};
+ assert.deepEqual(await checkedGroupRead({query},'community_subgroups','123@g.us'),{rows:[],truncated:false});
+ const groups=await checkedGroupRead({query:async()=>({tag:'iq',attrs:{type:'result'},content:[{tag:'sub_groups',content:[{tag:'group',attrs:{id:'456',subject:'Group',secret:'SECRET'}}]}]})},'community_subgroups','123@g.us');assert.equal(groups.rows[0].id,'456@g.us');assert.equal(JSON.stringify(groups).includes('SECRET'),false);
+ const requests=await checkedGroupRead({query:async()=>({tag:'iq',attrs:{type:'result'},content:[{tag:'membership_approval_requests',content:[{tag:'membership_approval_request',attrs:{jid:'123@lid',request_time:'1700000000',invite_code:'SECRET'}}]}]})},'group_requests','123@g.us');assert.deepEqual(requests.rows,[{jid:'123@lid',request_time:'1700000000'}]);
+});
 
 test('duplicate call observation preserves full bounded history',()=>{
  let prior={};for(let n=0;n<50;n++)prior=callSnapshot({id:'call',status:'ringing',date:new Date(1700000000000+n*1000)},prior);
@@ -19,6 +27,7 @@ const productNode=p=>({tag:'product',attrs:{},content:['id','name','description'
 function mockRawQueries(socket) {
  if(socket.query)return socket;
  socket.query=async node=>{
+  if(node.content?.[0]?.tag==='sub_groups'){const result=await socket.communityFetchLinkedGroups(node.attrs.to);return {tag:'iq',attrs:{type:'result'},content:[{tag:'sub_groups',content:result.linkedGroups.map(x=>({tag:'group',attrs:{id:x.id.replace('@g.us',''),subject:x.subject,size:String(x.size)}}))}]};}
   const child=node.content?.[0];
   if(child?.tag==='product_catalog') {
    const result=await socket.getCatalog({jid:child.attrs.jid,limit:Number(child.content.find(x=>x.tag==='limit').content),cursor:child.content.find(x=>x.tag==='after')?.content});

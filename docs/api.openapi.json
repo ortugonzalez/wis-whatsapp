@@ -2101,7 +2101,9 @@
                       "newsletter",
                       "newsletters",
                       "history",
-                      "avatar"
+                      "avatar",
+                      "group_requests",
+                      "community_subgroups"
                     ]
                   },
                   "target": {
@@ -2154,7 +2156,7 @@
             "description": "Administrator session and same-origin request required"
           }
         },
-        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled."
+        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available."
       }
     },
     "/reference-fields": {
@@ -2479,6 +2481,14 @@
               "minimum": 0,
               "default": 0
             }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Known community JID returns safe detail with linked_groups and subgroups read snapshot"
           }
         ],
         "responses": {
@@ -3304,6 +3314,66 @@
           },
           "404": {
             "description": "Story absent, expired or revoked"
+          }
+        }
+      }
+    },
+    "/group-requests": {
+      "get": {
+        "summary": "Read cached group-requests without remote mutations",
+        "description": "Read scope. Known target required; community-subgroups additionally requires community snapshot or observed isCommunity=true. Explicit allowlist strips invite codes/links/secrets. No remote query on GET. Bounded at2000 entries. Empty not_collected differs from verified complete empty; stale unavailable snapshots remain labeled.",
+        "parameters": [
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data target,observed,available,response_verified,stale,truncated,collection_status,updated_at,error plus requests[jid,request_method,request_time] or groups[id,subject,creation,owner,size]"
+          },
+          "400": {
+            "description": "Invalid group JID"
+          },
+          "403": {
+            "description": "Read scope required"
+          },
+          "404": {
+            "description": "Unknown group/community"
+          }
+        }
+      }
+    },
+    "/community-subgroups": {
+      "get": {
+        "summary": "Read cached community-subgroups without remote mutations",
+        "description": "Read scope. Known target required; community-subgroups additionally requires community snapshot or observed isCommunity=true. Explicit allowlist strips invite codes/links/secrets. No remote query on GET. Bounded at2000 entries. Empty not_collected differs from verified complete empty; stale unavailable snapshots remain labeled.",
+        "parameters": [
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data target,observed,available,response_verified,stale,truncated,collection_status,updated_at,error plus requests[jid,request_method,request_time] or groups[id,subject,creation,owner,size]"
+          },
+          "400": {
+            "description": "Invalid group JID"
+          },
+          "403": {
+            "description": "Read scope required"
+          },
+          "404": {
+            "description": "Unknown group/community"
           }
         }
       }

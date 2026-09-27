@@ -11,6 +11,9 @@ const capabilities = entries.map(([, name, url]) => ({
   reason: 'Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.'
 }));
 const implemented = {
+  getcommunity: ['/api/v1/communities?id=JID', 'Detalle local de una comunidad observada; campos disponibles sin modificar membresía.'],
+  getcommunitysubgroups: ['/api/v1/community-subgroups?target=JID', 'Subgrupos de una comunidad conocida, con consulta de lectura validada y disponibilidad explícita.'],
+  getgroupapplicationslist: ['/api/v1/group-requests?target=JID', 'Solicitudes de ingreso consultadas para un grupo conocido; depende de permisos y respuesta de WhatsApp. Sin aprobar ni rechazar.'],
   getstories: ['/api/v1/stories', 'Estados vigentes recibidos por la sesión, texto y metadatos locales. Sin recuperación completa, descargas ni confirmaciones de lectura.'],
   getstory: ['/api/v1/stories?id=ID', 'Detalle local de un estado observado no vencido ni revocado; sin medios ni publicación.'],
   getlidbyids: ['/api/v1/identities', 'Inventario local paginado de relaciones LID/PN observadas; sin resolución remota de números arbitrarios.'],

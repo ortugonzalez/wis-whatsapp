@@ -1051,12 +1051,12 @@
       "id": "getgroupapplicationslist",
       "name": "Get list of join requests to the group",
       "source": "https://whapi.readme.io/reference/getgroupapplicationslist.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/group-requests?target=JID",
+      "screen": "/#communities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Fixtures de respuesta IQ, permisos y API; docs/community-reads.md.",
+      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa."
     },
     {
       "id": "approvegroupapplicationslist",
@@ -1777,12 +1777,12 @@
       "id": "getcommunity",
       "name": "Get community",
       "source": "https://whapi.readme.io/reference/getcommunity.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/communities?id=JID",
+      "screen": "/#communities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Fixtures de respuesta IQ, permisos y API; docs/community-reads.md.",
+      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa."
     },
     {
       "id": "deactivatecommunity",
@@ -1909,12 +1909,12 @@
       "id": "getcommunitysubgroups",
       "name": "Get community subgroups",
       "source": "https://whapi.readme.io/reference/getcommunitysubgroups.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/community-subgroups?target=JID",
+      "screen": "/#communities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Fixtures de respuesta IQ, permisos y API; docs/community-reads.md.",
+      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa."
     },
     {
       "id": "createevent",

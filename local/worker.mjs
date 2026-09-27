@@ -96,6 +96,26 @@ export function readBudgetMs(method, override) {
   // Business adapter uses an explicit 30s provider timeout, with a 5s outer margin.
   return ['getCatalog','getCollections'].includes(method)?35000:12000;
 }
+export async function checkedGroupRead(socket,method,target) {
+  if(!['community_subgroups','group_requests'].includes(method)||!/^\d+(?:-\d+)?@g\.us$/.test(target||''))throw Error('invalid_target');
+  const tag=method==='community_subgroups'?'sub_groups':'membership_approval_requests',child=method==='community_subgroups'?'group':'membership_approval_request';
+  const reply=await socket.query({tag:'iq',attrs:{to:target,type:'get',xmlns:'w:g2'},content:[{tag,attrs:{}}]},10000);
+  if(!reply)throw Error('read_timeout');
+  if(reply.attrs?.type==='error'){const code=Number(reply.content?.find(x=>x.tag==='error')?.attrs?.code);throw Object.assign(Error('provider_error'),{statusCode:Number.isInteger(code)?code:undefined});}
+  const container=Array.isArray(reply.content)?reply.content.find(x=>x.tag===tag):null;
+  if(reply.tag!=='iq'||reply.attrs?.type!=='result'||!container||container.content!==undefined&&!Array.isArray(container.content))throw Error('invalid_group_response');
+  if((container.content||[]).some(x=>x.tag!==child))throw Error('invalid_group_response');
+  const rows=(container.content||[]).map(x=>{
+    if(method==='community_subgroups') {
+      if(!/^\d+(?:-\d+)?$/.test(x.attrs?.id || ''))throw Error('invalid_group_response');
+      const owner=typeof x.attrs.creator==='string'?x.attrs.creator.replace(/:\d+(?=@)/,''):'';
+      return {id:x.attrs.id+'@g.us',...safeFields(x.attrs,['subject']),...safeFields({creation:x.attrs.creation?Number(x.attrs.creation):undefined,size:x.attrs.size?Number(x.attrs.size):undefined,owner:/^\d+@(s\.whatsapp\.net|lid)$/.test(owner)?owner:undefined},['creation','size','owner'])};
+    }
+    if(!/^\d+(?::\d+)?@(s\.whatsapp\.net|lid)$/.test(x.attrs?.jid || ''))throw Error('invalid_group_response');
+    return safeFields(x.attrs,['jid','request_method','request_time']);
+  });
+  return {rows:rows.slice(0,2000),truncated:rows.length>2000};
+}
 export async function checkedBusinessRead(socket,method,args) {
   if(typeof socket.query!=='function')throw new Error('capability_unavailable');
   const catalog=method==='getCatalog';
@@ -267,8 +287,9 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     if(unresolvedRead?.socket===current)throw new Error('previous_read_unresolved');
     const business=['getCatalog','getCollections'].includes(name);
     const publicRead=['publicCatalog','publicCollections'].includes(name);
+    const groupRead=['community_subgroups','group_requests'].includes(name);
     const list=['fetchBlocklist','groupFetchAllParticipating','communityFetchAllParticipating'].includes(name);
-    if(!publicRead && typeof current[business||list?'query':name]!=='function')throw new Error('capability_unavailable');
+    if(!publicRead && typeof current[business||list||groupRead?'query':name]!=='function')throw new Error('capability_unavailable');
     let timer,timedOut=false;
     const diagnostic=activeReadCommand?{command_id:activeReadCommand.id,kind:activeReadCommand.kind,method:name}:null;
     const diagnosticResource=activeReadCommand?.target || 'wis-5679';
@@ -276,7 +297,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       const pending={socket:current};unresolvedRead=pending;
       // Local timeout does not cancel Baileys' IQ request. Block further reads until
       // that request settles (or a different socket takes over), avoiding fan-out.
-      const request=Promise.resolve().then(()=>publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
+      const request=Promise.resolve().then(()=>groupRead?checkedGroupRead(current,name,args[0]):publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
         if(timedOut && diagnostic && owns() && sock===current)event('read.late_completed',diagnosticResource,{...diagnostic,result:'response_received_after_timeout'});
         return value;
       },error=>{
@@ -345,6 +366,11 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(typeof requestId!=='string' || !requestId)throw new Error('invalid_history_response');
         snapshot('history_request',command.id,{request_id:requestId,status:'requested',request_accepted_at:new Date().toISOString(),complete:false});
         event('history.requested',command.target,{command_id:command.id,request_id:requestId,requested_count:50,complete:false});
+      } else if(['community_subgroups','group_requests'].includes(command.kind)) {
+        if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('invalid_target');
+        if(command.kind==='community_subgroups'&&!db.prepare("SELECT 1 FROM snapshots WHERE resource_id=? AND (kind='community' OR (kind='group' AND json_extract(payload,'$.isCommunity')=1)) LIMIT 1").get(command.target))throw Error('unknown_community');
+        const result=await readCall(current,command.kind,[command.target]);
+        snapshot(command.kind,command.target,{[command.kind==='group_requests'?'requests':'groups']:result.rows,available:true,response_verified:true,truncated:result.truncated,error:null,source:'checked_baileys_iq'});
       } else if(command.kind==='avatar') {
         const target=command.target;
         const own=current.user?.id?.replace(/:\d+(?=@)/,'');
@@ -405,8 +431,8 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         } else {
           if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw new Error('unknown_community');
           const group=await readCall(current,'communityMetadata',[command.target]);
-          const linked=await readCall(current,'communityFetchLinkedGroups',[command.target]);
-          snapshot('community',command.target,{...safeGroup(group),linked_groups:(linked?.linkedGroups || []).slice(0,2000).map(x=>safeFields(x,['id','subject','creation','owner','size'])),available:true,error:null});
+          const linked=await readCall(current,'community_subgroups',[group.linkedParent || command.target]);
+          snapshot('community',command.target,{...safeGroup(group),linked_groups:linked.rows,linked_groups_truncated:linked.truncated,response_verified:true,available:true,error:null});
           saveGroups([group]);
         }
       } else if(command.kind==='newsletter' || command.kind==='newsletters') {
@@ -428,6 +454,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       if(owns()) {
         const failure=classifyReadError(error);
         db.prepare("UPDATE read_commands SET status='failed',error=?,updated_at=? WHERE id=?").run(failure.code,new Date().toISOString(),command.id);
+        if(['community_subgroups','group_requests'].includes(command.kind))snapshot(command.kind,command.target,{available:false,stale:true,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='avatar') {
           const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(command.target);
           snapshot('avatar',command.target,{available:false,stale:Boolean(prior),error:failure.code,scope:'profile_picture',last_attempt_at:new Date().toISOString()});
