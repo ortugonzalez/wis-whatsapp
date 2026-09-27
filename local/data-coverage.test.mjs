@@ -26,3 +26,17 @@ test('coverage counts identity observations without exposing identifiers',()=>{
  db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('identity','malformed','not-json','2026-01-02T00:00:00.000Z');
  try{const coverage=buildDataCoverage(db);assert.deepEqual(coverage.entities.identity_observations,{known:2,with_whatsapp_id:1,metadata_records:2});assert.equal(JSON.stringify(coverage.entities).includes('private'),false);}finally{db.close();}
 });
+
+test('coverage reports only allowlisted read error codes and hides command targets',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)').run('private-id-1','catalog','failed','private-target-1','provider_error','2026-01-01T00:00:00.000Z');
+ db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)').run('private-id-2','contact_profile','failed','private-target-2','raw-secret-detail','2026-01-02T00:00:00.000Z');
+ db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)').run('private-id-3','contact_profile','failed','private-target-3','another-secret-detail','2026-01-03T00:00:00.000Z');
+ try{const coverage=buildDataCoverage(db);assert.deepEqual(coverage.read_errors,[{kind:'catalog',code:'provider_error',count:1,last_updated_at:'2026-01-01T00:00:00.000Z'},{kind:'contact_profile',code:'read_failed',count:2,last_updated_at:'2026-01-03T00:00:00.000Z'}]);assert.equal(coverage.read_errors_truncated,false);assert.equal(JSON.stringify(coverage.read_errors).includes('private-target'),false);assert.equal(JSON.stringify(coverage.read_errors).includes('secret-detail'),false);assert.equal(JSON.stringify(coverage.read_errors).includes('private-id'),false);}finally{db.close();}
+});
+
+test('coverage flags read error groups beyond the display limit',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const insert=db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)');for(let i=0;i<101;i++)insert.run(`id-${i}`,`kind-${i}`,'failed',`private-target-${i}`,'provider_error','2026-01-01T00:00:00.000Z');
+ try{const coverage=buildDataCoverage(db);assert.equal(coverage.read_errors.length,100);assert.equal(coverage.read_errors_truncated,true);assert.ok(coverage.read_errors.every(row=>row.code==='provider_error'));}finally{db.close();}
+});

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 const SECRET_FIELD = /(token|secret|password|cookie|qr|credential|authorization|private.?key)/i;
+const SAFE_READ_ERROR_CODES = ['read_timeout','read_pending','disconnected','method_missing','identity_unavailable','invalid_target','unknown_target','not_found','order_message_unavailable','order_credential_unavailable','public_catalog_unavailable','graphql_error','access_denied','rate_limited','transport_failed','public_catalog_config_unavailable','provider_error','read_failed','worker_interrupted','read_unavailable_or_disconnected','invalid_response','avatar_unavailable','avatar_destination_rejected','avatar_download_failed','avatar_timeout','avatar_too_large','invalid_avatar_media'];
 
 function normalizeArrayIndexes(path) {
   let result = '', quoted = false, escaped = false;
@@ -69,6 +70,9 @@ export function buildDataCoverage(db) {
     };
   });
   const kindCount = kind => byKind.get(kind)?.records || 0;
+  const errorPlaceholders = SAFE_READ_ERROR_CODES.map(() => '?').join(',');
+  const readErrorRows = db.prepare(`SELECT kind,CASE WHEN error IN (${errorPlaceholders}) THEN error ELSE 'read_failed' END AS code,count(*) AS count,max(updated_at) AS last_updated_at FROM read_commands WHERE status='failed' GROUP BY kind,code ORDER BY kind,code LIMIT 101`).all(...SAFE_READ_ERROR_CODES);
+  const readErrors = readErrorRows.slice(0,100).map(row => ({ kind: row.kind, code: row.code, count: row.count, last_updated_at: typeof row.last_updated_at === 'string' && Number.isFinite(Date.parse(row.last_updated_at)) ? new Date(row.last_updated_at).toISOString() : null }));
   return {
     entities: {
       contacts: { known: count('SELECT count(*) AS count FROM contacts'), with_whatsapp_id: count("SELECT count(*) AS count FROM contacts WHERE wa_jid IS NOT NULL AND wa_jid!=''"), metadata_records: kindCount('contact') },
@@ -80,6 +84,8 @@ export function buildDataCoverage(db) {
     message_types: db.prepare('SELECT type,count(*) AS count FROM messages GROUP BY type ORDER BY type').all().map(row => ({ type: row.type, count: row.count })),
     snapshot_kinds: snapshotKinds,
     read_commands: db.prepare('SELECT kind,status,count(*) AS count,max(updated_at) AS last_updated_at FROM read_commands GROUP BY kind,status ORDER BY kind,status').all().map(row => ({ kind: row.kind, status: row.status, count: row.count, last_updated_at: typeof row.last_updated_at === 'string' && Number.isFinite(Date.parse(row.last_updated_at)) ? new Date(row.last_updated_at).toISOString() : null })),
+    read_errors: readErrors,
+    read_errors_truncated: readErrorRows.length > 100,
     observed_at: new Date().toISOString(),
     history_complete: false,
   };
