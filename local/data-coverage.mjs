@@ -78,6 +78,7 @@ export function buildDataCoverage(db) {
     },
     message_types: db.prepare('SELECT type,count(*) AS count FROM messages GROUP BY type ORDER BY type').all().map(row => ({ type: row.type, count: row.count })),
     snapshot_kinds: snapshotKinds,
+    read_commands: db.prepare('SELECT kind,status,count(*) AS count,max(updated_at) AS last_updated_at FROM read_commands GROUP BY kind,status ORDER BY kind,status').all().map(row => ({ kind: row.kind, status: row.status, count: row.count, last_updated_at: typeof row.last_updated_at === 'string' && Number.isFinite(Date.parse(row.last_updated_at)) ? new Date(row.last_updated_at).toISOString() : null })),
     observed_at: new Date().toISOString(),
     history_complete: false,
   };
