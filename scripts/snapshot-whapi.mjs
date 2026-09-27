@@ -11,6 +11,8 @@ const capabilities = entries.map(([, name, url]) => ({
   reason: 'Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.'
 }));
 const implemented = {
+  getnewchatlimit: ['/api/v1/account-limits', 'Consulta administrativa de cuotas reportadas por WhatsApp; desconocido si no hay respuesta válida. No recomienda un volumen seguro de envíos.'],
+  getreachouttimelock: ['/api/v1/account-limits', 'Restricción temporal reportada por el proveedor, con campos ausentes explícitos. No cambia políticas ni habilita envíos.'],
   getcommunity: ['/api/v1/communities?id=JID', 'Detalle local de una comunidad observada; campos disponibles sin modificar membresía.'],
   getcommunitysubgroups: ['/api/v1/community-subgroups?target=JID', 'Subgrupos de una comunidad conocida, con consulta de lectura validada y disponibilidad explícita.'],
   getgroupapplicationslist: ['/api/v1/group-requests?target=JID', 'Solicitudes de ingreso consultadas para un grupo conocido; depende de permisos y respuesta de WhatsApp. Sin aprobar ni rechazar.'],

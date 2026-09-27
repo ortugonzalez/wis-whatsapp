@@ -2103,7 +2103,8 @@
                       "history",
                       "avatar",
                       "group_requests",
-                      "community_subgroups"
+                      "community_subgroups",
+                      "account_limits"
                     ]
                   },
                   "target": {
@@ -2156,7 +2157,7 @@
             "description": "Administrator session and same-origin request required"
           }
         },
-        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available."
+        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available. account_limits accepts only kind, with no target or extra properties; reads own account limits without changing any sending gate."
       }
     },
     "/reference-fields": {
@@ -3374,6 +3375,210 @@
           },
           "404": {
             "description": "Unknown group/community"
+          }
+        }
+      }
+    },
+    "/account-limits": {
+      "get": {
+        "summary": "Administrator-only observed provider quota and reachout timelock",
+        "description": "Local snapshot only; unknown fields are null, never invented zero. No safe sending quota, ban-risk score or permission to send is inferred. Does not change operational gates. Refresh requires administrator POST /sync with only kind account_limits.",
+        "responses": {
+          "200": {
+            "description": "Sanitized latest observation; independent subquery availability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "observed": {
+                          "type": "boolean"
+                        },
+                        "updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "observed_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "partial": {
+                          "type": "boolean"
+                        },
+                        "quota": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "available": {
+                              "type": "boolean"
+                            },
+                            "response_verified": {
+                              "type": "boolean"
+                            },
+                            "error": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "status_code": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 100,
+                              "maximum": 599
+                            },
+                            "total_quota": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "used_quota": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "cycle_start_timestamp": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "pattern": "^[0-9]{1,16}$",
+                              "description": "Raw provider timestamp; unit is not inferred."
+                            },
+                            "cycle_end_timestamp": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "pattern": "^[0-9]{1,16}$",
+                              "description": "Raw provider timestamp; unit is not inferred."
+                            },
+                            "server_sent_timestamp": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "pattern": "^[0-9]{1,16}$",
+                              "description": "Raw provider timestamp; unit is not inferred."
+                            },
+                            "ote_status": {
+                              "enum": [
+                                null,
+                                "NOT_ELIGIBLE",
+                                "ELIGIBLE",
+                                "ACTIVE_IN_CURRENT_CYCLE",
+                                "EXHAUSTED"
+                              ]
+                            },
+                            "mv_status": {
+                              "enum": [
+                                null,
+                                "NOT_ELIGIBLE",
+                                "NOT_ACTIVE",
+                                "ACTIVE",
+                                "ACTIVE_UPGRADE_AVAILABLE"
+                              ]
+                            },
+                            "capping_status": {
+                              "enum": [
+                                null,
+                                "NONE",
+                                "FIRST_WARNING",
+                                "SECOND_WARNING",
+                                "CAPPED"
+                              ]
+                            }
+                          }
+                        },
+                        "timelock": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "available": {
+                              "type": "boolean"
+                            },
+                            "response_verified": {
+                              "type": "boolean"
+                            },
+                            "error": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "status_code": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 100,
+                              "maximum": 599
+                            },
+                            "is_active": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "time_enforcement_ends": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "pattern": "^[0-9]{1,16}$",
+                              "description": "Raw provider timestamp; unit is not inferred."
+                            },
+                            "enforcement_type": {
+                              "enum": [
+                                null,
+                                "BIZ_COMMERCE_VIOLATION_ALCOHOL",
+                                "BIZ_COMMERCE_VIOLATION_ADULT",
+                                "BIZ_COMMERCE_VIOLATION_ANIMALS",
+                                "BIZ_COMMERCE_VIOLATION_BODY_PARTS_FLUIDS",
+                                "BIZ_COMMERCE_VIOLATION_DATING",
+                                "BIZ_COMMERCE_VIOLATION_DIGITAL_SERVICES_PRODUCTS",
+                                "BIZ_COMMERCE_VIOLATION_DRUGS",
+                                "BIZ_COMMERCE_VIOLATION_DRUGS_ONLY_OTC",
+                                "BIZ_COMMERCE_VIOLATION_GAMBLING",
+                                "BIZ_COMMERCE_VIOLATION_HEALTHCARE",
+                                "BIZ_COMMERCE_VIOLATION_REAL_FAKE_CURRENCY",
+                                "BIZ_COMMERCE_VIOLATION_SUPPLEMENTS",
+                                "BIZ_COMMERCE_VIOLATION_TOBACCO",
+                                "BIZ_COMMERCE_VIOLATION_VIOLENT_CONTENT",
+                                "BIZ_COMMERCE_VIOLATION_WEAPONS",
+                                "BIZ_QUALITY",
+                                "DEFAULT",
+                                "WEB_COMPANION_ONLY"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrator cookie required"
           }
         }
       }

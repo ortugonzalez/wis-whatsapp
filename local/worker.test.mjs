@@ -5,7 +5,17 @@ import {readFileSync,mkdtempSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {resolve} from 'node:path';
 import {EventEmitter} from 'node:events';
-import {timestamp,identityMatches,acquireLease,mediaFile,runWorker,safeGroup,normalizeContent,classifyReadError,readBudgetMs,checkedBusinessRead,checkedListRead,callSnapshot,checkedGroupRead} from './worker.mjs';
+import {timestamp,identityMatches,acquireLease,mediaFile,runWorker,safeGroup,normalizeContent,classifyReadError,readBudgetMs,checkedBusinessRead,checkedListRead,callSnapshot,checkedGroupRead,checkedAccountLimits} from './worker.mjs';
+
+test('account limits require actual objects and never default missing restriction to inactive',async()=>{
+ const socket=value=>({query:async(node,timeout)=>{assert.equal(node.attrs.type,'get');assert.equal(timeout,10000);return {tag:'iq',attrs:{type:'result'},content:[{tag:'result',content:Buffer.from(JSON.stringify({data:{xwa2_fetch_account_reachout_timelock:value,xwa2_message_capping_info:value}}))}]};}});
+ for(const value of [null,undefined,[]])await assert.rejects(checkedAccountLimits(socket(value),'timelock'),/invalid_limits_response/);
+ await assert.rejects(checkedAccountLimits({query:async()=>undefined},'quota'),/read_timeout/);
+ await assert.rejects(checkedAccountLimits(socket({secret:'PRIVATE'}),'timelock'),/invalid_limits_response/);
+ const quota=await checkedAccountLimits(socket({total_quota:100,used_quota:0,capping_status:'CAPPED',mv_status:'BOGUS',cycle_start_timestamp:'1700000000'}),'quota');assert.equal(quota.used_quota,0);assert.equal(quota.mv_status,null);assert.equal(quota.cycle_start_timestamp,'1700000000');assert.equal(quota.capping_status,'CAPPED');
+ const restricted=await checkedAccountLimits(socket({is_active:true,time_enforcement_ends:'1700000000',enforcement_type:'WEB_COMPANION_ONLY'}),'timelock');assert.equal(restricted.is_active,true);
+ const quality=await checkedAccountLimits(socket({enforcement_type:'BIZ_QUALITY'}),'timelock');assert.equal(quality.enforcement_type,'BIZ_QUALITY');assert.equal(quality.is_active,null);
+});
 
 test('checked group lists require verified container and never turn timeout into empty data',async()=>{
  for(const value of [undefined,{tag:'iq',attrs:{type:'result'},content:[]}])await assert.rejects(checkedGroupRead({query:async()=>value},'community_subgroups','123@g.us'));
