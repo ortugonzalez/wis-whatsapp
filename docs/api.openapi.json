@@ -3167,6 +3167,80 @@
           }
         }
       }
+    },
+    "/identities": {
+      "get": {
+        "summary": "Read persisted explicit LID/PN mappings and unknown identifiers",
+        "description": "Read scope only, no network or auth-state reads. Explicit identity snapshots require canonical LID and PN plus recognized source lid-mapping.update, messaging-history.set or contacts. Contact identifiers without explicit mapping have status unknown; a LID never generates a phone number. Conflicts preserve original observed PN and flag conflicting_pn. GET never merges contacts or modifies consent. candidate_pns contains at most20 validated distinct PN JIDs, including preserved and contradictory candidates. Exact PN and free-text filters include these candidates. Shared candidates propagate conflict visibility across affected rows without writing the database.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Canonical row JID returns one detail"
+          },
+          {
+            "name": "lid",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact numeric@lid"
+          },
+          {
+            "name": "pn",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact PN JID or +E164"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data row(s): id,lid,pn,phone_e164,status observed|conflict|unknown,conflict,conflicting_pn,source,observed_at,updated_at,contact_ids. List meta total,limit,offset,has_more,history_complete=false,source=persisted_identity_observations, candidate_pns validated PN JID array (maximum20)"
+          },
+          "400": {
+            "description": "Invalid filter"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Read scope required"
+          },
+          "404": {
+            "description": "Identity not observed"
+          }
+        }
+      }
     }
   }
 }

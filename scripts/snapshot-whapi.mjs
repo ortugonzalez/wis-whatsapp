@@ -11,6 +11,9 @@ const capabilities = entries.map(([, name, url]) => ({
   reason: 'Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.'
 }));
 const implemented = {
+  getlidbyids: ['/api/v1/identities', 'Inventario local paginado de relaciones LID/PN observadas; sin resolución remota de números arbitrarios.'],
+  getlidbyid: ['/api/v1/identities?pn=PN', 'Consulta por PN observado; los conflictos se conservan, sin prometer una relación única.'],
+  getidbylid: ['/api/v1/identities?lid=LID', 'Consulta por LID observado; no se calcula un teléfono desde los dígitos de un LID.'],
   getcall: ['/api/v1/calls?id=ID', 'Llamadas observadas por la sesión y persistidas localmente; no recupera el historial completo ni inicia llamadas.'],
   checkhealth: ['/api/v1/connections', 'Estado del worker y conexión; no emula wakeup de WHAPI.'],
   loginuser: ['/api/whatsapp/qr', 'QR administrativo temporal; formato propio WIS.'],

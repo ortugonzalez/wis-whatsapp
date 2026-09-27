@@ -212,18 +212,32 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     db.prepare('INSERT INTO events(id,kind,resource_id,payload,created_at) VALUES(?,?,?,?,?)').run(randomUUID(),kind,resource || 'wis-5679',JSON.stringify(payload),new Date().toISOString());
     db.prepare('DELETE FROM events WHERE id IN (SELECT id FROM events ORDER BY created_at DESC,rowid DESC LIMIT -1 OFFSET 1000)').run();
   }
+  function saveIdentity(value,source,observedAt=new Date().toISOString()) {
+    const lid=typeof value?.lid==='string'?value.lid.replace(/:\d+(?=@)/,''):'';
+    const pn=typeof value?.pn==='string'?value.pn.replace(/:\d+(?=@)/,''):'';
+    if(!owns()||!/^\d{1,30}@lid$/.test(lid)||!/^[1-9]\d{7,14}@s\.whatsapp\.net$/.test(pn))return;
+    let prior={};try{prior=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='identity' AND resource_id=?").get(lid)?.payload || '{}');}catch{}
+    const reverse=db.prepare("SELECT resource_id,payload FROM snapshots WHERE kind='identity' AND (json_extract(payload,'$.pn')=? OR EXISTS(SELECT 1 FROM json_each(snapshots.payload,'$.candidate_pns') WHERE value=?)) AND resource_id<>?").all(pn,pn,lid);
+    const contact=db.prepare('SELECT phone_e164 FROM contacts WHERE wa_jid=?').get(lid);
+    const conflict=Boolean(prior.conflict||(prior.pn&&prior.pn!==pn)||reverse.length||(contact?.phone_e164&&contact.phone_e164!=='+'+pn.split('@')[0]));
+    const candidate_pns=[...new Set([...(Array.isArray(prior.candidate_pns)?prior.candidate_pns:[]),prior.pn,prior.conflicting_pn,pn].filter(x=>typeof x==='string'&&/^[1-9]\d{7,14}@s\.whatsapp\.net$/.test(x)))].slice(0,20);
+    snapshot('identity',lid,{lid,pn:prior.pn || pn,source,observed_at:observedAt,status:conflict?'conflict':'observed',conflict,candidate_pns,...(conflict?{conflicting_pn:prior.conflicting_pn || (pn!==prior.pn?pn:null)}:{})});
+    for(const other of reverse)snapshot('identity',other.resource_id,{status:'conflict',conflict:true,conflict_reason:'pn_multiple_lids'});
+    if(conflict)event('identity.conflict',lid,{lid,pn:prior.pn || pn,conflicting_pn:pn,source});
+  }
   function saveContacts(contacts) {
     for(const c of contacts.slice(0,10000)) {
       if(!owns() || !c.id)continue;
+      saveIdentity({lid:c.lid || (c.id.endsWith('@lid')?c.id:null),pn:c.phoneNumber || (c.id.endsWith('@s.whatsapp.net')?c.id:null)},'contacts');
       const value=safeFields(c,contactKeys);
       if(c.imgUrl!==undefined)value.avatar_available=Boolean(c.imgUrl && c.imgUrl!=='changed');
       snapshot('contact',c.id,value);
-      const rawPhone = c.phoneNumber || (c.id.endsWith('@s.whatsapp.net')?c.id:null);
+      const rawPhone = c.id.endsWith('@s.whatsapp.net')?c.id:null;
       const digits=rawPhone?.split('@')[0]?.split(':')[0]?.replace(/^\+/,'');
       const phone=digits && /^[1-9]\d{7,14}$/.test(digits)?'+'+digits:null;
       const merged=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='contact' AND resource_id=?").get(c.id).payload);
       const name=merged.name || merged.verifiedName || merged.notify || merged.username;
-      const found=db.prepare('SELECT id FROM contacts WHERE wa_jid=? OR (phone_e164 IS NOT NULL AND phone_e164=?)').get(c.id,phone);
+      const found=db.prepare('SELECT id FROM contacts WHERE wa_jid=?').get(c.id);
       if(found) {
         if(name)db.prepare('UPDATE contacts SET display_name=? WHERE id=?').run(name,found.id);
         // Do not override a different known phone/LID identity or consent record.
@@ -504,7 +518,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       };
       current.ev.on('messaging-history.set', guarded(({messages,contacts,chats,progress,isLatest,syncType,lidPnMappings,peerDataRequestSessionId}) => {
         if(contacts?.length)saveContacts(contacts);
-        if(lidPnMappings?.length)saveContacts(lidPnMappings.slice(0,10000).filter(x=>x.lid && x.pn).map(x=>({id:x.lid,phoneNumber:x.pn,lid:x.lid})));
+        if(lidPnMappings?.length)for(const mapping of lidPnMappings.slice(0,10000))saveIdentity(mapping,'messaging-history.set');
         if(chats?.length)saveChats(chats);
         snapshot('history','wis-5679',{...safeFields({progress,isLatest,syncType},['progress','isLatest','syncType']),messages_in_chunk:messages?.length || 0,contacts_in_chunk:contacts?.length || 0,chats_in_chunk:chats?.length || 0});
         if(messages?.length)enqueue(messages,'import');
@@ -523,6 +537,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       current.ev.on('messaging-history.status',guarded(value=>{snapshot('history','wis-5679',safeFields(value,['syncType','status','explicit']));event('history.status','wis-5679',safeFields(value,['syncType','status','explicit']));}));
       current.ev.on('contacts.upsert', guarded(contacts=>saveContacts(contacts)));
       current.ev.on('contacts.update', guarded(contacts=>saveContacts(contacts)));
+      current.ev.on('lid-mapping.update',guarded(mapping=>saveIdentity(mapping,'lid-mapping.update')));
       current.ev.on('chats.upsert', guarded(chats=>saveChats(chats)));
       current.ev.on('chats.update', guarded(chats=>saveChats(chats)));
       current.ev.on('groups.upsert', guarded(groups=>saveGroups(groups)));
@@ -688,6 +703,20 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   db.prepare("UPDATE operations SET status='outcome_unknown',last_error='interrupted_send_requires_reconciliation' WHERE status='sending'").run();
   db.prepare("UPDATE read_commands SET status='failed',error='worker_interrupted',updated_at=? WHERE status='running'").run(new Date().toISOString());
   let ticking=false;
+  let recoveredIdentities=false;
+  function recoverIdentities() {
+    if(recoveredIdentities||!owns())return;
+    recoveredIdentities=true;
+    for(const row of db.prepare("SELECT resource_id,payload,updated_at FROM snapshots WHERE kind='contact' ORDER BY updated_at,resource_id").all()) {
+      let contact;try{contact=JSON.parse(row.payload);}catch{continue;}
+      const lid=contact.lid || (row.resource_id.endsWith('@lid')?row.resource_id:null);
+      const pn=contact.phoneNumber || (row.resource_id.endsWith('@s.whatsapp.net')?row.resource_id:null);
+      if(!Number.isFinite(Date.parse(row.updated_at)))continue;
+      const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='identity' AND resource_id=?").get(lid || '');
+      if(prior){try{const value=JSON.parse(prior.payload);if(value.pn===pn||value.candidate_pns?.includes(pn))continue;}catch{}}
+      saveIdentity({lid,pn},'contacts',row.updated_at);
+    }
+  }
   const webhookDispatcher=createWebhookDispatcher({db,owns});
   async function tick() {
     if(stopping || ticking)return;
@@ -695,6 +724,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     try {
       if(!acquireLease(db,owner)) {deadline=0;closeSocket();return;}
       deadline=Date.now()+25000;
+      recoverIdentities();
       const c=connection();
       if(c.qr_expires_at && c.qr_expires_at<=new Date().toISOString())patch({qr_payload:null,qr_expires_at:null});
       if(c.command) {

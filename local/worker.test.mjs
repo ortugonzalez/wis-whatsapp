@@ -240,6 +240,36 @@ test('observed calls merge durable chronological lifecycle without socket writes
  } finally {await worker.stop();db.close();}
 });
 
+test('observed identity mappings preserve conflicts without merging names or consent',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();const dir=mkdtempSync(resolve(tmpdir(),'wis-lid-')),ev=new EventEmitter();
+ const fake={default:()=>mockRawQueries({ev,user:{id:'5491111115679@s.whatsapp.net'},end(){}}),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth')});
+ try {
+  ev.emit('contacts.upsert',[{id:'5491111111111@s.whatsapp.net',name:'PN original'}]);
+  db.prepare("UPDATE contacts SET consent_at='2026-01-01',consent_source='original',consent_scope='test'").run();
+  ev.emit('lid-mapping.update',{lid:'100@lid',pn:'5491111111111@s.whatsapp.net',secret:'SECRET'});
+  ev.emit('contacts.upsert',[{id:'100@lid',phoneNumber:'5491111111111@s.whatsapp.net',name:'Different name'}]);
+  ev.emit('lid-mapping.update',{lid:'100@lid',pn:'5492222222222@s.whatsapp.net'});
+  ev.emit('lid-mapping.update',{lid:'200@lid',pn:'5491111111111@s.whatsapp.net'});
+  ev.emit('lid-mapping.update',{lid:'100@lid',pn:'5491111111111@s.whatsapp.net'});
+  const identity=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='identity' AND resource_id='100@lid'").get().payload);
+  assert.equal(identity.pn,'5491111111111@s.whatsapp.net');assert.equal(identity.status,'conflict');assert.equal(identity.conflicting_pn,'5492222222222@s.whatsapp.net');assert.equal(JSON.stringify(identity).includes('SECRET'),false);
+  assert.deepEqual(identity.candidate_pns,['5491111111111@s.whatsapp.net','5492222222222@s.whatsapp.net']);
+  assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='identity' AND resource_id='200@lid'").get().payload).conflict,true);
+  const pn=db.prepare("SELECT * FROM contacts WHERE wa_jid='5491111111111@s.whatsapp.net'").get(),lid=db.prepare("SELECT * FROM contacts WHERE wa_jid='100@lid'").get();assert.equal(pn.display_name,'PN original');assert.equal(pn.consent_source,'original');assert.equal(lid.phone_e164,null);assert.equal(lid.consent_at,null);
+  ev.emit('lid-mapping.update',{lid:'300@lid',pn:'300@lid'});assert.equal(db.prepare("SELECT count(*) n FROM snapshots WHERE kind='identity'").get().n,2);
+ } finally {await worker.stop();db.close();}
+});
+
+test('startup recovers explicit cached contact pairs once without new provider observations',async()=>{
+ const db=database(),date='2026-01-01T00:00:00.000Z',dir=mkdtempSync(resolve(tmpdir(),'wis-recover-lid-'));
+ for(const [id,data] of [['100@lid',{lid:'100@lid',phoneNumber:'5491111111111@s.whatsapp.net'}],['200@lid',{lid:'200@lid',phoneNumber:'5491111111111@s.whatsapp.net'}],['300@lid',{lid:'300@lid'}]])db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('contact',id,JSON.stringify(data),date);
+ const fake={default(){throw Error('no socket');},useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({})};
+ const options={db,baileys:fake,logger:{},authDir:resolve(dir,'auth')};const first=await runWorker(options);await first.stop();
+ const rows=db.prepare("SELECT payload FROM snapshots WHERE kind='identity' ORDER BY resource_id").all();assert.equal(rows.length,2);for(const row of rows){const v=JSON.parse(row.payload);assert.equal(v.observed_at,date);assert.equal(v.conflict,true);}
+ const second=await runWorker(options);await second.stop();assert.deepEqual(db.prepare("SELECT payload FROM snapshots WHERE kind='identity' ORDER BY resource_id").all(),rows);assert.equal(db.prepare('SELECT count(*) n FROM contacts').get().n,0);db.close();
+});
+
 test('late provider failure is correlated and sanitized after local read timeout',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();
  const dir=mkdtempSync(resolve(tmpdir(),'wis-late-test-'));const ev=new EventEmitter();let fail;

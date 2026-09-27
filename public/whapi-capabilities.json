@@ -743,12 +743,12 @@
       "id": "getlidbyids",
       "name": "Get LIDs by IDs",
       "source": "https://whapi.readme.io/reference/getlidbyids.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/identities",
+      "screen": "/#identities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales de persistencia, conflictos, permisos y API; evidencia en docs/identities-local.md.",
+      "reason": "Relaciones LID/PN observadas y persistidas localmente; desconocidos y conflictos explícitos. Sin resolución remota ni teléfonos inferidos."
     },
     {
       "id": "editcontact",
@@ -765,12 +765,12 @@
       "id": "getlidbyid",
       "name": "Get LID by ID",
       "source": "https://whapi.readme.io/reference/getlidbyid.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/identities",
+      "screen": "/#identities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales de persistencia, conflictos, permisos y API; evidencia en docs/identities-local.md.",
+      "reason": "Relaciones LID/PN observadas y persistidas localmente; desconocidos y conflictos explícitos. Sin resolución remota ni teléfonos inferidos."
     },
     {
       "id": "deletecontact",
@@ -798,12 +798,12 @@
       "id": "getidbylid",
       "name": "Get ID by LID",
       "source": "https://whapi.readme.io/reference/getidbylid.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/identities",
+      "screen": "/#identities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales de persistencia, conflictos, permisos y API; evidencia en docs/identities-local.md.",
+      "reason": "Relaciones LID/PN observadas y persistidas localmente; desconocidos y conflictos explícitos. Sin resolución remota ni teléfonos inferidos."
     },
     {
       "id": "sendmepresence",
