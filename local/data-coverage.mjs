@@ -74,6 +74,7 @@ export function buildDataCoverage(db) {
       contacts: { known: count('SELECT count(*) AS count FROM contacts'), with_whatsapp_id: count("SELECT count(*) AS count FROM contacts WHERE wa_jid IS NOT NULL AND wa_jid!=''"), metadata_records: kindCount('contact') },
       conversations: { known: count('SELECT count(*) AS count FROM conversations'), chat_metadata_records: kindCount('chat') },
       groups: { known: count("SELECT count(*) AS count FROM conversations WHERE wa_chat_id LIKE '%@g.us'"), metadata_records: kindCount('group') },
+      identity_links: { known: kindCount('identity'), with_whatsapp_id: count("SELECT count(*) AS count FROM snapshots WHERE kind='identity' AND json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.pn')='text' AND json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.pn')!=''"), metadata_records: kindCount('identity') },
       messages: { stored: count('SELECT count(*) AS count FROM messages'), with_whatsapp_id: count("SELECT count(*) AS count FROM messages WHERE wa_message_id IS NOT NULL AND wa_message_id!=''"), metadata_records: kindCount('message') },
     },
     message_types: db.prepare('SELECT type,count(*) AS count FROM messages GROUP BY type ORDER BY type').all().map(row => ({ type: row.type, count: row.count })),

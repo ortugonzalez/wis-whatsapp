@@ -19,3 +19,10 @@ test('coverage bounds pathological field inventories and reports truncation',()=
  db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('large','row-1',payload,'2026-01-01T00:00:00.000Z');
  try{const row=buildDataCoverage(db).snapshot_kinds[0];assert.equal(row.records,1);assert.equal(row.fields.length,100);assert.equal(row.field_counts.length,100);assert.equal(row.omitted_fields,9900);assert.equal(row.field_inventory_truncated,true);}finally{db.close();}
 });
+
+test('coverage counts LID-to-PN identity records without exposing identifiers',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('identity','private-lid',JSON.stringify({lid:'private-lid',pn:'private-pn@s.whatsapp.net',status:'observed'}),'2026-01-01T00:00:00.000Z');
+ db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('identity','malformed','not-json','2026-01-02T00:00:00.000Z');
+ try{const coverage=buildDataCoverage(db);assert.deepEqual(coverage.entities.identity_links,{known:2,with_whatsapp_id:1,metadata_records:2});assert.equal(JSON.stringify(coverage.entities).includes('private'),false);}finally{db.close();}
+});
