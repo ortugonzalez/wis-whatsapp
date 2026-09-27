@@ -433,6 +433,20 @@
         }
       }
     },
+    "/contact-checks": {
+      "get": {
+        "summary": "Read cached WhatsApp registration checks for known contacts",
+        "parameters": [
+          { "name": "id", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 100 }, "description": "Local contact ID; omit to list cached results." }
+        ],
+        "responses": {
+          "200": { "description": "Registered, explicitly not registered, or unknown; absence is never converted to false" },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Insufficient scope" },
+          "404": { "description": "Unknown contact" }
+        }
+      }
+    },
     "/contacts": {
       "get": {
         "summary": "List contacts",
@@ -2162,7 +2176,8 @@
                       "bot_list",
                       "contact_catalog",
                       "group_invite",
-                      "order_details"
+                      "order_details",
+                      "contact_check"
                     ]
                   },
                   "target": {
@@ -2215,7 +2230,7 @@
             "description": "Administrator session and same-origin request required"
           }
         },
-        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available. account_limits accepts only kind, with no target or extra properties; reads own account limits without changing any sending gate. newsletter_messages accepts only kind/target for an already observed channel; administrator-only fixed 50-message read. No subscribe or receipt operation. bot_list accepts only kind, with no target or extra fields. Administrator manual read of provider catalog only. contact_catalog accepts only kind/target with exact known contact PN JID; administrator manual read only, no LID inference or arbitrary owner URL. group_invite accepts kind/target only for known group, administrator manual get of existing invite credential; never revokes or joins. Code is temporary private data. order_details accepts kind/target only for an existing order message; administrator-only manual read. The token is used from worker memory, never persisted or logged; response image URLs are discarded."
+        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available. account_limits accepts only kind, with no target or extra properties; reads own account limits without changing any sending gate. newsletter_messages accepts only kind/target for an already observed channel; administrator-only fixed 50-message read. No subscribe or receipt operation. bot_list accepts only kind, with no target or extra fields. Administrator manual read of provider catalog only. contact_catalog accepts only kind/target with exact known contact PN JID; administrator manual read only, no LID inference or arbitrary owner URL. group_invite accepts kind/target only for known group, administrator manual get of existing invite credential; never revokes or joins. Code is temporary private data. order_details accepts kind/target only for an existing order message; administrator-only manual read. The token is used from worker memory, never persisted or logged; response image URLs are discarded. contact_check accepts only the local ID of a stored contact with a valid E.164 phone. It is an administrator-initiated single-number read with a 15-minute local cooldown, no batch or raw arbitrary phone input. Only an exact provider match can report existence; an empty result remains unknown, never not registered."
       }
     },
     "/reference-fields": {

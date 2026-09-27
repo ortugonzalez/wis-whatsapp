@@ -469,6 +469,16 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       } else if(command.kind==='group') {
         if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target || ''))throw new Error('invalid_target');
         saveGroups([await readCall(current,'groupMetadata',[command.target])]);
+      } else if(command.kind==='contact_check') {
+        const contact=db.prepare('SELECT id,phone_e164 FROM contacts WHERE id=?').get(command.target);
+        if(!contact||!/^\+[1-9]\d{6,14}$/.test(contact.phone_e164||''))throw new Error('known_contact_phone_required');
+        const results=await readCall(current,'onWhatsApp',[contact.phone_e164]);
+        if(!Array.isArray(results))throw new Error('contact_check_unavailable');
+        const expected=contact.phone_e164.slice(1),match=results.length===1&&results[0]&&typeof results[0]==='object'&&new RegExp('^'+expected+'(?::\\d+)?@s\\.whatsapp\\.net$').test(results[0].jid||'')?results[0]:null;
+        const checkedAt=new Date().toISOString();
+        if(match&&match.exists===true)snapshot('contact_check',contact.id,{available:true,response_verified:true,status:'registered',exists:true,provider_jid:match.jid,checked_at:checkedAt,error:null});
+        else if(match&&match.exists===false)snapshot('contact_check',contact.id,{available:true,response_verified:true,status:'not_registered',exists:false,provider_jid:match.jid,checked_at:checkedAt,error:null});
+        else snapshot('contact_check',contact.id,{available:true,response_verified:false,status:'unknown',exists:null,provider_jid:null,checked_at:checkedAt,error:'no_exact_match_returned'});
       } else if(command.kind==='contact_profile') {
         if(!/^\d+@(s\.whatsapp\.net|lid)$/.test(command.target || ''))throw new Error('invalid_target');
         const statuses=await readCall(current,'fetchStatus',[command.target]);
@@ -606,7 +616,8 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       if(owns()) {
         const failure=classifyReadError(error);
         db.prepare("UPDATE read_commands SET status='failed',error=?,updated_at=? WHERE id=?").run(failure.code,new Date().toISOString(),command.id);
-        if(command.kind==='contact_catalog'&&/^[1-9]\d{6,14}@s\.whatsapp\.net$/.test(command.target||'')&&db.prepare('SELECT 1 FROM contacts WHERE wa_jid=? OR phone_e164=? LIMIT 1').get(command.target,'+'+command.target.split('@')[0]))snapshot('catalog',command.target,{available:false,stale:true,scope:'contact_catalog',known_only:true,source:'checked_baileys_iq',error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
+         if(command.kind==='contact_check')snapshot('contact_check',command.target,{available:false,response_verified:false,status:'unknown',exists:null,provider_jid:null,checked_at:new Date().toISOString(),error:failure.code,status_code:failure.status_code});
+         if(command.kind==='contact_catalog'&&/^[1-9]\d{6,14}@s\.whatsapp\.net$/.test(command.target||'')&&db.prepare('SELECT 1 FROM contacts WHERE wa_jid=? OR phone_e164=? LIMIT 1').get(command.target,'+'+command.target.split('@')[0]))snapshot('catalog',command.target,{available:false,stale:true,scope:'contact_catalog',known_only:true,source:'checked_baileys_iq',error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='bot_list')snapshot('bot_list','wis-5679',{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='newsletter_messages')snapshot('newsletter_messages',command.target,{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='group_invite')snapshot('group_invite',command.target,{code:null,expires_at:null,available:false,response_verified:false,stale:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});

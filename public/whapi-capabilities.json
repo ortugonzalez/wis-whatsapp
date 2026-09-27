@@ -1446,12 +1446,12 @@
       "id": "checkphones",
       "name": "Check phones",
       "source": "https://whapi.readme.io/reference/checkphones.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
-      "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "status": "partial",
+      "endpoint": "/api/v1/sync + /api/v1/contact-checks",
+      "screen": "/#contacts",
+      "baileys": "onWhatsApp",
+      "test": "local/contact-check.test.mjs; test/qa/contact-checks.test.mjs",
+      "reason": "Consulta manual de un único contacto ya guardado. No implementa el batch WHAPI; respuestas vacías quedan desconocidas porque onWhatsApp omite coincidencias negativas.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
@@ -1462,7 +1462,7 @@
         ],
         "support": "candidate",
         "reason": "Consulta registro de números PN; explícitamente no admite LID como número.",
-        "next_step": "Normalizar E164, limitar consultas y preservar resultados desconocidos."
+        "next_step": "Conservar consulta singular y cooldown; validar soporte de respuesta negativa con el nodo USync crudo antes de afirmar no registrado o añadir lotes."
       }
     },
     {
@@ -1537,12 +1537,12 @@
       "id": "checkexist",
       "name": "Check exist",
       "source": "https://whapi.readme.io/reference/checkexist.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
-      "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "status": "partial",
+      "endpoint": "/api/v1/sync + /api/v1/contact-checks?id=UUID",
+      "screen": "/#contacts",
+      "baileys": "onWhatsApp",
+      "test": "local/contact-check.test.mjs; test/qa/contact-checks.test.mjs",
+      "reason": "Consulta individual manual limitada a un contacto conocido. Un resultado vacío queda desconocido, no se declara contacto no registrado.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
@@ -1553,7 +1553,7 @@
         ],
         "support": "candidate",
         "reason": "Consulta existencia para números; el código rechaza LID como entrada y no verifica consentimiento.",
-        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+        "next_step": "Validar respuesta negativa real desde USync antes de exponer equivalencia con HTTP 404 de WHAPI."
       }
     },
     {
