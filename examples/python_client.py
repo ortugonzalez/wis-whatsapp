@@ -15,7 +15,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class WISClient:
     LIST_RESOURCES = frozenset({'contacts', 'conversations', 'messages', 'operations',
         'groups', 'events', 'calls', 'identities', 'stories', 'products', 'collections',
-        'labels', 'label-associations', 'communities', 'channels', 'media'})
+        'labels', 'label-associations', 'communities', 'channels', 'channel-messages', 'media'})
 
     def __init__(self, base=None, token=None, timeout=30):
         self.base = (base or os.environ.get('WIS_API_URL', 'http://localhost:3010/api/v1')).rstrip('/')
@@ -86,6 +86,13 @@ class WISClient:
     def stories(self, **filters):
         """Only unexpired locally observed stories; never marks them as viewed."""
         return self.iter_records('stories', **filters)
+
+    def channel_messages(self, target):
+        """Read the bounded local snapshot of a known channel; no remote sync."""
+        import re
+        if not isinstance(target, str) or not re.fullmatch(r'[0-9]{1,40}@newsletter', target):
+            raise ValueError('Use a known newsletter identifier')
+        return self.iter_records('channel-messages', target=target)
 
     def detail(self, resource, identifier):
         if resource not in {'calls', 'identities', 'stories', 'messages', 'contacts', 'groups', 'conversations'} or not isinstance(identifier, str) or not identifier:

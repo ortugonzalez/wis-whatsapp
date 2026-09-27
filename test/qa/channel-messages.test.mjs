@@ -1,0 +1,18 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {scryptSync,randomBytes} from 'node:crypto';
+process.env.WIS_DB_PATH=':memory:';
+const {openDatabase}=await import('../../local/db.mjs');
+const {makeServer}=await import('../../local/server.mjs');
+test('channel messages are local, bounded, sanitized and refresh is admin-only for known channels',async()=>{
+ const db=openDatabase(':memory:'),password=randomBytes(20).toString('hex'),salt='channel-test';db.prepare("INSERT INTO settings(key,value) VALUES('admin_password',?)").run(salt+':'+scryptSync(password,salt,64).toString('hex'));
+ const server=makeServer(db);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+server.address().port;let cookie='';const req=async(path,method='GET',body,token)=>{const r=await fetch(base+path,{method,headers:{Origin:base,'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{}),...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,json:await r.json(),headers:r.headers};};
+ try{
+ assert.equal((await req('/api/v1/channel-messages?target=1@newsletter')).status,401);const login=await req('/api/login','POST',{password});cookie=login.headers.get('set-cookie').split(';')[0];const reader=(await req('/api/v1/tokens','POST',{name:'reader',scopes:['read']})).json.data.token;
+ assert.equal((await req('/api/v1/channel-messages?target=1@newsletter')).status,404);assert.equal((await req('/api/v1/channel-messages?target=https://other.invalid')).status,400);
+ db.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('newsletter','1@newsletter','{}',?)").run(new Date().toISOString());assert.equal((await req('/api/v1/channel-messages?target=1@newsletter','GET',null,reader)).json.meta.observed,false);
+ const command=await req('/api/v1/sync','POST',{kind:'newsletter_messages',target:'1@newsletter'});assert.equal(command.status,202);assert.equal((await req('/api/v1/sync','POST',{kind:'newsletter_messages',target:'1@newsletter'})).json.data.id,command.json.data.id);assert.equal((await req('/api/v1/sync','POST',{kind:'newsletter_messages',target:'1@newsletter'},reader)).status,403);assert.equal((await req('/api/v1/sync','POST',{kind:'newsletter_messages',target:'1@newsletter',count:100})).status,400);
+ const data={available:true,response_verified:true,messages:[{id:'real-id',server_id:'3',date:'2026-01-01T00:00:00Z',type:'image',body:'Observed caption',url:'secret-value',mediaKey:'secret-value'}]};db.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('newsletter_messages','1@newsletter',?,?)").run(JSON.stringify(data),new Date().toISOString());const response=(await req('/api/v1/channel-messages?target=1@newsletter&limit=1','GET',null,reader)).json;assert.equal(response.data[0].body,'Observed caption');assert.equal(response.data[0].media_available,false);assert.equal(response.meta.history_complete,false);assert.equal(JSON.stringify(response).includes('secret-value'),false);
+ db.prepare("UPDATE snapshots SET payload=json_set(payload,'$.available',json('false'),'$.stale',json('true'),'$.error','secret-value') WHERE kind='newsletter_messages'").run();const failed=(await req('/api/v1/channel-messages?target=1@newsletter')).json;assert.equal(failed.data[0].id,'real-id');assert.equal(failed.meta.stale,true);assert.equal(failed.meta.error,'read_failed');assert.equal((await req('/api/v1/snapshots?kind=newsletter_messages','GET',null,reader)).status,400);
+ }finally{await new Promise(resolve=>server.close(resolve));db.close();}
+});

@@ -142,6 +142,30 @@ export async function checkedAccountLimits(socket,kind) {
   if(!meaningful)throw Error('invalid_limits_response');
   return output;
 }
+export async function checkedNewsletterMessages(socket,target) {
+  if(!/^\d{1,40}@newsletter$/.test(target||''))throw Error('invalid_target');
+  const reply=await socket.query({tag:'iq',attrs:{type:'get',xmlns:'newsletter',to:target},content:[{tag:'message_updates',attrs:{count:'50'}}]},10000);
+  if(!reply)throw Error('read_timeout');
+  if(!Array.isArray(reply.content))throw Error('invalid_newsletter_response');
+  const errorNode=reply.content.find(x=>x.tag==='error');
+  if(reply.attrs?.type==='error'||errorNode)throw Object.assign(Error('provider_error'),{statusCode:Number(errorNode?.attrs?.code)});
+  const container=reply.content?.find(x=>['message_updates','messages'].includes(x.tag));
+  if(reply.tag!=='iq'||reply.attrs?.type!=='result'||!container||container.content!==undefined&&!Array.isArray(container.content))throw Error('invalid_newsletter_response');
+  const entries=container.content||[];
+  if(entries.some(x=>x.tag!=='message'))throw Error('invalid_newsletter_response');
+  const {proto}=await import(pathToFileURL(requireWorker.resolve('baileys')).href);
+  const messages=[];
+  for(const node of entries.slice(0,50)) {
+    const id=node.attrs?.message_id||node.attrs?.server_id||node.attrs?.id;
+    if(typeof id!=='string'||!/^[\x21-\x7e]{1,256}$/.test(id))throw Error('invalid_newsletter_response');
+    if(node.content!==undefined&&!Array.isArray(node.content))throw Error('invalid_newsletter_response');
+    const plaintext=node.content?.find(x=>x.tag==='plaintext')?.content;
+    let normalized=null;
+    if(plaintext!==undefined){if(!Buffer.isBuffer(plaintext)||plaintext.length>1024*1024)throw Error('invalid_newsletter_response');try{normalized=normalizeContent(proto.Message.decode(plaintext));}catch{throw Error('invalid_newsletter_response');}}
+    messages.push({id,...(typeof node.attrs?.server_id==='string'&&/^\d{1,40}$/.test(node.attrs.server_id)?{server_id:node.attrs.server_id}:{}),date:timestamp(node.attrs?.t),type:normalized?.type||'unknown',body:typeof normalized?.body==='string'?normalized.body.slice(0,8192):null,media_available:false});
+  }
+  return {messages,count:messages.length,truncated:entries.length>=50,partial:true,complete:false,limit:50};
+}
 export async function checkedBusinessRead(socket,method,args) {
   if(typeof socket.query!=='function')throw new Error('capability_unavailable');
   const catalog=method==='getCatalog';
@@ -315,8 +339,9 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     const publicRead=['publicCatalog','publicCollections'].includes(name);
     const groupRead=['community_subgroups','group_requests'].includes(name);
     const limitsRead=['account_quota','account_timelock'].includes(name);
+    const newsletterRead=name==='newsletter_messages';
     const list=['fetchBlocklist','groupFetchAllParticipating','communityFetchAllParticipating'].includes(name);
-    if(!publicRead && typeof current[business||list||groupRead||limitsRead?'query':name]!=='function')throw new Error('capability_unavailable');
+    if(!publicRead && typeof current[business||list||groupRead||limitsRead||newsletterRead?'query':name]!=='function')throw new Error('capability_unavailable');
     let timer,timedOut=false;
     const diagnostic=activeReadCommand?{command_id:activeReadCommand.id,kind:activeReadCommand.kind,method:name}:null;
     const diagnosticResource=activeReadCommand?.target || 'wis-5679';
@@ -324,7 +349,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       const pending={socket:current};unresolvedRead=pending;
       // Local timeout does not cancel Baileys' IQ request. Block further reads until
       // that request settles (or a different socket takes over), avoiding fan-out.
-      const request=Promise.resolve().then(()=>limitsRead?checkedAccountLimits(current,name==='account_quota'?'quota':'timelock'):groupRead?checkedGroupRead(current,name,args[0]):publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
+      const request=Promise.resolve().then(()=>newsletterRead?checkedNewsletterMessages(current,args[0]):limitsRead?checkedAccountLimits(current,name==='account_quota'?'quota':'timelock'):groupRead?checkedGroupRead(current,name,args[0]):publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
         if(timedOut && diagnostic && owns() && sock===current)event('read.late_completed',diagnosticResource,{...diagnostic,result:'response_received_after_timeout'});
         return value;
       },error=>{
@@ -393,6 +418,10 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(typeof requestId!=='string' || !requestId)throw new Error('invalid_history_response');
         snapshot('history_request',command.id,{request_id:requestId,status:'requested',request_accepted_at:new Date().toISOString(),complete:false});
         event('history.requested',command.target,{command_id:command.id,request_id:requestId,requested_count:50,complete:false});
+      } else if(command.kind==='newsletter_messages') {
+        if(!/^\d{1,40}@newsletter$/.test(command.target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('unknown_newsletter');
+        const result=await readCall(current,'newsletter_messages',[command.target]);
+        snapshot('newsletter_messages',command.target,{...result,available:true,response_verified:true,error:null,source:'checked_newsletter_iq'});
       } else if(command.kind==='account_limits') {
         const data={};
         for(const kind of ['quota','timelock']){try{data[kind]=await readCall(current,'account_'+kind);}catch(error){const failure=classifyReadError(error);data[kind]={available:false,response_verified:false,error:failure.code,status_code:failure.status_code};}}
@@ -486,6 +515,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       if(owns()) {
         const failure=classifyReadError(error);
         db.prepare("UPDATE read_commands SET status='failed',error=?,updated_at=? WHERE id=?").run(failure.code,new Date().toISOString(),command.id);
+        if(command.kind==='newsletter_messages')snapshot('newsletter_messages',command.target,{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(['community_subgroups','group_requests'].includes(command.kind))snapshot(command.kind,command.target,{available:false,stale:true,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='avatar') {
           const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(command.target);

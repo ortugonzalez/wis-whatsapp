@@ -14,6 +14,7 @@ function validateEntries(entries){
  const ids=new Set();for(const row of entries){if(!row||typeof row.id!=='string'||! /^[a-z0-9][a-z0-9_-]*$/.test(row.id)||typeof row.name!=='string'||!row.name.trim()||typeof row.source!=='string'||! /^https:\/\/whapi\.readme\.io\/reference\/[a-z0-9][a-z0-9_-]*(?:\.md)?$/.test(row.source)||row.source.split('/').pop().replace(/\.md$/,'')!==row.id)throw new Error('Invalid WHAPI entry');if(ids.has(row.id))throw new Error('Duplicate WHAPI ID: '+row.id);ids.add(row.id);}
 }
 const implemented = {
+  getmessagesnewsletter: ['/api/v1/channel-messages?target=JID', 'Consulta manual acotada a 50 mensajes de un canal conocido, con texto y metadatos locales. Formato real pendiente de validar en esta cuenta; sin historial completo, medios ni suscripciones.'],
   getchat: ['/api/v1/conversations?id=UUID', 'Detalle local, metadatos y recuentos del historial recibido. No garantiza el historial completo del dispositivo.'],
   getcontact: ['/api/v1/contacts?id=UUID', 'Detalle de contacto local, perfil observado y conversaciones relacionadas por identificadores exactos, sin fusionar consentimiento.'],
   getnewchatlimit: ['/api/v1/account-limits', 'Consulta administrativa de cuotas reportadas por WhatsApp; desconocido si no hay respuesta válida. No recomienda un volumen seguro de envíos.'],

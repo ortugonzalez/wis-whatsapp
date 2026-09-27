@@ -2738,12 +2738,12 @@
       "id": "getmessagesnewsletter",
       "name": "Get newsletter messages",
       "source": "https://whapi.readme.io/reference/getmessagesnewsletter.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/channel-messages?target=JID",
+      "screen": "/#channels",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "test": "Fixtures worker/API y documentación docs/channel-messages.md; consulta real pendiente por ausencia de canales conocidos.",
+      "reason": "Consulta manual acotada a 50 mensajes de un canal conocido, con texto y metadatos locales. Formato real pendiente de validar en esta cuenta; sin historial completo, medios ni suscripciones.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [

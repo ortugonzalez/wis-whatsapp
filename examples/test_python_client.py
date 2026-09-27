@@ -59,6 +59,17 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(request.get_method(), 'POST')
         self.assertEqual(request.get_header('Idempotency-key'), 'stable-key')
 
+    def test_channel_messages_only_reads_encoded_known_target(self):
+        client = self.client()
+        client._opener = Mock()
+        client._opener.open.return_value = io.BytesIO(b'{"data":[],"meta":{"has_more":false}}')
+        self.assertEqual(list(client.channel_messages('123@newsletter')), [])
+        request = client._opener.open.call_args.args[0]
+        self.assertEqual(request.get_method(), 'GET')
+        self.assertIn('/channel-messages?target=123%40newsletter', request.full_url)
+        with self.assertRaises(ValueError):
+            client.channel_messages('123@newsletter&kind=sync')
+
     def test_conversation_detail_encodes_identifier_as_one_query_value(self):
         client = self.client()
         client._opener = Mock()
