@@ -1,5 +1,13 @@
 # WIS WhatsApp SQLite — QA independiente
 
+## Respaldo y restauración aislada — revisión independiente
+
+Apto para verificar respaldos SQLite sin restaurar la base activa. Pruebas en fixtures: **5/5 PASS**. QA añadió regresión de clave foránea huérfana que debe fallar, conservar bytes del origen y dejar vacío el directorio temporal. No se abrió ninguna base real desde QA.
+
+El respaldo abre el origen en modo lectura, genera destino UUID bajo backups y comunica explícitamente alcance sqlite_only. El verificador mantiene una transacción de lectura del origen, copia mediante SQLite a un directorio temporal único, abre la copia en lectura y compara integridad, relaciones, versión, esquema requerido y conteos. Se reforzó por revisión la detección de triggers e índices ausentes/modificados, unicidad y definiciones obligatorias de claves foráneas. Los objetos adicionales compatibles se permiten.
+
+La CLI restringe el origen mediante realpath al directorio privado de backups. La limpieza elimina únicamente nombres generados dentro de su directorio temporal; no mueve ni sustituye la base activa. El reporte no contiene filas, secretos ni rutas privadas. La validación acredita integridad/esquema/conteos, no equivalencia criptográfica de todas las filas. Este respaldo no incluye sesión Baileys, multimedia ni avatares y por sí solo no permite una recuperación integral de la instalación.
+
 ## Fotos de perfil — revisión independiente
 
 Apto para integración local en modo lectura; **22/22 pruebas aisladas PASS** (avatars, backend, worker y dos regresiones QA), más sintaxis de avatars.js válida. Sin red externa, cuenta real, reinicio ni base de producción. Las pruebas QA rechazan dominios parecidos, credenciales en URL, fragmentos, puertos no previstos y autorización perdida antes de HTTP.

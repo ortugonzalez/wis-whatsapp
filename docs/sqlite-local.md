@@ -28,7 +28,11 @@ Los envíos están deshabilitados por defecto (`WIS_OUTBOUND_ENABLED=false`). Se
 
 ## Copia y recuperación
 
-`rtk npm run local:backup` crea una copia consistente de SQLite en `backups/`. Para copia integral: detener ambos procesos y copiar `.local/` de forma privada, incluyendo la sesión Baileys. Restaurar con ambos procesos detenidos. No ejecutar simultáneamente la sesión original y su copia. Proteger los backups con ACL/cifrado del disco: SQLite no cifra por sí mismo.
+`rtk npm run local:backup` crea una copia consistente de SQLite en `.local/backups/`, con nombre único. Su salida identifica explícitamente que no incluye archivos de sesión, multimedia ni fotos. La copia puede realizarse con la base activa mediante la API de backup de SQLite.
+
+Para copia integral: detener ambos procesos y copiar `.local/` de forma privada, incluyendo la sesión Baileys, multimedia y fotos. Restaurar con ambos procesos detenidos. No ejecutar simultáneamente la sesión original y su copia. Proteger los backups con ACL/cifrado del disco: SQLite no cifra por sí mismo.
+
+Comprobar una copia con `rtk npm run local:backup:check -- .local/backups/NOMBRE.sqlite`. El verificador acepta solo archivos dentro de la carpeta privada de backups, abre el original en lectura y restaura una copia temporal aislada. Comprueba integridad, claves foráneas, estructura y conteos; elimina únicamente los archivos temporales que creó. No reemplaza la base activa, no inicia el worker ni abre una segunda sesión de WhatsApp. Su resultado no certifica los archivos externos ni equivale a una prueba de vinculación tras recuperar el equipo completo.
 
 ## Cobertura
 
