@@ -1,12 +1,23 @@
-> Arquitectura actual: SQLite, sin Supabase ni Docker. Ver [manual SQLite](docs/sqlite-local.md). El contenido anterior debajo es histórico.
-
 # WIS WhatsApp local
 
-Implementación WIS sobre `mocte201/whatsapp-ui-template`. Guía vigente: [Operación local](docs/wis-local-runbook.md), [API](docs/api.md), [OpenAPI](docs/api.openapi.json).
+Implementación WIS sobre `mocte201/whatsapp-ui-template`, con **Node.js 24, SQLite y Baileys**. El runtime activo no utiliza Supabase ni Docker. El panel se sirve en `http://127.0.0.1:3010` y se verifica en Chrome.
 
-El panel y el worker compilan. Los envíos y las campañas están deshabilitados. La conexión real requiere Supabase local disponible y que el propietario escanee el QR; no se declara vinculada la línea 5679 ni paridad completa con WHAPI.
+Guías vigentes: [operación local](docs/sqlite-local.md), [estado verificado y limitaciones](docs/sqlite-delivery.md), [OpenAPI](docs/api.openapi.json), [mensajes e historial](docs/message-explorer.md), [exploradores](docs/data-explorers.md).
 
-El contenido que sigue describe la plantilla original como referencia histórica. Para WIS usar los comandos y puertos del runbook, nunca los destinos ni configuraciones históricas.
+La línea terminada en 5679 está vinculada en esta instalación y la recuperación de sesión tras reiniciar fue comprobada. Una instalación nueva requiere su propio QR. La API comparte la conexión del worker con Python y n8n; no comparte sus archivos de autenticación. Los envíos, webhooks salientes y campañas permanecen desactivados. La matriz distingue cobertura parcial y funciones pendientes: no se declara paridad completa con WHAPI.
+
+```sh
+npm ci
+npm run local:setup
+npm start
+# En otra terminal:
+npm run local:status
+npm run local:stop
+```
+
+Pruebas locales: `npm run test:local`. Comprobación sintáctica: `npm run build`.
+
+El contenido que sigue describe la plantilla original como referencia histórica y **no es la instalación activa**. Para WIS usar el manual SQLite; los comandos, servicios y configuraciones de la plantilla no son necesarios para ejecutarlo.
 
 ## Plantilla de origen
 

@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-09-27T07:33:28.774Z",
+  "captured_at": "2026-09-27T08:13:01.005Z",
   "source": "https://whapi.readme.io/llms.txt",
   "capabilities": [
     {
@@ -468,12 +468,12 @@
       "id": "getmessage",
       "name": "Get message",
       "source": "https://whapi.readme.io/reference/getmessage.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/messages?id=UUID",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Detalle local con cita, menciones, reacciones y recibos observados; no recupera campos históricos ausentes."
     },
     {
       "id": "forwardmessage",
@@ -1161,12 +1161,12 @@
       "id": "getmessageviewstatuses",
       "name": "Get message or story view statuses",
       "source": "https://whapi.readme.io/reference/getmessageviewstatuses.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/messages?id=UUID",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Recibos por participante recibidos desde la vinculación; no garantiza listado completo de visualizaciones."
     },
     {
       "id": "getnewsletters",
@@ -1403,12 +1403,12 @@
       "id": "getmediafiles",
       "name": "Get media files",
       "source": "https://whapi.readme.io/reference/getmediafiles.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "/api/v1/media",
+      "screen": "/#capabilities",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
+      "reason": "Inventario paginado de archivos registrados localmente, con acceso autenticado; no lista todo el almacenamiento remoto."
     },
     {
       "id": "getmedia",
@@ -1463,7 +1463,7 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Catálogo de la cuenta propia mediante lectura limitada; indica disponibilidad y truncamiento."
+      "reason": "Catálogo público visible de la cuenta propia; indica error, alcance parcial y truncamiento. No expone administración ni productos ocultos."
     },
     {
       "id": "createproduct",
@@ -1573,7 +1573,7 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Colecciones de la cuenta propia; no replica la edición de WHAPI."
+      "reason": "Colecciones públicas visibles de la cuenta propia; respuesta vacía verificada en esta cuenta. No replica el catálogo privado ni su edición."
     },
     {
       "id": "getcollection",

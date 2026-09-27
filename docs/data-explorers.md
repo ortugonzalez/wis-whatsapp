@@ -11,7 +11,9 @@ Las consultas son de lectura. No siguen canales, no agregan participantes, no ca
 - Completo: consulta terminada dentro del alcance señalado.
 - Parcial/truncado: se alcanzó un límite o el origen solo informa eventos/recursos conocidos.
 
-El catálogo consulta hasta 3 páginas de 100 productos. Las colecciones se limitan a 100, con hasta 100 productos por colección. La consulta de canales considera únicamente los conocidos y como máximo 20 por lote. Las etiquetas dependen de eventos entregados por WhatsApp; no se promete recuperar todo su estado anterior. La consulta de comunidades se basa en grupos participantes y metadatos expuestos.
+La ruta pública del catálogo consulta hasta 3 páginas de 50 productos. Las colecciones públicas se limitan a una página de 50, con hasta 50 productos por colección; se conserva el indicador de paginación. El alcance público no incluye productos ocultos ni administración privada. El adaptador IQ anterior conserva sus límites de 100 en pruebas, pero no es la ruta preferida del runtime. Ver [evidencia de la alternativa pública](public-catalog.md).
+
+La consulta de canales considera únicamente los conocidos y como máximo 20 por lote. Las etiquetas dependen de eventos entregados por WhatsApp; no se promete recuperar todo su estado anterior. La consulta de comunidades se basa en grupos participantes y metadatos expuestos.
 
 Durante la validación real, la promesa de catálogo terminó aproximadamente 61 segundos después del inicio. La revisión de Baileys reveló que `waitForMessage` puede devolver `undefined` tras un timeout y su parser convertirlo en una lista vacía: la terminación de esa promesa no prueba una respuesta real. Por ello se exige validar el nodo de respuesta antes de aceptar un catálogo o colecciones vacíos. Los eventos `read.late_completed` y `read.late_failed` incluyen únicamente correlación, método y códigos sanitizados, sin cuerpos de error ni secretos. Las consultas no se solapan mientras una solicitud subyacente siga pendiente.
 

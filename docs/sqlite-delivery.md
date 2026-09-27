@@ -17,12 +17,18 @@
 - API local, consentimiento/bajas, scopes, revocación, idempotencia, cola y webhooks con entregas desactivadas.
 - Campañas permanecen desactivadas; no se enviaron mensajes.
 - Ejemplos Python y n8n apuntan a API HTTP, no a archivos de sesión.
+- Detalle de mensajes con citas, menciones, reacciones y recibos disponibles; búsqueda global en SQLite y biblioteca multimedia autenticada. Comprobado en Chrome: 1.438 registros, filtro sin coincidencias, apertura de detalle y biblioteca sin archivos locales registrados. La consulta de historial anterior diferencia solicitud de llegada correlacionada y no promete recuperación completa.
+- Alternativa posterior para Business: ruta pública GraphQL integrada y verificada desde Chrome. Colecciones devolvió una respuesta real vacía, registrada con alcance público parcial. Catálogo respondió `2498052`, registrado como `public_catalog_unavailable`; no se afirma catálogo vacío. Se reemplazó la consulta IQ que terminaba en timeout por esta ruta pública acotada. Ver `docs/public-catalog.md`.
 
 ## Validación
 
 `npm run build`, 12 pruebas locales y de QA en la ampliación, y revisión independiente. Ver `ops/reports/qa/wis-sqlite-review.md`. El reinicio con cuenta vinculada ya fue probado. Las pruebas de WhatsApp real de envío y multimedia saliente requieren aprobar los envíos concretos.
 
 Ampliación de exploradores y respuestas comprobadas: 22 pruebas Node aprobadas, más una prueba de paginación del cliente Python. Validación en Chrome del explorador, detalle de grupos y comandos de lectura. No se enviaron mensajes ni se modificaron listas de bloqueo, grupos o productos.
+
+Ampliación de mensajes e historial: 23 pruebas Node aprobadas en revisión independiente, comprobación sintáctica y nuevo reinicio con recuperación de sesión. Las pruebas de historial utilizaron un transporte simulado; no solicitaron mensajes al dispositivo real. Ver `docs/message-explorer.md`.
+
+Validación final incluyendo el adaptador público y sus regresiones: **30/30 pruebas Node aprobadas**, comprobación sintáctica y revisión QA independiente. Dos consultas manuales desde Chrome comprobaron el resultado real de catálogo y colecciones. La sesión se recuperó sin QR; el contador de operaciones de envío permanece en cero. La matriz registra 33 métodos parcialmente cubiertos y 149 pendientes, sin declarar equivalencia completa.
 
 ## Límites actuales
 

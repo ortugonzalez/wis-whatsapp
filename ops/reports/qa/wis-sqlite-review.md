@@ -1,5 +1,29 @@
 # WIS WhatsApp SQLite — QA independiente
 
+## Integración final del catálogo público — revisión independiente
+
+Apta técnicamente para reinicio en modo lectura. Pruebas aisladas combinadas de backend, worker, adaptador y QA: **29/29 PASS**. Se revisó la fábrica inyectada en runtime, ligada al JID actual, con configuración en memoria y descubrimiento bajo comando manual. No incorpora fallback de autenticación ni reintentos automáticos. Conserva exclusión de solicitudes pendientes, comprobación de propietario y rechazo de resultados de otro socket.
+
+Se detectaron y el propietario corrigió tres P2 antes del dictamen: productos con product_id se descartaban; el indicador truncated del adaptador se perdía permitiendo reemplazar datos previos con una lista recortada; los códigos antiguos de error permanecían tras el éxito. La regresión verifica recuperación desde error, identificador alternativo, preservación de snapshots cuando la respuesta es parcial y flags de productos anidados. Los éxitos limpian provider_code/status_code; los fallos conservan datos previos como stale y anuncian alcance público parcial.
+
+El lector limita cada página pública a cincuenta elementos; worker consulta como máximo tres páginas de productos y una de colecciones. El resumen conserva cursores/truncamiento y known_only, por lo que la API no anuncia inventario Business completo. Las respuestas reales informadas por el orquestador no fueron reproducidas por QA. Este dictamen no valida envíos ni funciones administrativas del catálogo.
+
+## Adaptador HTTP del catálogo público — revisión independiente
+
+La revisión estática confirma destinos HTTPS restringidos, endpoint GraphQL fijo, cookies omitidas, redirecciones rechazadas, extracción de configuración sin ejecutar JavaScript, token sólo en memoria y límites de tiempo/tamaño. El objetivo de consulta queda fijado por ownJid; los resultados identifican el alcance public_catalog, que no equivale a acceso administrativo al catálogo Business.
+
+Hallazgo P2 corregido por el propietario: un cuerpo JSON null provocaba TypeError y productos null/sin identificador se aceptaban como registros verificados. Ahora cuerpo, datos, contenedor y filas deben ser objetos planos; los identificadores deben ser valores estables no vacíos. Se validan también productos anidados y filas fuera del límite visual. La regresión independiente en `test/qa/catalog-http.test.mjs` fallaba antes de corregir y ahora pasa. Ejecución independiente de pruebas del adaptador más QA: **5/5 PASS**. Apto para su lectura pública acotada; no se evaluó todavía integración en worker ni disponibilidad real del proveedor. No se realizaron consultas reales desde QA.
+
+## Historial, detalle de mensajes y multimedia — revisión independiente
+
+Sin hallazgos P1/P2 bloqueantes en este incremento. Pruebas aisladas: `node --test local/worker.test.mjs local/backend.test.mjs test/qa/checked-reads.test.mjs test/qa/sqlite-review.test.mjs test/qa/api-expansion.test.mjs`, **23/23 PASS**; sintaxis de messages.js válida. No hubo consultas a la cuenta real ni reinicios desde QA. El adaptador catalog-http en desarrollo queda fuera de este dictamen.
+
+La solicitud de historial exige administrador, conversación conocida y ancla persistida; pide cincuenta registros. Se contrastó el uso de milisegundos con fetchMessageHistory de la dependencia instalada. Es una solicitud de datos al dispositivo asociado y no un mensaje al contacto. Sólo una correlación explícita por request_id cambia la solicitud a arrived; no se declara historial completo y se distingue la sincronización global de la cuenta. El contador recibido contabiliza el evento del proveedor, no garantiza que todos los registros sean nuevos o persistibles.
+
+El detalle y búsqueda requieren permiso read, los filtros son parametrizados y la multimedia exige nombre permitido, registro en base y contención realpath dentro del directorio privado. La interfaz escapa texto y utiliza rutas locales autenticadas. Las citas, reacciones y confirmaciones conservan campos permitidos, sin objetos completos de credenciales ni URLs firmadas. Edición y revocación procesan eventos recibidos; las pruebas no envían mensajes a WhatsApp.
+
+Límites: revisión visual estática sin navegador real; recuperación efectiva depende del dispositivo/proveedor; no se garantiza recuperación completa ni descarga de multimedia histórica. Los metadatos recibidos en eventos y las pruebas con sockets simulados no equivalen a aceptación integral con una cuenta real.
+
 ## Validación de respuestas crudas — revisión final
 
 Apto técnicamente para reiniciar el worker en modo lectura. La corrección reemplaza los wrappers que podían convertir un timeout en una lista vacía: catálogo y colecciones requieren un IQ result con contenedor y elementos válidos antes de ejecutar el parser instalado. Bloqueados, grupos y comunidades también validan la respuesta cruda. Undefined se clasifica como read_timeout; un contenedor ausente o incorrecto como invalid_response. Los errores del proveedor sólo conservan código permitido y estado numérico.

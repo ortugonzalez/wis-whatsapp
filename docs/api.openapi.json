@@ -3,7 +3,7 @@
   "info": {
     "title": "WIS WhatsApp API",
     "version": "1.1.0",
-    "description": "Local SQLite API for one WIS connection wis-5679. Bearer tokens have explicit scopes. Admin cookies and same-origin Origin are required for administration. Sends and webhook delivery are disabled by default. Live dashboard pagination preserves data arrays and adds top-level meta. Snapshots are observed data, never a claim of complete WhatsApp history. Sync queues read-only work and does not activate outbound."
+    "description": "Local SQLite API for one WIS connection wis-5679. Bearer tokens have explicit scopes. Admin cookies and same-origin Origin are required for administration. Sends and webhook delivery are disabled by default. Live dashboard pagination preserves data arrays and adds top-level meta. Snapshots are observed data, never a claim of complete WhatsApp history. Sync queues read-only work and does not activate outbound. Successful read audits are sampled once per actor/resource/minute and contain no query, content, credentials or QR."
   },
   "servers": [
     {
@@ -1276,8 +1276,18 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Local message UUID returns message, conversation, contact, sanitized snapshot/details, quote, mentions, reaction snapshots/events, receipts and history metadata instead of list",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
           }
-        ]
+        ],
+        "description": "Without id, q searches body across all conversations unless conversation_id narrows it. Returns total pagination. Message detail never implies complete reaction or history coverage."
       },
       "post": {
         "summary": "Queue a message; accepted is not delivered",
@@ -1602,9 +1612,34 @@
           {
             "name": "path",
             "in": "query",
-            "required": true,
+            "description": "Optional registered filename: returns binary; omission lists registered media metadata",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
             }
           }
         ],
@@ -1618,7 +1653,8 @@
           "404": {
             "description": "Media absent"
           }
-        }
+        },
+        "description": "Without path: data rows path, media_url, mime_type, size, available, created_at, message_count, type and top-level pagination meta. Only message-referenced files and uploaded files with audit registration appear; storage is never enumerated. Missing files are unavailable. Binary reads also require registration. No session files are accessible."
       }
     },
     "/capabilities": {
@@ -2081,7 +2117,8 @@
                       "communities",
                       "community",
                       "newsletter",
-                      "newsletters"
+                      "newsletters",
+                      "history"
                     ]
                   },
                   "target": {
@@ -2134,7 +2171,7 @@
             "description": "Administrator session and same-origin request required"
           }
         },
-        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only."
+        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived."
       }
     },
     "/reference-fields": {
@@ -2919,6 +2956,29 @@
           },
           "403": {
             "description": "Missing scope or administrator session"
+          }
+        }
+      }
+    },
+    "/history": {
+      "get": {
+        "summary": "Read persisted history-request progress for one known conversation",
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data: latest_command (queue status/error), latest_request (command_id,data,updated_at), latest_sync (account-scoped), latest_sync_scope=account, complete=false, request_limit=50"
+          },
+          "404": {
+            "description": "Conversation not observed"
           }
         }
       }

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createPublicCatalogReader } from './catalog-http.mjs';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -48,6 +49,7 @@ export function safeGroup(group) {
   return value;
 }
 export function safeProduct(product) {
+  product={...product,id:product?.id ?? product?.product_id,retailerId:product?.retailerId ?? product?.retailer_id,isHidden:product?.isHidden ?? product?.is_hidden,availability:product?.availability ?? product?.product_availability};
   // Product image URLs may contain signed CDN credentials; expose availability only.
   return {...safeFields(product,['id','name','retailerId','description','price','currency','isHidden','availability']),has_images:Object.values(product?.imageUrls || {}).some(x=>typeof x==='string'),review_status:safeFields(product?.reviewStatus,['status','canAppeal'])};
 }
@@ -58,12 +60,13 @@ export function classifyReadError(error) {
   // Never expose provider messages/data: they can contain request material.
   const local={read_timeout:'read_timeout',previous_read_unresolved:'read_pending',connection_unavailable:'disconnected',connection_changed:'disconnected',capability_unavailable:'method_missing',account_identity_unavailable:'identity_unavailable',invalid_target:'invalid_target',unknown_community:'unknown_target',unknown_newsletter:'unknown_target',unsupported_read_command:'method_missing',newsletter_unavailable:'not_found'};
   const marker=typeof error?.message==='string'?error.message:'';
-  const candidate=error?.output?.statusCode ?? error?.statusCode ?? error?.status;
+  const candidate=error?.output?.statusCode ?? error?.statusCode ?? error?.status ?? error?.status_code;
   const status_code=Number.isInteger(candidate) && candidate>=100 && candidate<=599?candidate:null;
   let code=Object.hasOwn(local,marker)?local[marker]:undefined;
+  if(['public_catalog_unavailable','graphql_error','access_denied','rate_limited','transport_failed','public_catalog_config_unavailable'].includes(marker))code=marker;
   if(!code && marker.startsWith('invalid_') && marker.endsWith('_response'))code='invalid_response';
   if(!code)code=status_code===401 || status_code===403?'access_denied':status_code===404?'not_found':status_code===429?'rate_limited':status_code===408 || status_code===504?'read_timeout':status_code && status_code>=500?'provider_error':'read_failed';
-  return {code,status_code};
+  return {code,status_code,...(Number.isSafeInteger(error?.provider_code)?{provider_code:error.provider_code}:{})};
 }
 export function readBudgetMs(method, override) {
   if(override!==undefined) {
@@ -154,8 +157,15 @@ export function normalizeContent(m) {
   const unsupported=Object.keys(m).find(k=>k.endsWith('Message') && !['protocolMessage','senderKeyDistributionMessage','messageContextInfo','fastRatchetKeySenderKeyDistributionMessage'].includes(k));
   return unsupported?{type:'unsupported',body:`Contenido disponible: ${unsupported}`,details:{wire_type:unsupported}}:null;
 }
+export function messageContext(message) {
+  const entry=Object.values(message || {}).find(value=>value && typeof value==='object' && value.contextInfo);
+  const ctx=entry?.contextInfo;
+  if(!ctx)return {};
+  const quoted=normalizeContent(ctx.quotedMessage);
+  return {quote:{...safeFields(ctx,['stanzaId','participant','remoteJid']),...(quoted?{type:quoted.type,body_preview:quoted.body.slice(0,512)}:{})},mentions:(ctx.mentionedJid || []).filter(x=>typeof x==='string').slice(0,100)};
+}
 
-export async function runWorker({ db, baileys, logger, authDir = resolve(root, '.local/baileys-auth'), mediaDir = resolve(root, '.local/media'), readTimeoutMs, readIntervalMs = 2000 }) {
+export async function runWorker({ db, baileys, logger, authDir = resolve(root, '.local/baileys-auth'), mediaDir = resolve(root, '.local/media'), readTimeoutMs, readIntervalMs = 2000, publicCatalogReaderFactory }) {
   mkdirSync(authDir, {recursive:true, mode:0o700});
   mkdirSync(mediaDir, {recursive:true, mode:0o700});
   const owner = randomUUID();
@@ -218,12 +228,14 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       saveChats([{id:group.id,name:group.subject}]);
     }
   }
+  let publicReader,publicReaderJid;
   async function readCall(current, name, args=[]) {
     if(!owns() || sock!==current || connection().status!=='connected')throw new Error('connection_unavailable');
     if(unresolvedRead?.socket===current)throw new Error('previous_read_unresolved');
     const business=['getCatalog','getCollections'].includes(name);
+    const publicRead=['publicCatalog','publicCollections'].includes(name);
     const list=['fetchBlocklist','groupFetchAllParticipating','communityFetchAllParticipating'].includes(name);
-    if(typeof current[business||list?'query':name]!=='function')throw new Error('capability_unavailable');
+    if(!publicRead && typeof current[business||list?'query':name]!=='function')throw new Error('capability_unavailable');
     let timer,timedOut=false;
     const diagnostic=activeReadCommand?{command_id:activeReadCommand.id,kind:activeReadCommand.kind,method:name}:null;
     const diagnosticResource=activeReadCommand?.target || 'wis-5679';
@@ -231,7 +243,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       const pending={socket:current};unresolvedRead=pending;
       // Local timeout does not cancel Baileys' IQ request. Block further reads until
       // that request settles (or a different socket takes over), avoiding fan-out.
-      const request=Promise.resolve().then(()=>business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
+      const request=Promise.resolve().then(()=>publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
         if(timedOut && diagnostic && owns() && sock===current)event('read.late_completed',diagnosticResource,{...diagnostic,result:'response_received_after_timeout'});
         return value;
       },error=>{
@@ -241,7 +253,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         throw error;
       }).finally(()=>{if(unresolvedRead===pending)unresolvedRead=null;});
       pending.request=request;
-      const value=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('read_timeout'));},readBudgetMs(name,readTimeoutMs));})]);
+      const value=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('read_timeout'));},publicRead && readTimeoutMs===undefined?150000:readBudgetMs(name,readTimeoutMs));})]);
       if(!owns() || sock!==current)throw new Error('connection_changed');
       return value;
     } finally {clearTimeout(timer);}
@@ -287,29 +299,46 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         const statuses=await readCall(current,'fetchStatus',[command.target]);
         const status=statusSnapshot(statuses).items[0]?.status || {};
         snapshot('contact',command.target,{...status,profile_read_at:new Date().toISOString()});
+      } else if(command.kind==='history') {
+        const chat=db.prepare('SELECT id FROM conversations WHERE wa_chat_id=?').get(command.target);
+        if(!chat || !/^\d+(?:-\d+)?@(s\.whatsapp\.net|lid|g\.us)$/.test(command.target || ''))throw new Error('invalid_target');
+        const oldest=db.prepare("SELECT wa_message_id,direction,created_at FROM messages WHERE conversation_id=? AND wa_message_id IS NOT NULL AND wa_message_id!='' AND direction IN ('in','out') ORDER BY created_at ASC LIMIT 1").get(chat.id);
+        const millis=Date.parse(oldest?.created_at);
+        if(!oldest || !Number.isFinite(millis) || millis<=0)throw new Error('invalid_target');
+        snapshot('history_request',command.id,{target:command.target,conversation_id:chat.id,status:'requesting',requested_count:50,oldest_message_id:oldest.wa_message_id,oldest_timestamp:oldest.created_at,requested_at:new Date().toISOString(),complete:false});
+        // Installed Baileys copies the argument to oldestMsgTimestampMs, so use
+        // milliseconds. This is a peer history request, never a chat send/read receipt.
+        const requestId=await readCall(current,'fetchMessageHistory',[50,{remoteJid:command.target,id:oldest.wa_message_id,fromMe:oldest.direction==='out'},millis]);
+        if(typeof requestId!=='string' || !requestId)throw new Error('invalid_history_response');
+        snapshot('history_request',command.id,{request_id:requestId,status:'requested',request_accepted_at:new Date().toISOString(),complete:false});
+        event('history.requested',command.target,{command_id:command.id,request_id:requestId,requested_count:50,complete:false});
       } else if(command.kind==='catalog' || command.kind==='collections') {
         const jid=current.user?.id?.replace(/:\d+(?=@)/,'');
         if(!jid)throw new Error('account_identity_unavailable');
+        const publicScope=Boolean(publicCatalogReaderFactory);
+        if(publicScope && (!publicReader || publicReaderJid!==jid)){publicReader=publicCatalogReaderFactory({ownJid:jid});publicReaderJid=jid;}
+        const scope=publicScope?{scope:'public_catalog',known_only:true,source:'public_whatsapp_graphql'}:{};
         if(command.kind==='catalog') {
-          const products=new Map();const seenCursors=new Set();let cursor,pages=0;
+          const products=new Map();const seenCursors=new Set();let cursor,pages=0,partial=false;
           do {
-            const page=await readCall(current,'getCatalog',[{jid,limit:100,...(cursor?{cursor}:{})}]);
+            const page=publicScope?await readCall(current,'publicCatalog',[{after:cursor || null}]):await readCall(current,'getCatalog',[{jid,limit:100,...(cursor?{cursor}:{})}]);
             if(!Array.isArray(page?.products))throw new Error('invalid_catalog_response');
-            for(const p of page.products.slice(0,100))if(p.id)products.set(String(p.id),safeProduct(p));
-            cursor=typeof page.nextPageCursor==='string'?page.nextPageCursor:undefined;pages++;
+            partial ||= Boolean(page.truncated);
+            for(const p of page.products.slice(0,100)){const value=safeProduct(p);if(value.id!==undefined && value.id!==null)products.set(String(value.id),value);}
+            cursor=publicScope?(page.paging?.after || undefined):(typeof page.nextPageCursor==='string'?page.nextPageCursor:undefined);pages++;
             if(cursor && seenCursors.has(cursor))break;
             if(cursor)seenCursors.add(cursor);
           } while(cursor && pages<3);
           // Replace the previous complete collection only when this read is complete.
-          if(!cursor)db.prepare("DELETE FROM snapshots WHERE kind='product' AND resource_id LIKE ?").run(jid+':%');
+          if(!cursor && !partial)db.prepare("DELETE FROM snapshots WHERE kind='product' AND resource_id LIKE ?").run(jid+':%');
           for(const [id,value] of products)snapshot('product',jid+':'+id,{...value,owner_jid:jid,available:true});
-          snapshot('catalog',jid,{available:true,response_verified:true,product_count:products.size,has_more:Boolean(cursor),truncated:Boolean(cursor),pages,source:'getCatalog',error:null});
+          snapshot('catalog',jid,{available:true,response_verified:true,product_count:products.size,has_more:Boolean(cursor),truncated:Boolean(cursor)||partial,pages,source:'getCatalog',...scope,error:null,provider_code:null,status_code:null});
         } else {
-          const result=await readCall(current,'getCollections',[jid,100]);
+          const result=publicScope?await readCall(current,'publicCollections',[{}]):await readCall(current,'getCollections',[jid,100]);
           if(!Array.isArray(result?.collections))throw new Error('invalid_collections_response');
-          if(result.collections.length<100)db.prepare("DELETE FROM snapshots WHERE kind='collection' AND resource_id LIKE ?").run(jid+':%');
-          for(const c of result.collections.slice(0,100))if(c.id)snapshot('collection',jid+':'+c.id,{...safeFields(c,['id','name']),owner_jid:jid,status:safeFields(c.status,['status','canAppeal']),products:(c.products || []).slice(0,100).map(safeProduct),available:true});
-          snapshot('collections',jid,{available:true,response_verified:true,collection_count:Math.min(result.collections.length,100),truncated:result.collections.length>=100,source:'getCollections',error:null});
+          if(!result.truncated && !result.paging?.after && result.collections.length<100)db.prepare("DELETE FROM snapshots WHERE kind='collection' AND resource_id LIKE ?").run(jid+':%');
+          for(const c of result.collections.slice(0,100))if(c.id!==undefined && c.id!==null)snapshot('collection',jid+':'+c.id,{...safeFields(c,['id','name','products_truncated','products_collected']),owner_jid:jid,status:safeFields(c.status,['status','canAppeal']),products:(c.products || []).slice(0,100).map(safeProduct),available:true});
+          snapshot('collections',jid,{available:true,response_verified:true,collection_count:Math.min(result.collections.length,publicScope?50:100),truncated:Boolean(result.truncated) || Boolean(result.paging?.after) || result.collections.length>(publicScope?50:99),source:'getCollections',...scope,error:null,provider_code:null,status_code:null});
         }
       } else if(command.kind==='blocklist') {
         const values=await readCall(current,'fetchBlocklist');
@@ -352,16 +381,17 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       } else if(!['account','all'].includes(command.kind))throw new Error('unsupported_read_command');
       if(!owns() || sock!==current)throw new Error('connection_changed');
       db.prepare("UPDATE read_commands SET status='done',updated_at=? WHERE id=?").run(new Date().toISOString(),command.id);
-      event('read.completed',command.target || 'wis-5679',{kind:command.kind,command_id:command.id});
+      event('read.completed',command.target || 'wis-5679',{kind:command.kind,command_id:command.id,...(command.kind==='history'?{result:'request_accepted',complete:false}:{})});
     } catch(error) {
       if(owns()) {
         const failure=classifyReadError(error);
         db.prepare("UPDATE read_commands SET status='failed',error=?,updated_at=? WHERE id=?").run(failure.code,new Date().toISOString(),command.id);
+        if(command.kind==='history' && db.prepare("SELECT 1 FROM snapshots WHERE kind='history_request' AND resource_id=?").get(command.id))snapshot('history_request',command.id,{status:'outcome_unknown',error:failure.code,complete:false});
         const summaryKind={catalog:'catalog',collections:'collections',blocklist:'blocklist',communities:'communities',community:'communities',newsletter:'newsletters',newsletters:'newsletters',groups:'groups',all:'groups'}[command.kind];
         const resource=['catalog','collections'].includes(command.kind)?current.user?.id?.replace(/:\d+(?=@)/,''):'wis-5679';
         if(summaryKind && resource) {
           const prior=db.prepare('SELECT payload FROM snapshots WHERE kind=? AND resource_id=?').get(summaryKind,resource);
-          snapshot(summaryKind,resource,{available:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
+          snapshot(summaryKind,resource,{available:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,provider_code:failure.provider_code ?? null,...(publicCatalogReaderFactory && ['catalog','collections'].includes(command.kind)?{scope:'public_catalog',known_only:true,source:'public_whatsapp_graphql'}:{}),last_attempt_at:new Date().toISOString()});
         }
         event('read.failed',command.target || 'wis-5679',{kind:command.kind,command_id:command.id,error:failure.code,status_code:failure.status_code});
       }
@@ -418,7 +448,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if (!owns()) return;
         db.prepare(`INSERT OR IGNORE INTO messages(id,conversation_id,wa_message_id,direction,type,body,media_path,delivery_status,source,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)`)
           .run(randomUUID(),chat.id,waId,msg.key.fromMe?'out':'in',type,body,media,msg.key.fromMe?'sent':'delivered',source,at);
-        snapshot('message',waId,{type,details,participant:msg.key.participant || null,push_name:msg.pushName || null,source,timestamp:at});
+        snapshot('message',waId,{type,details,...messageContext(m),participant:msg.key.participant || null,push_name:msg.pushName || null,source,timestamp:at});
         db.prepare('UPDATE conversations SET last_message_preview=?,last_message_at=? WHERE id=? AND (last_message_at IS NULL OR last_message_at<=?)').run(body || `[${type}]`,at,chat.id,at);
         if (msg.message) { cache.set(waId,msg.message); if(cache.size>1000) cache.delete(cache.keys().next().value); }
       } catch { console.error('message_persistence_failed'); }
@@ -440,12 +470,23 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(!owns() || sock!==current)return;
         try {handler(payload);} catch {console.error('metadata_persistence_failed');}
       };
-      current.ev.on('messaging-history.set', guarded(({messages,contacts,chats,progress,isLatest,syncType,lidPnMappings}) => {
+      current.ev.on('messaging-history.set', guarded(({messages,contacts,chats,progress,isLatest,syncType,lidPnMappings,peerDataRequestSessionId}) => {
         if(contacts?.length)saveContacts(contacts);
         if(lidPnMappings?.length)saveContacts(lidPnMappings.slice(0,10000).filter(x=>x.lid && x.pn).map(x=>({id:x.lid,phoneNumber:x.pn,lid:x.lid})));
         if(chats?.length)saveChats(chats);
         snapshot('history','wis-5679',{...safeFields({progress,isLatest,syncType},['progress','isLatest','syncType']),messages_in_chunk:messages?.length || 0,contacts_in_chunk:contacts?.length || 0,chats_in_chunk:chats?.length || 0});
         if(messages?.length)enqueue(messages,'import');
+        // Correlate only an explicit request id; simultaneous automatic history
+        // chunks must never be credited to a user-requested fetch by timing alone.
+        if(typeof peerDataRequestSessionId==='string' && peerDataRequestSessionId) {
+          const request=db.prepare("SELECT resource_id,payload FROM snapshots WHERE kind='history_request' AND json_extract(payload,'$.request_id')=? LIMIT 1").get(peerDataRequestSessionId);
+          if(request) {
+            const prior=JSON.parse(request.payload);
+            const count=(messages || []).filter(m=>m.key?.remoteJid===prior.target).length;
+            snapshot('history_request',request.resource_id,{status:'arrived',received_count:(prior.received_count || 0)+count,chunks_received:(prior.chunks_received || 0)+1,last_arrived_at:new Date().toISOString(),complete:false});
+            event('history.arrived',prior.target,{command_id:request.resource_id,received_count:count,correlated:true,complete:false});
+          }
+        }
       }));
       current.ev.on('messaging-history.status',guarded(value=>{snapshot('history','wis-5679',safeFields(value,['syncType','status','explicit']));event('history.status','wis-5679',safeFields(value,['syncType','status','explicit']));}));
       current.ev.on('contacts.upsert', guarded(contacts=>saveContacts(contacts)));
@@ -469,7 +510,46 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(association.chatId && association.labelId)snapshot('label_association',`${association.chatId}:${association.labelId}:${association.messageId || ''}`,{...association,associated:value.type==='add'});
       }));
       current.ev.on('messages.reaction',guarded(values=>{
-        for(const value of values.slice(0,1000))event('messages.reaction',value.key?.id || 'unknown',{key:safeFields(value.key,['id','remoteJid','fromMe','participant']),reaction:safeFields(value.reaction,['text','senderTimestampMs'])});
+        for(const value of values.slice(0,1000)) {
+          const reaction={key:safeFields(value.key,['id','remoteJid','fromMe','participant']),reaction:safeFields(value.reaction,['text','senderTimestampMs']),sender:safeFields(value.reaction?.key,['id','participant','fromMe','remoteJid'])};
+          event('messages.reaction',value.key?.id || 'unknown',reaction);
+          if(value.key?.id)snapshot('reaction',value.key.id+':'+(value.reaction?.key?.participant || (value.reaction?.key?.fromMe?'self':value.reaction?.key?.remoteJid) || 'unknown'),{message_id:value.key.id,...reaction,removed:!value.reaction?.text});
+        }
+      }));
+      const applyMessageChange=(key,update)=>{
+        if(!owns() || sock!==current || !key?.id)return;
+        const existing=db.prepare('SELECT m.id,m.conversation_id,m.created_at FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE m.wa_message_id=? AND c.wa_chat_id=?').get(key.id,key.remoteJid);
+        if(!existing)return;
+        const old=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='message' AND resource_id=?").get(key.id)?.payload || '{}');
+        const now=new Date().toISOString();
+        if(update.message===null) {
+          db.prepare('UPDATE messages SET body=NULL,media_path=NULL WHERE id=?').run(existing.id);
+          snapshot('message',key.id,{revoked:true,revoked_at:now,details:{},quote:{},mentions:[]});
+          cache.delete(key.id);event('message.revoked',key.id,{conversation_id:existing.conversation_id,at:now});
+        } else if(update.message?.editedMessage?.message && !old.revoked) {
+          const at=timestamp(update.messageTimestamp) || now;
+          if(old.edited_at && old.edited_at>at)return;
+          const content=update.message.editedMessage.message,normalized=normalizeContent(content);
+          if(!normalized)return;
+          db.prepare('UPDATE messages SET body=?,type=? WHERE id=?').run(normalized.body,normalized.type,existing.id);
+          snapshot('message',key.id,{type:normalized.type,details:normalized.details,...messageContext(content),edited:true,edited_at:at});
+          cache.set(key.id,content);event('message.edited',key.id,{conversation_id:existing.conversation_id,at});
+        } else return;
+        const last=db.prepare('SELECT id,body,type FROM messages WHERE conversation_id=? ORDER BY created_at DESC,id DESC LIMIT 1').get(existing.conversation_id);
+        if(last?.id===existing.id)db.prepare('UPDATE conversations SET last_message_preview=? WHERE id=?').run(update.message===null?'Mensaje eliminado':last.body || `[${last.type}]`,existing.conversation_id);
+      };
+      current.ev.on('messages.delete',guarded(value=>{
+        const keys=Array.isArray(value.keys)?value.keys:[];
+        for(const key of keys.slice(0,1000))queue=queue.then(()=>applyMessageChange(key,{message:null})).catch(()=>console.error('message_update_failed'));
+        if(value.all && value.jid)event('messages.delete_all',value.jid,{observed:true,local_messages_preserved:true});
+      }));
+      current.ev.on('message-receipt.update',guarded(values=>{
+        for(const {key,receipt} of values.slice(0,1000)) {
+          if(!key?.id)continue;
+          const data=safeFields(receipt,['userJid','receiptTimestamp','readTimestamp','playedTimestamp']);
+          snapshot('receipt',key.id+':'+(receipt.userJid || 'unknown'),{message_id:key.id,...data});
+          event('message.receipt',key.id,data);
+        }
       }));
       current.ev.on('call',guarded(values=>{
         for(const value of values.slice(0,100))event('call',value.id,safeFields(value,['id','from','chatId','date','status','isVideo','isGroup','offline']));
@@ -477,6 +557,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       current.ev.on('messages.update', updates => {
         if(!owns() || sock!==current) return;
         for(const {key,update} of updates) {
+          if(update.message===null || update.message?.editedMessage?.message)queue=queue.then(()=>applyMessageChange(key,update)).catch(()=>console.error('message_update_failed'));
           const status = {2:'sent',3:'delivered',4:'read',5:'read'}[update.status];
           if(status) {
             const previous=receipts.get(key.id);
@@ -617,7 +698,7 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
   const {openDatabase}=await import('./db.mjs');
   const baileys=await import(pathToFileURL(requireWorker.resolve('baileys')).href);
   const pino=requireWorker('pino');
-  runWorker({db:openDatabase(),baileys,logger:pino({level:'silent'})}).then(worker=>{
+  runWorker({db:openDatabase(),baileys,logger:pino({level:'silent'}),publicCatalogReaderFactory:createPublicCatalogReader}).then(worker=>{
     process.on('message',message=>{if(message?.type==='wis.shutdown')void worker.stop().then(()=>process.exit(0));});
   }).catch(()=>{console.error('worker_start_failed');process.exitCode=1;});
 }

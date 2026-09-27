@@ -173,6 +173,34 @@ test('mock socket QR, persistent incoming history, no sends and graceful lease r
  assert.equal(sends,0);await worker.stop();assert.equal(ended,1);
  assert.equal(db.prepare('SELECT lease_owner FROM connections').get().lease_owner,null);db.close();
 });
+test('public reader uses own identity, verified public scope and safe unavailable classification',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();
+ const dir=mkdtempSync(resolve(tmpdir(),'wis-public-test-'));const ev=new EventEmitter();let factories=0,recovered=false;
+ const socket={ev,user:{id:'5491111115679:1@s.whatsapp.net'},end(){}};
+ const fake={default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),readIntervalMs:0,publicCatalogReaderFactory:({ownJid})=>{
+  factories++;assert.equal(ownJid,'5491111115679@s.whatsapp.net');return {catalog:async()=>{if(recovered)return {products:[{product_id:'alias',name:'Recovered'}],truncated:true,paging:{after:null}};throw Object.assign(Error('public_catalog_unavailable'),{provider_code:2498052});},collections:async()=>recovered?({collections:[{id:'new',products:[],products_collected:false,products_truncated:true}],truncated:true,paging:{after:null}}):({collections:[],paging:{after:null},response_verified:true})};
+ }});
+ try {
+  ev.emit('connection.update',{connection:'open'});db.prepare('DELETE FROM read_commands').run();
+  for(const kind of ['catalog','collections']){const now=new Date().toISOString();db.prepare('INSERT INTO read_commands(id,kind,status,created_at,updated_at) VALUES(?,?,?,?,?)').run(kind,kind,'pending',now,now);await worker.drainReads();}
+  const catalog=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='catalog'").get().payload);
+  assert.equal(catalog.available,false);assert.equal(catalog.error,'public_catalog_unavailable');assert.equal(catalog.provider_code,2498052);
+  const collections=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='collections'").get().payload);
+  assert.equal(collections.response_verified,true);assert.equal(collections.known_only,true);assert.equal(collections.collection_count,0);assert.equal(factories,1);
+  recovered=true;
+  const now=new Date().toISOString();
+  for(const kind of ['product','collection'])db.prepare('INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES(?,?,?,?)').run(kind,'5491111115679@s.whatsapp.net:old','{}',now);
+  for(const kind of ['catalog','collections']){db.prepare('INSERT INTO read_commands(id,kind,status,created_at,updated_at) VALUES(?,?,?,?,?)').run(kind+'-recovered',kind,'pending',now,now);await worker.drainReads();}
+  const recoveredCatalog=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='catalog'").get().payload);
+  assert.equal(recoveredCatalog.provider_code,null);assert.equal(recoveredCatalog.status_code,null);assert.equal(recoveredCatalog.truncated,true);
+  assert.ok(db.prepare("SELECT 1 FROM snapshots WHERE kind='product' AND resource_id LIKE '%:alias'").get());
+  assert.equal(db.prepare("SELECT count(*) n FROM snapshots WHERE resource_id LIKE '%:old'").get().n,2);
+  const nested=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='collection' AND resource_id LIKE '%:new'").get().payload);
+  assert.equal(nested.products_collected,false);assert.equal(nested.products_truncated,true);
+ } finally {await worker.stop();db.close();}
+});
+
 test('late provider failure is correlated and sanitized after local read timeout',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();
  const dir=mkdtempSync(resolve(tmpdir(),'wis-late-test-'));const ev=new EventEmitter();let fail;
@@ -235,5 +263,51 @@ test('Business, privacy, community and known-newsletter reads are bounded and st
   empty=true;assert.equal(await command('catalog'),'done');
   assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE kind='product'").get().n,0);
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='catalog'").get().payload).product_count,0);
+ } finally {await worker.stop();db.close();}
+});
+test('history requests use oldest persisted key and milliseconds, and only exact arrival correlation changes request state',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();
+ const dir=mkdtempSync(resolve(tmpdir(),'wis-history-request-'));const ev=new EventEmitter();let calls=0;
+ const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},fetchMessageHistory:async(count,key,ms)=>{calls++;assert.equal(count,50);assert.deepEqual(key,{remoteJid:'123@g.us',id:'oldest',fromMe:false});assert.equal(ms,1700000000000);return 'request-history-1';},sendMessage(){throw Error('chat send forbidden');},readMessages(){throw Error('read receipt forbidden');}};
+ const fake={default:()=>socket,useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),mediaDir:resolve(dir,'media'),readIntervalMs:0});
+ try {
+  ev.emit('connection.update',{connection:'open'});db.prepare('DELETE FROM read_commands').run();
+  ev.emit('messages.upsert',{messages:[{key:{id:'oldest',remoteJid:'123@g.us'},messageTimestamp:1700000000,message:{conversation:'oldest'}}]});
+  await new Promise(r=>setTimeout(r,0));
+  const now=new Date().toISOString();db.prepare("INSERT INTO read_commands(id,kind,target,status,created_at,updated_at) VALUES('history-test','history','123@g.us','pending',?,?)").run(now,now);
+  await worker.drainReads();assert.equal(calls,1);
+  const request=()=>JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='history_request' AND resource_id='history-test'").get().payload);
+  assert.equal(request().status,'requested');assert.equal(request().complete,false);
+  ev.emit('messaging-history.set',{messages:[],peerDataRequestSessionId:'different-request'});assert.equal(request().status,'requested');
+  ev.emit('messaging-history.set',{messages:[{key:{id:'older',remoteJid:'123@g.us'},messageTimestamp:1690000000,message:{conversation:'older'}}],peerDataRequestSessionId:'request-history-1'});
+  await new Promise(r=>setTimeout(r,0));assert.equal(request().status,'arrived');assert.equal(request().received_count,1);assert.equal(request().complete,false);
+  assert.equal(db.prepare("SELECT source FROM messages WHERE wa_message_id='older'").get().source,'import');
+  assert.equal(db.prepare('SELECT last_message_preview FROM conversations').get().last_message_preview,'oldest');
+ } finally {await worker.stop();db.close();}
+});
+test('quotes, mentions, reactions, receipts, edits and revokes persist safe metadata without WA writes',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();
+ const dir=mkdtempSync(resolve(tmpdir(),'wis-message-meta-'));const ev=new EventEmitter();
+ const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},sendMessage(){throw Error('no sends');}};
+ const fake={default:()=>socket,useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),mediaDir:resolve(dir,'media')});
+ try {
+  ev.emit('connection.update',{connection:'open'});db.prepare('DELETE FROM read_commands').run();
+  const key={id:'m',remoteJid:'123@g.us'};
+  ev.emit('messages.upsert',{messages:[{key,messageTimestamp:1700000000,message:{extendedTextMessage:{text:'Original',contextInfo:{stanzaId:'quoted',participant:'111@lid',mentionedJid:['222@lid'],quotedMessage:{imageMessage:{caption:'Quoted image',mediaKey:'never-store'}},secret:'never-store'}}}}]});
+  await new Promise(r=>setTimeout(r,0));
+  const metadata=()=>JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='message' AND resource_id='m'").get().payload);
+  assert.equal(metadata().quote.stanzaId,'quoted');assert.equal(metadata().quote.body_preview,'Quoted image');assert.deepEqual(metadata().mentions,['222@lid']);
+  ev.emit('messages.reaction',[{key,reaction:{text:'👍',senderTimestampMs:1700000001000,key:{participant:'222@lid'},secret:'never-store'}}]);
+  ev.emit('message-receipt.update',[{key,receipt:{userJid:'222@lid',readTimestamp:1700000002,secret:'never-store'}}]);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE kind='reaction'").get().n,1);
+  assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='receipt'").get().payload).readTimestamp,1700000002);
+  ev.emit('messages.update',[{key,update:{message:{editedMessage:{message:{conversation:'Edited'}}},messageTimestamp:1700000003}}]);
+  await new Promise(r=>setTimeout(r,0));assert.equal(db.prepare("SELECT body FROM messages WHERE wa_message_id='m'").get().body,'Edited');assert.equal(metadata().edited,true);
+  ev.emit('messages.update',[{key,update:{message:null,messageStubType:1}}]);
+  await new Promise(r=>setTimeout(r,0));assert.equal(db.prepare("SELECT body FROM messages WHERE wa_message_id='m'").get().body,null);assert.equal(metadata().revoked,true);
+  assert.equal(db.prepare('SELECT last_message_preview FROM conversations').get().last_message_preview,'Mensaje eliminado');
+  assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE payload LIKE '%never-store%'").get().n,0);
  } finally {await worker.stop();db.close();}
 });

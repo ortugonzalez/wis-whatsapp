@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node local/start.mjs",
-    "build": "node --check local/server.mjs && node --check local/worker.mjs && node --check local/public/app.js && node --check local/public/live.js && node --check local/public/explorer.js",
+    "build": "node --check local/server.mjs && node --check local/worker.mjs && node --check local/public/app.js && node --check local/public/live.js && node --check local/public/explorer.js && node --check local/public/messages.js",
     "start": "node local/start.mjs",
     "lint": "eslint",
     "local:setup": "node local/setup.mjs",
