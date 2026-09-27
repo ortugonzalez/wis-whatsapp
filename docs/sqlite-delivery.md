@@ -34,6 +34,8 @@ Incremento posterior de webhooks: dispatcher integrado al worker, ledger con per
 
 ## Límites actuales
 
+Incremento de fotos de perfil: lectura manual de cuenta, contactos y grupos conocidos, caché privada y ruta autenticada, con disponibilidad y errores explícitos. **40/40 pruebas locales y QA aprobadas**. Foto de la cuenta propia comprobada en Chrome (96 × 96, origen local); otros destinos probados mediante simulación. La sesión recuperó conexión sin QR y no hubo operaciones salientes. La matriz pasa a 34 funciones parcialmente cubiertas y 148 pendientes. Ver `docs/avatars-local.md`.
+
 El runtime SQLite inicial administra un usuario administrador y una conexión. No implementa todavía usuarios operadores ni múltiples conexiones. La bandeja consulta el historial disponible; no hay garantía de historial completo. No se declara paridad WHAPI: administración avanzada de grupos, edición de canales/comunidades/catálogo, estados publicados y llamadas permanecen pendientes donde lo indica la matriz. Los esquemas de variables WHAPI son referencia, no prueba de implementación. La ejecución de campañas no está implementada. No se habilitaron webhooks externos ni workflows. Ver `docs/data-explorers.md` para límites de las nuevas lecturas.
 
 El código heredado de Next/Supabase se conserva como referencia en su historial y carpetas, pero no forma parte del arranque activo. El manual vigente es `docs/sqlite-local.md`.

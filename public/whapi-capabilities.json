@@ -974,12 +974,12 @@
       "id": "getgroupicon",
       "name": "Get group icon",
       "source": "https://whapi.readme.io/reference/getgroupicon.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
-      "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "status": "partial",
+      "endpoint": "/api/v1/avatars?target=JID",
+      "screen": "/#groups",
+      "baileys": "profilePictureUrl",
+      "test": "local/avatars.test.mjs, local/worker.test.mjs, local/backend.test.mjs; pruebas simuladas, equivalencia completa no verificada.",
+      "reason": "Lectura manual de foto de un grupo conocido, con caché privada autenticada. Depende de visibilidad y respuesta de WhatsApp; sin edición."
     },
     {
       "id": "setgroupicon",

@@ -18,6 +18,7 @@ const implemented = {
   getbusinessprofile: ['/api/v1/account', 'Snapshot Business si la cuenta y WhatsApp lo permiten; sin edición.'],
   getgroups: ['/api/v1/groups', 'Metadatos disponibles de grupos participantes, consultados por el worker.'],
   getgroup: ['/api/v1/groups', 'Detalle en snapshot; refresco de lectura mediante /api/v1/sync.'],
+  getgroupicon: ['/api/v1/avatars?target=JID', 'Lectura manual de foto de un grupo conocido, con caché privada autenticada. Depende de visibilidad y respuesta de WhatsApp; sin edición.'],
   getcontactprofile: ['/api/v1/snapshots', 'Snapshots de perfil solicitado por lectura; sin garantía de datos privados.'],
   getcontactabout: ['/api/v1/snapshots', 'Acerca de cuando WhatsApp permite consultarlo.'],
   getpresence: ['/api/v1/snapshots', 'Eventos de presencia entregados por WhatsApp; no seguimiento garantizado.'],

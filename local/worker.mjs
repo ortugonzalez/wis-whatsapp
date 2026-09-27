@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createPublicCatalogReader } from './catalog-http.mjs';
 import { createWebhookDispatcher } from './webhooks.mjs';
+import { cacheAvatar } from './avatars.mjs';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -65,6 +66,7 @@ export function classifyReadError(error) {
   const status_code=Number.isInteger(candidate) && candidate>=100 && candidate<=599?candidate:null;
   let code=Object.hasOwn(local,marker)?local[marker]:undefined;
   if(['public_catalog_unavailable','graphql_error','access_denied','rate_limited','transport_failed','public_catalog_config_unavailable'].includes(marker))code=marker;
+  if(['avatar_unavailable','avatar_destination_rejected','avatar_download_failed','avatar_timeout','avatar_too_large','invalid_avatar_media'].includes(marker))code=marker;
   if(!code && marker.startsWith('invalid_') && marker.endsWith('_response'))code='invalid_response';
   if(!code)code=status_code===401 || status_code===403?'access_denied':status_code===404?'not_found':status_code===429?'rate_limited':status_code===408 || status_code===504?'read_timeout':status_code && status_code>=500?'provider_error':'read_failed';
   return {code,status_code,...(Number.isSafeInteger(error?.provider_code)?{provider_code:error.provider_code}:{})};
@@ -166,7 +168,7 @@ export function messageContext(message) {
   return {quote:{...safeFields(ctx,['stanzaId','participant','remoteJid']),...(quoted?{type:quoted.type,body_preview:quoted.body.slice(0,512)}:{})},mentions:(ctx.mentionedJid || []).filter(x=>typeof x==='string').slice(0,100)};
 }
 
-export async function runWorker({ db, baileys, logger, authDir = resolve(root, '.local/baileys-auth'), mediaDir = resolve(root, '.local/media'), readTimeoutMs, readIntervalMs = 2000, publicCatalogReaderFactory }) {
+export async function runWorker({ db, baileys, logger, authDir = resolve(root, '.local/baileys-auth'), mediaDir = resolve(root, '.local/media'), readTimeoutMs, readIntervalMs = 2000, publicCatalogReaderFactory, avatarCache=cacheAvatar, avatarDir=resolve(root,'.local/avatars') }) {
   mkdirSync(authDir, {recursive:true, mode:0o700});
   mkdirSync(mediaDir, {recursive:true, mode:0o700});
   const owner = randomUUID();
@@ -313,6 +315,15 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(typeof requestId!=='string' || !requestId)throw new Error('invalid_history_response');
         snapshot('history_request',command.id,{request_id:requestId,status:'requested',request_accepted_at:new Date().toISOString(),complete:false});
         event('history.requested',command.target,{command_id:command.id,request_id:requestId,requested_count:50,complete:false});
+      } else if(command.kind==='avatar') {
+        const target=command.target;
+        const own=current.user?.id?.replace(/:\d+(?=@)/,'');
+        if(!/^\d+(?:-\d+)?@(s\.whatsapp\.net|lid|g\.us)$/.test(target || '') || (target!==own && !db.prepare("SELECT 1 FROM contacts WHERE wa_jid=? OR replace(phone_e164,'+','')||'@s.whatsapp.net'=? UNION SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='group' AND resource_id=? LIMIT 1").get(target,target,target,target)))throw Error('invalid_target');
+        const remote=await readCall(current,'profilePictureUrl',[target,'preview',10000]);
+        if(typeof remote!=='string'||!remote)throw Error('avatar_unavailable');
+        const value=await avatarCache(remote,{directory:avatarDir,authorized:()=>owns()&&sock===current&&!stopping});
+        if(!owns()||sock!==current)throw Error('connection_changed');
+        snapshot('avatar',target,{...value,available:true,stale:false,error:null,scope:'profile_picture',last_attempt_at:new Date().toISOString()});
       } else if(command.kind==='catalog' || command.kind==='collections') {
         const jid=current.user?.id?.replace(/:\d+(?=@)/,'');
         if(!jid)throw new Error('account_identity_unavailable');
@@ -387,6 +398,10 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       if(owns()) {
         const failure=classifyReadError(error);
         db.prepare("UPDATE read_commands SET status='failed',error=?,updated_at=? WHERE id=?").run(failure.code,new Date().toISOString(),command.id);
+        if(command.kind==='avatar') {
+          const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(command.target);
+          snapshot('avatar',command.target,{available:false,stale:Boolean(prior),error:failure.code,scope:'profile_picture',last_attempt_at:new Date().toISOString()});
+        }
         if(command.kind==='history' && db.prepare("SELECT 1 FROM snapshots WHERE kind='history_request' AND resource_id=?").get(command.id))snapshot('history_request',command.id,{status:'outcome_unknown',error:failure.code,complete:false});
         const summaryKind={catalog:'catalog',collections:'collections',blocklist:'blocklist',communities:'communities',community:'communities',newsletter:'newsletters',newsletters:'newsletters',groups:'groups',all:'groups'}[command.kind];
         const resource=['catalog','collections'].includes(command.kind)?current.user?.id?.replace(/:\d+(?=@)/,''):'wis-5679';

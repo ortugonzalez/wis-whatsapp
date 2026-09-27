@@ -524,7 +524,8 @@
               "maxLength": 200
             }
           }
-        ]
+        ],
+        "description": " Detail includes safe avatar metadata, or null when no eligible target exists."
       },
       "post": {
         "summary": "Create contact and record consent provenance",
@@ -1736,7 +1737,8 @@
           "403": {
             "description": "Insufficient scope"
           }
-        }
+        },
+        "description": " Detail includes safe avatar metadata, or null when no eligible target exists."
       }
     },
     "/groups": {
@@ -1825,7 +1827,8 @@
               "maxLength": 200
             }
           }
-        ]
+        ],
+        "description": " Detail includes safe avatar metadata, or null when no eligible target exists."
       }
     },
     "/events": {
@@ -2097,7 +2100,8 @@
                       "community",
                       "newsletter",
                       "newsletters",
-                      "history"
+                      "history",
+                      "avatar"
                     ]
                   },
                   "target": {
@@ -2150,7 +2154,7 @@
             "description": "Administrator session and same-origin request required"
           }
         },
-        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived."
+        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled."
       }
     },
     "/reference-fields": {
@@ -3039,6 +3043,50 @@
           },
           "403": {
             "description": "Scope required"
+          }
+        }
+      }
+    },
+    "/avatars": {
+      "get": {
+        "summary": "Read cached avatar metadata or authenticated private image for a known JID",
+        "description": "Metadata allowlists safe fields only: target,observed,available,cached,stale,status,mime,size,updated_at,last_attempt_at,error,content_url. No provider URL or filename is exposed. cached requires an existing file within private avatars storage. Own account requires administrator and verified identity. Content requires a registered UUID filename, realpath containment, JPEG/PNG/WebP MIME and magic validation, maximum2MiB, no-store headers.",
+        "parameters": [
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "content",
+            "in": "query",
+            "schema": {
+              "const": "1"
+            },
+            "description": "Omit for metadata; 1 returns image bytes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metadata envelope or image bytes"
+          },
+          "400": {
+            "description": "Invalid target or content option"
+          },
+          "403": {
+            "description": "Read scope or own-account administrator required"
+          },
+          "404": {
+            "description": "Unknown target, absent cache or missing image"
+          },
+          "409": {
+            "description": "Own identity unverified"
+          },
+          "415": {
+            "description": "Image MIME/magic mismatch"
           }
         }
       }

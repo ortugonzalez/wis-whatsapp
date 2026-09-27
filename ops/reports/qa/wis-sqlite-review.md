@@ -1,5 +1,15 @@
 # WIS WhatsApp SQLite — QA independiente
 
+## Fotos de perfil — revisión independiente
+
+Apto para integración local en modo lectura; **22/22 pruebas aisladas PASS** (avatars, backend, worker y dos regresiones QA), más sintaxis de avatars.js válida. Sin red externa, cuenta real, reinicio ni base de producción. Las pruebas QA rechazan dominios parecidos, credenciales en URL, fragmentos, puertos no previstos y autorización perdida antes de HTTP.
+
+El descargador permite únicamente hosts exactos configurados de WhatsApp, DNS IPv4 público fijado a la conexión, sin redirects; limita a 2 MiB y comprueba MIME más firma de archivo. Sólo persiste nombre aleatorio y metadatos locales, sin URL remota firmada. El worker admite objetivos propios o ya conocidos y comprueba propietario/socket antes de guardar el resultado. Ante error mantiene la copia anterior como stale.
+
+La API exige permisos de lectura, administrador para foto propia/solicitudes y verificación de identidad propia. Los metadatos comprueban existencia, tamaño y contención realpath; un archivo ausente ya no figura como cached. El contenido vuelve a verificar ruta y formato, y los errores usan lista permitida. La interfaz usa únicamente URL autenticada local, consulta manual y polling del registro local; no descarga automáticamente todas las fotos.
+
+Limitaciones: inspección visual estática; no se comprueba entrega efectiva de imágenes del proveedor. La escritura asume que el directorio privado local no fue reemplazado por un enlace por otro proceso con acceso al equipo; el servidor sí rechaza servir archivos que resuelven fuera del directorio protegido. Este escenario de manipulación local queda fuera del alcance operativo actual.
+
 ## Webhooks, registro y receptores — revisión independiente
 
 Apto técnicamente para integración local manteniendo destinos y despacho desactivados. **11/11 pruebas Node y 4/4 Python PASS**, más sintaxis de integrations.js válida. No se usaron red externa, base real ni cuenta WhatsApp. Se añadieron dos regresiones independientes en test/qa/webhooks.test.mjs para redes reservadas/DNS mixto y desactivación durante resolución DNS.

@@ -201,6 +201,22 @@ test('public reader uses own identity, verified public scope and safe unavailabl
  } finally {await worker.stop();db.close();}
 });
 
+test('avatar reads require known targets, cache metadata only, and preserve stale file on failure',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();
+ const dir=mkdtempSync(resolve(tmpdir(),'wis-avatar-worker-'));const ev=new EventEmitter();let calls=0,fail=false;
+ const own='5491111115679@s.whatsapp.net';
+ const socket={ev,user:{id:own},end(){},profilePictureUrl:async(target,type,timeout)=>{calls++;assert.equal(target,own);assert.equal(type,'preview');assert.equal(timeout,10000);return fail?undefined:'https://pps.whatsapp.net/image?token=SECRET';}};
+ const fake={default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),readIntervalMs:0,avatarCache:async(url,options)=>{assert.ok(options.authorized());assert.ok(url.includes('SECRET'));return {filename:'example.jpg',mime:'image/jpeg',size:4};}});
+ try {
+  ev.emit('connection.update',{connection:'open'});db.prepare('DELETE FROM read_commands').run();
+  const command=async(id,target)=>{const date=new Date().toISOString();db.prepare('INSERT INTO read_commands(id,kind,target,status,created_at,updated_at) VALUES(?,?,?,?,?,?)').run(id,'avatar',target,'pending',date,date);await worker.drainReads();};
+  await command('unknown','123456789@s.whatsapp.net');assert.equal(calls,0);
+  await command('own',own);let row=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(own).payload);assert.equal(row.available,true);assert.equal(JSON.stringify(row).includes('SECRET'),false);
+  fail=true;await command('missing',own);row=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(own).payload);assert.equal(row.available,false);assert.equal(row.stale,true);assert.equal(row.filename,'example.jpg');assert.equal(row.error,'avatar_unavailable');
+ } finally {await worker.stop();db.close();}
+});
+
 test('late provider failure is correlated and sanitized after local read timeout',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();
  const dir=mkdtempSync(resolve(tmpdir(),'wis-late-test-'));const ev=new EventEmitter();let fail;
