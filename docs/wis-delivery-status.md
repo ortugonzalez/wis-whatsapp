@@ -1,3 +1,5 @@
+> Arquitectura actual: SQLite, sin Supabase ni Docker. Ver [manual SQLite](sqlite-local.md). El contenido anterior debajo es histórico.
+
 # Estado de entrega — 2026-09-27
 
 Estado integral: **BLOCKED** por motor Docker Desktop no disponible. Código desarrollado y revisado; no se declara conexión real ni paridad total.

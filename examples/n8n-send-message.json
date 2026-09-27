@@ -24,7 +24,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:3010/api/v1/messages",
+        "url": "http://127.0.0.1:3010/api/v1/messages",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,

@@ -1,6 +1,5 @@
 // Run explicitly after approval: node --env-file=.env.local examples/webhook-dispatcher.mjs
 // Configure WIS_WEBHOOKS_ENABLED=true and WIS_WEBHOOK_ALLOWED_HOSTS=hooks.example.com.
-import { createClient } from '@supabase/supabase-js';
 import { createHmac } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
 import { request } from 'node:https';
@@ -29,14 +28,20 @@ async function deliver(webhook, row) {
 }
 export async function dispatch() {
   if(process.env.WIS_WEBHOOKS_ENABLED!=='true')throw Error('Webhook delivery disabled; requires approved configuration.');
-  const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
-  const {data:rows,error}=await db.rpc('wis_claim_webhooks');if(error)throw Error('claim_failed');
+  const {db,transaction}=await import('../local/db.mjs');
+  const rows=transaction(db,()=>{
+    const current=new Date().toISOString();
+    db.prepare("UPDATE webhook_deliveries SET status=CASE WHEN attempts>=5 THEN 'failed' ELSE 'pending' END,last_error='interrupted_delivery' WHERE status='sending' AND available_at<=?").run(current);
+    const pending=db.prepare("SELECT d.* FROM webhook_deliveries d JOIN webhooks w ON w.id=d.webhook_id WHERE d.status='pending' AND d.attempts<5 AND d.available_at<=? AND w.enabled=1 LIMIT 20").all(current);
+    for(const row of pending)db.prepare("UPDATE webhook_deliveries SET status='sending',attempts=attempts+1,available_at=? WHERE id=?").run(new Date(Date.now()+600000).toISOString(),row.id);
+    return pending.map(row=>({...row,payload:JSON.parse(row.payload),attempts:row.attempts+1}));
+  });
   for(const row of rows||[]){
-    const {data:webhook,error:loadError}=await db.from('wis_webhooks').select('*').eq('id',row.webhook_id).single();
+    const webhook=db.prepare('SELECT * FROM webhooks WHERE id=?').get(row.webhook_id);
     let values;
-    try{if(loadError||!webhook?.enabled)throw Error('webhook_disabled');await deliver(webhook,row);values={status:'delivered',last_error:null};}
+    try{if(!webhook?.enabled)throw Error('webhook_disabled');await deliver(webhook,row);values={status:'delivered',last_error:null,available_at:row.available_at};}
     catch{values={status:row.attempts>=5?'failed':'pending',last_error:'delivery_failed',available_at:new Date(Date.now()+Math.min(3600000,1000*2**row.attempts)).toISOString()};}
-    const {error:updateError}=await db.from('wis_webhook_deliveries').update(values).eq('id',row.id);if(updateError)throw Error('delivery_record_failed');
+    db.prepare('UPDATE webhook_deliveries SET status=?,last_error=?,available_at=? WHERE id=?').run(values.status,values.last_error,values.available_at,row.id);
   }
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)dispatch().catch(()=>{console.error('Dispatcher stopped; inspect configuration and delivery records.');process.exitCode=1;});

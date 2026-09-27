@@ -2,12 +2,12 @@
   "openapi": "3.1.0",
   "info": {
     "title": "WIS WhatsApp API",
-    "version": "1.0.0",
-    "description": "Bearer tokens are sector-scoped. Token administration and campaigns require an admin cookie session and same-origin Origin on mutations. No endpoint enables campaign execution or webhook delivery."
+    "version": "1.1.0",
+    "description": "Local SQLite API for one WIS connection wis-5679. Bearer tokens have explicit scopes. Admin cookies and same-origin Origin are required for administration. Sends and webhook delivery are disabled by default."
   },
   "servers": [
     {
-      "url": "http://localhost:3010/api/v1"
+      "url": "http://127.0.0.1:3010/api/v1"
     }
   ],
   "security": [
@@ -27,7 +27,7 @@
       "cookieAuth": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "Supabase session cookie"
+        "name": "wis_session"
       }
     },
     "schemas": {
@@ -46,12 +46,7 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "sector_id": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "status": {
             "enum": [
@@ -167,11 +162,11 @@
             "type": "string",
             "maxLength": 10000
           },
-          "media_bucket_path": {
-            "type": "string"
-          },
           "purpose": {
             "const": "transactional"
+          },
+          "media_path": {
+            "type": "string"
           }
         },
         "required": [
@@ -1457,18 +1452,22 @@
         "requestBody": {
           "required": true,
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                },
                 "required": [
-                  "file"
-                ]
+                  "mime_type",
+                  "base64"
+                ],
+                "properties": {
+                  "mime_type": {
+                    "type": "string"
+                  },
+                  "base64": {
+                    "type": "string",
+                    "contentEncoding": "base64"
+                  }
+                }
               }
             }
           }

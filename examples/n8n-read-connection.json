@@ -23,7 +23,7 @@
         0
       ],
       "parameters": {
-        "url": "http://host.docker.internal:3010/api/v1/connections",
+        "url": "http://127.0.0.1:3010/api/v1/connections",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {}

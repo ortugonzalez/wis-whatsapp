@@ -1,3 +1,5 @@
+> Arquitectura actual: SQLite, sin Supabase ni Docker. Ver [manual SQLite](docs/sqlite-local.md). El contenido anterior debajo es histórico.
+
 # WIS WhatsApp local
 
 Implementación WIS sobre `mocte201/whatsapp-ui-template`. Guía vigente: [Operación local](docs/wis-local-runbook.md), [API](docs/api.md), [OpenAPI](docs/api.openapi.json).

@@ -3,16 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1 --port 3010",
-    "build": "next build",
-    "start": "next start --hostname 127.0.0.1 --port 3010",
+    "dev": "node local/start.mjs",
+    "build": "node --check local/server.mjs && node --check local/worker.mjs && node --check local/public/app.js",
+    "start": "node local/start.mjs",
     "lint": "eslint",
-    "local:db": "supabase start",
-    "local:setup": "node scripts/bootstrap-local.mjs",
-    "local:stop": "supabase stop",
-    "worker": "npm --prefix workers/whatsapp-baileys start",
+    "local:setup": "node local/setup.mjs",
+    "worker": "node local/worker.mjs",
     "test:api": "node --test examples/webhook-dispatcher.test.mjs examples/n8n-contract.test.mjs",
-    "test:worker": "npm --prefix workers/whatsapp-baileys test"
+    "test:worker": "npm --prefix workers/whatsapp-baileys test",
+    "legacy:build": "next build",
+    "local:backup": "node local/backup.mjs",
+    "test:local": "node --test local/*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
@@ -20,7 +21,9 @@
     "next": "16.3.6",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "baileys": "7.0.0-rc14",
+    "pino": "9.6.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14",
@@ -35,5 +38,8 @@
     "tailwindcss": "^4",
     "tsx": "4.20.6",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=24.13.0"
   }
 }

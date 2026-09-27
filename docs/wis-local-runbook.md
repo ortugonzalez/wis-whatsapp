@@ -1,3 +1,5 @@
+> Arquitectura actual: SQLite, sin Supabase ni Docker. Ver [manual SQLite](sqlite-local.md). El contenido anterior debajo es histórico.
+
 # WIS WhatsApp — operación local
 
 ## Estado y límites
