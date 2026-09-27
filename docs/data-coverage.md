@@ -4,4 +4,6 @@
 
 La respuesta no contiene nombres, teléfonos, JID, cuerpos de mensajes, valores de perfil, credenciales ni códigos QR. Sirve para ver qué partes del modelo se han observado y qué campos aparecieron; no implica que todas las entidades tengan esos campos ni que WhatsApp haya entregado el historial completo.
 
+El administrador puede iniciar desde el panel una actualización secuencial de `all` (cuenta y grupos), `blocklist`, `communities`, `catalog`, `collections` y `newsletters`. Cada lectura se espera antes de iniciar la siguiente; los límites por recurso siguen aplicando y el botón no consulta identificadores nuevos de contactos. Si una lectura queda en curso por más de 90 segundos, la secuencia se detiene sin duplicarla. Salir de Inicio detiene los siguientes pasos. La actualización es manual y de solo lectura: no envía mensajes, no modifica el perfil o grupos y no se ejecuta en segundo plano.
+
 La vista «Cobertura de datos observados» aparece en Inicio y se actualiza cada 15 segundos mientras esa pantalla permanece abierta. Los snapshots se consultan como agregados y claves JSON; los valores privados se siguen consultando en sus pantallas autorizadas.
