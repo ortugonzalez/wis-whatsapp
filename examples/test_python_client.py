@@ -70,6 +70,21 @@ class ClientTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             client.channel_messages('123@newsletter&kind=sync')
 
+    def test_catalog_details_and_collection_products_are_local_gets(self):
+        client = self.client()
+        client._opener = Mock()
+        client._opener.open.side_effect = [io.BytesIO(b'{"data":{"id":"stored"}}'),
+            io.BytesIO(b'{"data":{"id":"stored"}}'), io.BytesIO(b'{"data":[],"meta":{"has_more":false}}')]
+        identifier = '123@s.whatsapp.net:item&other=value'
+        self.assertEqual(client.detail('products', identifier)['id'], 'stored')
+        self.assertEqual(client.detail('collections', identifier)['id'], 'stored')
+        self.assertEqual(list(client.iter_records('collection-products', collection_id=identifier)), [])
+        from urllib.parse import urlsplit, parse_qs
+        requests = [call.args[0] for call in client._opener.open.call_args_list]
+        self.assertTrue(all(r.get_method() == 'GET' and r.data is None for r in requests))
+        self.assertEqual(parse_qs(urlsplit(requests[0].full_url).query), {'id':[identifier]})
+        self.assertEqual(parse_qs(urlsplit(requests[2].full_url).query)['collection_id'], [identifier])
+
     def test_conversation_detail_encodes_identifier_as_one_query_value(self):
         client = self.client()
         client._opener = Mock()

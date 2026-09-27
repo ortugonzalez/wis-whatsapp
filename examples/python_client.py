@@ -15,7 +15,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class WISClient:
     LIST_RESOURCES = frozenset({'contacts', 'conversations', 'messages', 'operations',
         'groups', 'events', 'calls', 'identities', 'stories', 'products', 'collections',
-        'labels', 'label-associations', 'communities', 'channels', 'channel-messages', 'media'})
+        'labels', 'label-associations', 'communities', 'channels', 'channel-messages', 'collection-products', 'media'})
 
     def __init__(self, base=None, token=None, timeout=30):
         self.base = (base or os.environ.get('WIS_API_URL', 'http://localhost:3010/api/v1')).rstrip('/')
@@ -95,7 +95,7 @@ class WISClient:
         return self.iter_records('channel-messages', target=target)
 
     def detail(self, resource, identifier):
-        if resource not in {'calls', 'identities', 'stories', 'messages', 'contacts', 'groups', 'conversations'} or not isinstance(identifier, str) or not identifier:
+        if resource not in {'calls', 'identities', 'stories', 'messages', 'contacts', 'groups', 'conversations', 'products', 'collections'} or not isinstance(identifier, str) or not identifier:
             raise ValueError('Invalid detail resource or identifier')
         return self.call('/' + resource + '?' + urllib.parse.urlencode({'id': identifier}))
 

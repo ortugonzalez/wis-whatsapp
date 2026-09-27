@@ -2675,7 +2675,7 @@
     "/products": {
       "get": {
         "summary": "Read persisted products; read scope",
-        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs. Detail exposes safe persisted fields only, provider product_id/collection_id separately from local id, and owner-scoped summary metadata. No remote lookup; historical availability is not current provider verification.",
         "parameters": [
           {
             "name": "q",
@@ -2703,6 +2703,16 @@
               "minimum": 0,
               "default": 0
             }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "description": "Exact persisted resource ID; detail instead of list, 404 if absent."
           }
         ],
         "responses": {
@@ -2767,6 +2777,9 @@
           },
           "403": {
             "description": "Missing scope or administrator session"
+          },
+          "404": {
+            "description": "Exact catalog resource not found"
           }
         }
       }
@@ -2774,7 +2787,7 @@
     "/collections": {
       "get": {
         "summary": "Read persisted collections; read scope",
-        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs. Detail exposes safe persisted fields only, provider product_id/collection_id separately from local id, and owner-scoped summary metadata. No remote lookup; historical availability is not current provider verification.",
         "parameters": [
           {
             "name": "q",
@@ -2802,6 +2815,16 @@
               "minimum": 0,
               "default": 0
             }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "description": "Exact persisted resource ID; detail instead of list, 404 if absent."
           }
         ],
         "responses": {
@@ -2866,6 +2889,9 @@
           },
           "403": {
             "description": "Missing scope or administrator session"
+          },
+          "404": {
+            "description": "Exact catalog resource not found"
           }
         }
       }
@@ -3672,6 +3698,62 @@
           },
           "404": {
             "description": "Unknown channel"
+          }
+        }
+      }
+    },
+    "/collection-products": {
+      "get": {
+        "summary": "Observed nested products of an exact stored collection",
+        "description": "No inferred product joins. Returns safe nested data array and pagination metadata, products_collected/products_truncated. Missing collection members are not a verified empty list. Owner-scoped summary preserves unavailable state. Never loads media.",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Local partial collection membership"
+          },
+          "400": {
+            "description": "Missing or invalid ID"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Read scope required"
+          },
+          "404": {
+            "description": "Collection not found"
           }
         }
       }
