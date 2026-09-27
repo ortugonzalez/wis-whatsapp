@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS campaigns(id TEXT PRIMARY KEY,name TEXT NOT NULL,body
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT,action TEXT NOT NULL,actor TEXT NOT NULL,resource_id TEXT,created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS operations_pending ON operations(status,created_at);
 CREATE INDEX IF NOT EXISTS messages_chat ON messages(conversation_id,created_at);
+CREATE INDEX IF NOT EXISTS webhook_deliveries_filter ON webhook_deliveries(webhook_id,status,created_at DESC);
+CREATE INDEX IF NOT EXISTS webhook_deliveries_schedule ON webhook_deliveries(status,available_at);
 -- Additive live-dashboard schema: existing account, messages and sessions remain intact.
 CREATE TABLE IF NOT EXISTS snapshots(kind TEXT NOT NULL,resource_id TEXT NOT NULL,payload TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(kind,resource_id));
 CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,kind TEXT NOT NULL,resource_id TEXT,payload TEXT NOT NULL,created_at TEXT NOT NULL);

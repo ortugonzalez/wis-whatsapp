@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { createPublicCatalogReader } from './catalog-http.mjs';
+import { createWebhookDispatcher } from './webhooks.mjs';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -648,6 +649,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   db.prepare("UPDATE operations SET status='outcome_unknown',last_error='interrupted_send_requires_reconciliation' WHERE status='sending'").run();
   db.prepare("UPDATE read_commands SET status='failed',error='worker_interrupted',updated_at=? WHERE status='running'").run(new Date().toISOString());
   let ticking=false;
+  const webhookDispatcher=createWebhookDispatcher({db,owns});
   async function tick() {
     if(stopping || ticking)return;
     ticking=true;
@@ -670,6 +672,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       await connect();
       void drain();
       void drainReads();
+      void webhookDispatcher.tick().catch(()=>{});
     } catch {console.error('worker_tick_failed');}
     finally {ticking=false;}
   }
@@ -678,6 +681,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   let stopPromise;
   const stop=()=>stopPromise || (stopPromise=(async()=>{
     stopping=true;clearInterval(timer);clearInterval(watchdog);closeSocket();
+    await webhookDispatcher.stop();
     process.removeListener('SIGINT',onSignal);process.removeListener('SIGTERM',onSignal);
     let timeout;
     try {await Promise.race([Promise.allSettled([queue,credentialsSaved,unresolvedRead?.request]),new Promise(resolve=>{timeout=setTimeout(resolve,4000);})]);}

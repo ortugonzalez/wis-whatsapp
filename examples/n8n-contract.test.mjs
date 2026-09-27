@@ -10,7 +10,7 @@ const require=createRequire(import.meta.url);
 test('inactive n8n receiver accepts original signed bytes and rejects altered or expired payload',async()=>{
   assert.equal(workflow.active,false);
   const secret='offline-test-only', timestamp=String(Math.floor(Date.now()/1000));
-  const raw=JSON.stringify({id:'offline-event',type:'message.created'});
+  const raw=JSON.stringify({id:'offline-event',type:'message.created',data:{}});
   const item={json:{body:raw,headers:{'x-wis-timestamp':timestamp,'x-wis-event-id':'offline-event','x-wis-signature':'sha256='+sign(secret,timestamp,raw)}}};
   const run=()=>verify.call({},require,{first:()=>item},{WIS_WEBHOOK_SECRET:secret},Buffer);
   assert.equal((await run())[0].json.verified,true);
@@ -18,4 +18,12 @@ test('inactive n8n receiver accepts original signed bytes and rejects altered or
   await assert.rejects(run(),/Firma/);
   item.json.body=raw;item.json.headers['x-wis-timestamp']='1';
   await assert.rejects(run(),/autorizado/);
+});
+
+test('inactive n8n receiver rejects signed malformed envelopes and excessive bodies',async()=>{
+ const secret='offline-test-only',timestamp=String(Math.floor(Date.now()/1000));
+ for(const value of [null,[],{id:'',type:'message.created',data:{}},{id:'offline-event',type:'',data:{}},{id:'offline-event',type:'message.created',data:[]},{id:'offline-event',type:'message.created',data:{body:'x'.repeat(1048577)}}]){
+  const raw=JSON.stringify(value),item={json:{body:raw,headers:{'x-wis-timestamp':timestamp,'x-wis-event-id':'offline-event','x-wis-signature':'sha256='+sign(secret,timestamp,raw)}}};
+  await assert.rejects(verify.call({},require,{first:()=>item},{WIS_WEBHOOK_SECRET:secret},Buffer));
+ }
 });

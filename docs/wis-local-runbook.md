@@ -48,7 +48,7 @@ Crear token desde Dashboard → Tokens. El token completo se muestra una vez; gu
 
 Registrar consentimiento y bajas desde Contactos. Todo envío verifica consentimiento en API, cola y nuevamente en worker. No usar `transactional` para eludir controles. Los grupos salientes y campañas permanecen bloqueados mientras no exista política de destinatarios y aprobación de ejecución.
 
-El dispatcher `examples/webhook-dispatcher.mjs` procesa un lote por invocación y está deshabilitado por defecto. Su activación/repetición programada requiere aprobación concreta. Exige HTTPS, lista explícita de hosts y destinos públicos; firma cuerpo crudo con timestamp. `examples/webhook_receiver.py` verifica firma y antigüedad y persiste eventos idempotentemente en SQLite; no ejecuta trabajo comercial. Para producción, publicar ese receptor detrás de HTTPS y consumir su inbox durable. No usar el callback sin verificar firma.
+Esta sección pertenece a la arquitectura histórica. El dispatcher activo ahora forma parte del worker SQLite; el antiguo ejecutable independiente no envía. Consultar `docs/webhooks-local.md` para el contrato vigente y la activación pendiente de aprobación.
 
 `examples/n8n-receive-webhook.json` es un tercer workflow inactivo que verifica HMAC, timestamp e identificador sin ejecutar acciones comerciales. Requiere conservar Raw Body, permitir `crypto` en Code y configurar `WIS_WEBHOOK_SECRET` con acceso desde el runner. No se cambiaron esos permisos en tu n8n ni se importó/activó el flujo. Antes de añadir acciones, agregar deduplicación durable por `event_id`. Referencia: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook .
 

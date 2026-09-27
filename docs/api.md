@@ -1,35 +1,41 @@
-# API WIS v1
+# API WIS v1 · SQLite
 
-Base local: `http://localhost:3010/api/v1`. Todas las respuestas son `{data: ...}` o `{error: código}`. Tokens Bearer creados desde una sesión administradora; se muestran una sola vez y se almacenan como SHA-256. Cada token queda ligado al sector/conexión activo. Nunca poner tokens en workflows exportados.
+Base local: `http://127.0.0.1:3010/api/v1`. El contrato vigente es [OpenAPI](api.openapi.json), servido también en `/api/v1/openapi`. El runtime administra una cuenta vinculada y un administrador; no implementa todavía sectores ni múltiples conexiones.
 
-## Contrato
+Las respuestas usan `{data: ...}` o `{error: código}`. Las listas paginadas incluyen `meta` con `total`, `limit`, `offset` y `has_more`. Tokens Bearer revocables: se muestran una vez y se guardan como hash. No incluirlos en workflows exportados. Los permisos disponibles son `read`, `send`, `contacts:write` y `webhooks:write`; ciertos recursos además requieren sesión administrativa de navegador.
 
-| Método/ruta | Requisito | Resultado |
-|---|---|---|
-| GET connections | read | Estado sin QR ni credenciales |
-| GET conversations, messages, operations | read | Últimos 50; `before` ISO y filtro `id`; messages admite conversation_id |
-| GET contacts | read | Últimos 100 contactos |
-| POST/PATCH contacts | contacts:write | Datos y evidencia de consentimiento; PATCH requiere id |
-| POST media | send | Multipart file, 10 MiB máximo; devuelve media_bucket_path |
-| POST messages | send + Idempotency-Key | `{to,type,body,media_bucket_path?}`; 202 es cola, no entrega |
-| GET capabilities | read | Matriz documentada de soporte |
-| GET/POST/DELETE tokens | sesión administrador | Crear `{name,scopes}`, revocar `?id=` |
-| GET/POST/DELETE webhooks | webhooks:write | Crear `{url}` devuelve secret una vez, queda desactivado |
+## Recursos principales
 
-Scopes: `read`, `send`, `contacts:write`, `webhooks:write`. Las mutaciones con cookies requieren Origin idéntico al host del panel. Bearer no utiliza cookies. Todos los envíos requieren consentimiento registrado; las campañas están bloqueadas; bajas bloquean toda cola, incluida la UI heredada. Para registrar consentimiento se requieren fecha no futura, origen y alcance. La API no permite borrar una baja.
+| Recurso | Uso |
+|---|---|
+| `connections` | Estado sin credenciales; el QR usa una ruta administrativa separada |
+| `conversations`, `contacts`, `messages` | Listas paginadas, búsqueda y detalles locales |
+| `messages?id=UUID` | Contenido, contexto, cita, reacciones y recibos observados |
+| `history?conversation_id=UUID` | Estado de solicitudes de historial, sin garantía de completitud |
+| `sync` | Solicitudes administrativas de lectura acotadas por el worker |
+| `operations?id=UUID` | Estado de la operación saliente |
+| `media` | Inventario local; `?path=` entrega bytes autenticados |
+| `account`, `groups`, `snapshots`, `events` | Datos recibidos y actividad local con controles de acceso |
+| `products`, `collections`, `labels`, `communities`, `channels` | Exploradores con disponibilidad y alcance explícitos |
+| `capabilities`, `reference-fields` | Cobertura WIS y campos de referencia WHAPI, diferenciados |
+| `webhooks`, `webhook-deliveries`, `webhook-events` | Configuración desactivada, trazabilidad y contrato de eventos |
 
-Tipos de envío: text, image, audio, document. Subir primero el archivo; sólo se aceptan paths del sector del token. No se descargan URLs arbitrarias. La clave de idempotencia se conserva por sector; repetir con otro contenido devuelve 409. Estados de operación: pending, sending, sent, failed, outcome_unknown. Entrega/lectura se consultan en `operations[].message.delivery_status` o en messages usando `message_id`; la operación conserva separado su estado de cola. Nunca reintentar outcome_unknown con otra clave sin reconciliar.
+## Envíos y archivos
+
+`POST /media` recibe JSON `{mime_type,base64}`, valida tipo y firma del archivo y devuelve `media_path`. Límite: 10 MiB. No descarga URLs arbitrarias. `POST /messages` recibe `{to,type,body,media_path?}` y requiere `Idempotency-Key`, permiso de envío, consentimiento válido, ausencia de baja y activación operativa autorizada. Los tipos disponibles son texto, imagen, audio y documento.
+
+La aceptación 202 indica ingreso a cola, no entrega. Una misma clave con contenido distinto devuelve conflicto. Los estados registrados incluyen `pending`, `sending`, `sent`, `delivered`, `read`, `failed` y `outcome_unknown`. Un resultado desconocido requiere reconciliación antes de intentar un nuevo envío con otra clave. Los envíos reales permanecen desactivados en la instalación entregada.
 
 ## Webhooks
 
-Los triggers crean eventos `message.created`, `message.updated` y `operation.updated` sólo para destinos habilitados. El dispatcher se ejecuta explícitamente con `node --env-file=.env.local examples/webhook-dispatcher.mjs`. Requiere aprobación operativa, `WIS_WEBHOOKS_ENABLED=true`, habilitar el registro y configurar lista exacta `WIS_WEBHOOK_ALLOWED_HOSTS`. No hay scheduler activo. Sólo HTTPS/443 y IPv4 pública, DNS fijado durante la solicitud, sin redirects. Máximo cinco intentos, backoff y recuperación de claims vencidos. Hay entrega al menos una vez; deduplicar X-WIS-Event-ID.
+El dispatcher pertenece al worker supervisado; no se ejecuta por separado. Conserva eventos firmados, reintentos limitados y estados de entrega en SQLite. Continúa desactivado hasta aprobar destino, datos e impacto concretos. El [manual de webhooks](webhooks-local.md) detalla el contrato, las restricciones de destino, la firma y los ejemplos Python/n8n.
 
-Verificar HMAC SHA256 de `X-WIS-Timestamp + '.' + cuerpo original` contra X-WIS-Signature (`sha256=hex`) con comparación constante y tolerancia de cinco minutos. Guardar IDs procesados antes de acciones posteriores. Secretos de webhook se guardan en tabla exclusiva service_role: proteger disco y backups.
+## Campañas
 
-Los ejemplos n8n se importan desactivados. Configurar credencial Header Auth `Authorization: Bearer ...` y URL accesible desde n8n; localhost dentro de Docker apunta al contenedor. El ejemplo receptor no autoriza acciones: la verificación de firma debe preceder cualquier automatización real.
+Las acciones administrativas permiten borrador, previsualización, aprobación del borrador y pausa. No ejecutan campañas ni encolan sus envíos. Registrar aprobación de un borrador no habilita el motor comercial. Se verifica consentimiento y baja también al solicitar envíos por API.
 
-## Campañas de borrador
+## Ejemplos y verificación
 
-`GET/POST/PATCH /campaigns` sólo acepta sesión administrador. Crear con nombre, body, contact_ids, daily_limit explícito, window_start/window_end HH:mm (zona America/Argentina/Buenos_Aires). PATCH `{id,action:'preview'}` devuelve elegibles, excluidos y ausentes. `approve` valida consentimiento de todos y registra al administrador; `pause` pausa el borrador. Ninguna acción encola envíos: `execution_enabled` siempre false hasta una implementación y aprobación separada.
+`examples/python_client.py` consume la misma API que el panel; `iter_records` recorre páginas. La base recibe eventos nuevos durante una exportación: deduplicar por ID y reconciliar cambios. Los workflows n8n se importan desactivados. Si n8n corre en otra máquina o contenedor, su `localhost` no apunta a esta instalación; el acceso remoto autenticado y HTTPS se preparará antes de desplegar.
 
-Especificación: `GET /api/v1/openapi`. Pruebas de DB: ejecutar `examples/api-database-test.sql` en la base local aislada, sin worker activo; toda escritura hace rollback. Pruebas del dispatcher: `node --test examples/webhook-dispatcher.test.mjs`.
+Pruebas vigentes: `npm run test:local`, `npm run test:api` y pruebas Python en `examples`. El SQL histórico basado en PostgreSQL no es una migración ni una prueba del runtime SQLite.

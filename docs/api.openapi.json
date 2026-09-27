@@ -930,36 +930,14 @@
           "503": {
             "description": "Database unavailable"
           }
-        }
+        },
+        "description": "Requires webhooks:write (without hidden read scope), or administrator cookie. Rows exclude secret and include delivery_counts total/pending/sending/delivered/failed, last_delivery_at, dispatcher_enabled, activation_requires_approval. New webhook configuration always disabled."
       },
       "delete": {
-        "summary": "Revoke token or delete webhook",
+        "summary": "Disable webhook without deleting its configuration or delivery history",
         "responses": {
           "200": {
-            "description": "Scoped data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "revoked": {
-                          "type": "boolean"
-                        },
-                        "deleted": {
-                          "type": "boolean"
-                        }
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
+            "description": "data: disabled=true, history_preserved=true"
           },
           "400": {
             "description": "Invalid input",
@@ -1073,7 +1051,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Returns generated secret only once. enabled=true and PATCH/PUT activation return409 webhook_activation_requires_approval. No endpoint activates dispatch or sends a test."
       }
     },
     "/conversations": {
@@ -2979,6 +2958,87 @@
           },
           "404": {
             "description": "Conversation not observed"
+          }
+        }
+      }
+    },
+    "/webhook-deliveries": {
+      "get": {
+        "summary": "Read delivery metadata, or administrator-only sanitized payload detail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Single delivery detail requires administrator cookie",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "webhook_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pending",
+                "sending",
+                "delivered",
+                "failed"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List data metadata fields id,webhook_id,event_id,event_type,status,attempts,available_at,last_error,created_at plus pagination meta. Detail includes sanitized payload; credentials/secret/authorization/session keys excluded."
+          },
+          "400": {
+            "description": "Invalid status or pagination"
+          },
+          "403": {
+            "description": "webhooks:write required for list; administrator required for payload detail"
+          },
+          "404": {
+            "description": "Delivery absent"
+          }
+        }
+      }
+    },
+    "/webhook-events": {
+      "get": {
+        "summary": "Actual local event inventory, delivery signature/retry contract and distinct WHAPI reference categories",
+        "description": "webhooks:write scope. Only message.created, message.updated, operation.updated are emitted by local triggers. WHAPI reference categories are not wire-compatible event names. No action is activated by reading this endpoint. Retry contract: max_attempts=5 includes the initial attempt; at most four retries are scheduled after 2, 4, 8 and 16 seconds. A failed fifth attempt is terminal; its available_at value does not schedule another retry.",
+        "responses": {
+          "200": {
+            "description": "data: supported, delivery, reference"
+          },
+          "403": {
+            "description": "Scope required"
           }
         }
       }

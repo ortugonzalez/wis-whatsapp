@@ -51,11 +51,11 @@
       "name": "Get allowed events",
       "source": "https://whapi.readme.io/reference/getallowedevents.md",
       "status": "partial",
-      "endpoint": "/api/v1/events",
+      "endpoint": "/api/v1/webhook-events",
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Actividad local registrada; no replica todo el catálogo de webhooks WHAPI."
+      "reason": "Contrato de los tres eventos emitidos por WIS; diferencia las categorías de referencia WHAPI. Entrega externa desactivada hasta aprobación."
     },
     {
       "id": "webhooktest",

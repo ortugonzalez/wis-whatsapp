@@ -21,7 +21,7 @@ const implemented = {
   getcontactprofile: ['/api/v1/snapshots', 'Snapshots de perfil solicitado por lectura; sin garantía de datos privados.'],
   getcontactabout: ['/api/v1/snapshots', 'Acerca de cuando WhatsApp permite consultarlo.'],
   getpresence: ['/api/v1/snapshots', 'Eventos de presencia entregados por WhatsApp; no seguimiento garantizado.'],
-  getallowedevents: ['/api/v1/events', 'Actividad local registrada; no replica todo el catálogo de webhooks WHAPI.'],
+  getallowedevents: ['/api/v1/webhook-events', 'Contrato de los tres eventos emitidos por WIS; diferencia las categorías de referencia WHAPI. Entrega externa desactivada hasta aprobación.'],
   getchannelsettings: ['/api/v1/settings', 'Preferencias locales de WIS, no configuración remota equivalente WHAPI.'],
   getmedia: ['/api/v1/media', 'Lectura privada de archivos realmente descargados; medios históricos pueden no estar disponibles.'],
   getproducts: ['/api/v1/products', 'Catálogo público visible de la cuenta propia; indica error, alcance parcial y truncamiento. No expone administración ni productos ocultos.'],

@@ -1,5 +1,15 @@
 # WIS WhatsApp SQLite — QA independiente
 
+## Webhooks, registro y receptores — revisión independiente
+
+Apto técnicamente para integración local manteniendo destinos y despacho desactivados. **11/11 pruebas Node y 4/4 Python PASS**, más sintaxis de integrations.js válida. No se usaron red externa, base real ni cuenta WhatsApp. Se añadieron dos regresiones independientes en test/qa/webhooks.test.mjs para redes reservadas/DNS mixto y desactivación durante resolución DNS.
+
+El despacho requiere habilitación global, destino habilitado, propietario del worker y host permitido. Valida IPv4 pública y fija esa dirección al conectar, rechaza redirects y mantiene límites DNS/HTTP. La reserva transaccional evita dos despachadores sobre la misma entrega; cinco intentos como máximo, payload y event_id persistidos sin reconstrucción, firma por intento sobre timestamp y bytes exactos. Las entregas son al menos una vez: ante recepción ambigua el consumidor debe deduplicar. El ejecutable antiguo de ejemplo ya no permite despachar por separado.
+
+El registro exige webhooks:write; el payload detallado exige administrador. Se corrigió un P2: la máscara de last_error usaba una expresión regular que admitía valores desconocidos; ahora usa lista explícita y convierte el resto en delivery_failed. La interfaz escapa datos y no activa ni fuerza entregas. Borrar un destino lo deshabilita conservando evidencia.
+
+Python verifica firma antes de parsear y confirma éxito tras commit SQLite; duplicado idéntico no vuelve a insertarse y el mismo ID con bytes distintos produce conflicto 409. El límite de cuerpo coincide en 1 MiB entre dispatcher, Python y n8n. El workflow n8n permanece desactivado y es sólo verificador: no incluye inbox durable ni efectos comerciales. Antes de un uso real debe conectarse una deduplicación persistente; no se valida aquí importación/ejecución en una instancia real de n8n ni HTTPS externo.
+
 ## Integración final del catálogo público — revisión independiente
 
 Apta técnicamente para reinicio en modo lectura. Pruebas aisladas combinadas de backend, worker, adaptador y QA: **29/29 PASS**. Se revisó la fábrica inyectada en runtime, ligada al JID actual, con configuración en memoria y descubrimiento bajo comando manual. No incorpora fallback de autenticación ni reintentos automáticos. Conserva exclusión de solicitudes pendientes, comprobación de propietario y rechazo de resultados de otro socket.
