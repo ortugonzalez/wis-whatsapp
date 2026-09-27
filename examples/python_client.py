@@ -88,7 +88,7 @@ class WISClient:
         return self.iter_records('stories', **filters)
 
     def detail(self, resource, identifier):
-        if resource not in {'calls', 'identities', 'stories', 'messages', 'contacts', 'groups'} or not isinstance(identifier, str) or not identifier:
+        if resource not in {'calls', 'identities', 'stories', 'messages', 'contacts', 'groups', 'conversations'} or not isinstance(identifier, str) or not identifier:
             raise ValueError('Invalid detail resource or identifier')
         return self.call('/' + resource + '?' + urllib.parse.urlencode({'id': identifier}))
 

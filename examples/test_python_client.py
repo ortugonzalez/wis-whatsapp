@@ -59,6 +59,22 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(request.get_method(), 'POST')
         self.assertEqual(request.get_header('Idempotency-key'), 'stable-key')
 
+    def test_conversation_detail_encodes_identifier_as_one_query_value(self):
+        client = self.client()
+        client._opener = Mock()
+        client._opener.open.return_value = io.BytesIO(b'{"data":{"conversation":{"id":"local-id"}}}')
+        identifier = 'local-id&target=//other.invalid/#fragment ?'
+        self.assertEqual(client.detail('conversations', identifier)['conversation']['id'], 'local-id')
+        request = client._opener.open.call_args.args[0]
+        from urllib.parse import urlsplit, parse_qs
+        url = urlsplit(request.full_url)
+        self.assertEqual(url.path, '/api/v1/conversations')
+        self.assertEqual(parse_qs(url.query), {'id': [identifier]})
+        self.assertEqual(url.fragment, '')
+        self.assertEqual(request.get_method(), 'GET')
+        self.assertIsNone(request.data)
+        client._opener.open.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()

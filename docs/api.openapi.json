@@ -525,7 +525,7 @@
             }
           }
         ],
-        "description": " Detail includes safe avatar metadata, or null when no eligible target exists."
+        "description": " Detail includes safe avatar metadata, or null when no eligible target exists. Contact detail conversations include exact stored FK or exact wa_jid/phone-derived JID matches with relation_origins: stored_contact_id, exact_wa_jid, exact_phone_jid. This read never uses ambiguous LID/PN mappings, modifies foreign keys, or changes consent."
       },
       "post": {
         "summary": "Create contact and record consent provenance",
@@ -1111,6 +1111,9 @@
           "403": {
             "description": "Scope, origin, consent or opt-out blocked"
           },
+          "404": {
+            "description": "Conversation not found; never falls back to list"
+          },
           "409": {
             "description": "Idempotency conflict, disabled campaign or invalid state"
           },
@@ -1156,8 +1159,19 @@
                 "group"
               ]
             }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "description": "Exact local conversation ID; returns detail instead of list, absent ID yields 404."
           }
-        ]
+        ],
+        "description": " With id returns {data:{conversation,contact,contact_relation,snapshots,history,message_counts:{total,in,out,by_status},history_complete:false}}. Contact is only the stored foreign-key association, otherwise null. Snapshots contain allowlisted chat/group/presence fields only. Counts reflect local persisted messages, not complete provider history. Read has no remote effects."
       }
     },
     "/messages": {
