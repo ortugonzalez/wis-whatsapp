@@ -2194,7 +2194,7 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "reason": "Pendiente. La lectura WIS group_invite obtiene temporalmente el código de invitación de un grupo conocido (JID); no consulta metadata a partir de un código entrante y no demuestra equivalencia con este método WHAPI.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
@@ -2204,8 +2204,8 @@
           }
         ],
         "support": "candidate",
-        "reason": "Consulta por código; no exponer código en logs.",
-        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+        "reason": "Baileys declara groupGetInviteInfo(inviteCode), distinto de la consulta WIS group_invite que obtiene un código desde el JID de un grupo. El flujo WIS existente no llama a groupGetInviteInfo.",
+        "next_step": "Implementar una lectura administrativa dedicada, probar y filtrar los campos de respuesta frente al esquema WHAPI, y asegurar que el inviteCode no se persista ni aparezca en logs. La existencia del método Baileys no acredita paridad."
       }
     },
     {
