@@ -11,7 +11,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Estado del worker y conexión; no emula wakeup de WHAPI."
+      "reason": "Estado del worker y conexión; no emula wakeup de WHAPI.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Salud y arranque del proceso son responsabilidad local; connection.update permite observar el socket, no reproduce el wakeup alojado de WHAPI.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "getchannelsettings",
@@ -22,7 +29,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Preferencias locales de WIS, no configuración remota equivalente WHAPI."
+      "reason": "Preferencias locales de WIS, no configuración remota equivalente WHAPI.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Preferencias propias de WIS; no equivalencia con configuración del canal WHAPI.",
+        "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+      }
     },
     {
       "id": "resetchannelsettings",
@@ -33,7 +47,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Configuración propia del canal WHAPI; no es una operación de WhatsApp.",
+        "next_step": "Definir valores por defecto y reset de configuración local."
+      }
     },
     {
       "id": "updatechannelsettings",
@@ -44,7 +65,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Configuración del canal alojado WHAPI requiere contrato local propio; no equivale a ajustes remotos de WhatsApp.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "getallowedevents",
@@ -55,7 +83,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Contrato de los tres eventos emitidos por WIS; diferencia las categorías de referencia WHAPI. Entrega externa desactivada hasta aprobación."
+      "reason": "Contrato de los tres eventos emitidos por WIS; diferencia las categorías de referencia WHAPI. Entrega externa desactivada hasta aprobación.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Catálogo local de eventos y webhooks; Baileys expone eventos pero no el contrato WHAPI.",
+        "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+      }
     },
     {
       "id": "webhooktest",
@@ -66,7 +101,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Prueba de entrega HTTP del servicio, ajena al socket WhatsApp.",
+        "next_step": "Preparar simulación firmada; envío real exige aprobación."
+      }
     },
     {
       "id": "getlimits",
@@ -77,7 +119,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Los límites de servicio WHAPI no son límites garantizados por Baileys; cuotas propias requieren almacenamiento y controles locales.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "loginuser",
@@ -88,7 +137,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "QR administrativo temporal; formato propio WIS."
+      "reason": "QR administrativo temporal; formato propio WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "connection.update",
+            "file": "node_modules/baileys/lib/Types/Events.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Evento QR de conexión; conversión base64 y vencimiento corresponden al panel.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "loginuserimage",
@@ -99,7 +160,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "makeWASocket",
+            "file": "node_modules/baileys/lib/Socket/index.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "El socket emite connection.update.qr; no entrega una imagen QR.",
+        "next_step": "Renderizar el payload en imagen temporal protegida y comprobar vencimiento."
+      }
     },
     {
       "id": "loginuserrowdata",
@@ -110,7 +183,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "connection.update",
+            "file": "node_modules/baileys/lib/Socket/socket.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "El evento de conexión contiene QR efímero; no es un método HTTP de login ni garantiza equivalencia del formato rowdata.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "loginuserviaauthcode",
@@ -121,7 +206,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "requestPairingCode",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Código de emparejamiento por teléfono; no autenticación WHAPI.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "logoutuser",
@@ -132,7 +229,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Cierre administrativo con sesión de navegador."
+      "reason": "Cierre administrativo con sesión de navegador.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "logout",
+            "file": "node_modules/baileys/lib/Socket/socket.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Invalida la conexión y credenciales vinculadas.",
+        "next_step": "Probar revocación con cuenta de prueba y aprobación explícita."
+      }
     },
     {
       "id": "getuserprofile",
@@ -143,7 +252,23 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Snapshot de perfil de la cuenta vinculada; campos disponibles dependen de WhatsApp."
+      "reason": "Snapshot de perfil de la cuenta vinculada; campos disponibles dependen de WhatsApp.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "fetchStatus",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          },
+          {
+            "name": "profilePictureUrl",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Lecturas parciales de estado y foto; el perfil propio exige combinar identidad autenticada y campos disponibles sin garantizar el esquema WHAPI.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getcontactprofile",
@@ -154,7 +279,23 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Snapshots de perfil solicitado por lectura; sin garantía de datos privados."
+      "reason": "Snapshots de perfil solicitado por lectura; sin garantía de datos privados.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "fetchStatus",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "profilePictureUrl",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Datos parciales de perfil y foto; no perfil unificado equivalente.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "updateuserprofile",
@@ -165,7 +306,27 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "updateProfileName",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          },
+          {
+            "name": "updateProfileStatus",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          },
+          {
+            "name": "updateProfilePicture",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Nombre, texto de perfil y foto tienen métodos separados; no equivalencia de todos los campos WHAPI.",
+        "next_step": "Mapear campos admitidos y validar cada mutación con aprobación."
+      }
     },
     {
       "id": "getaccountregistrationdate",
@@ -176,7 +337,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró getter público de fecha de creación de cuenta; registrationId criptográfico no representa una fecha.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "getusername",
@@ -187,7 +355,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "Contact.username existe como dato recibido; no método público dedicado para consultar username.",
+        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+      }
     },
     {
       "id": "setusername",
@@ -198,7 +373,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró setter público de username; updateProfileName cambia el nombre visible, no el identificador username.",
+        "next_step": "Revisar futuras versiones y documentar diferencia semántica."
+      }
     },
     {
       "id": "getmessages",
@@ -209,7 +391,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Mensajes persistidos en WIS, paginación propia."
+      "reason": "Mensajes persistidos en WIS, paginación propia.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Consulta paginada requiere mensajes persistidos localmente; fetchMessageHistory solicita fragmentos al teléfono y no ofrece archivo completo consultable.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "getmessagesbychatid",
@@ -220,7 +409,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Filtro por conversación WIS."
+      "reason": "Filtro por conversación WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Historial persistido local; fetchMessageHistory solicita entrega parcial pero no pagina historial remoto completo.",
+        "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+      }
     },
     {
       "id": "sendmessagetext",
@@ -231,7 +427,23 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Envío en cola con consentimiento e idempotencia; deshabilitado hasta prueba autorizada."
+      "reason": "Envío en cola con consentimiento e idempotencia; deshabilitado hasta prueba autorizada.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "generateWAMessageContent",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "El contenido text tiene generación específica de mensaje.",
+        "next_step": "Validar cola, consentimiento e idempotencia antes de prueba autorizada."
+      }
     },
     {
       "id": "sendmessageimage",
@@ -242,7 +454,23 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Multimedia desde almacenamiento privado WIS; pendiente prueba real."
+      "reason": "Multimedia desde almacenamiento privado WIS; pendiente prueba real.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "image:",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Imagen declarada en AnyMediaMessageContent.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "sendmessagevideo",
@@ -253,7 +481,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "video",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "AnyMediaMessageContent video; formato y entrega deben verificarse.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "sendmessageshort",
@@ -264,7 +508,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "prepareWAMessageMedia",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "La rama ptv convierte videoMessage en ptvMessage; no cualquier video equivale a PTV.",
+        "next_step": "Validar codecs, formato y recepción PTV en prueba autorizada."
+      }
     },
     {
       "id": "sendmessagegif",
@@ -275,7 +535,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "gifPlayback",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Vídeo con gifPlayback, no un GIF arbitrario sin conversión.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "sendmessageaudio",
@@ -286,7 +562,23 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Multimedia desde almacenamiento privado WIS; pendiente prueba real."
+      "reason": "Multimedia desde almacenamiento privado WIS; pendiente prueba real.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "audio",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "AnyMediaMessageContent audio; códec y entrega requieren pruebas.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "sendmessagevoice",
@@ -297,7 +589,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "prepareWAMessageMedia",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Audio con ptt:true produce mensaje de voz y procesa waveform.",
+        "next_step": "Validar audio Opus y límites antes de envío aprobado."
+      }
     },
     {
       "id": "sendmessagedocument",
@@ -308,7 +616,23 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Multimedia desde almacenamiento privado WIS; pendiente prueba real."
+      "reason": "Multimedia desde almacenamiento privado WIS; pendiente prueba real.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "document:",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Documento con MIME y nombre opcional.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "sendmessagelinkpreview",
@@ -319,7 +643,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "linkPreview",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "AnyRegularMessageContent linkPreview; generación y compatibilidad no verificadas.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "sendmessagelocation",
@@ -330,7 +670,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "generateWAMessageContent",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          },
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Existe rama locationMessage para ubicación estática; no implica ubicación en vivo.",
+        "next_step": "Mapear coordenadas y campos de ubicación y probar con aprobación."
+      }
     },
     {
       "id": "sendmessagelivelocation",
@@ -341,7 +697,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "Existe nombre liveLocationMessage en tipos de protocolo, pero AnyMessageContent expone location estática; no se encontró método público de sesión de ubicación en vivo.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "sendmessagecontact",
@@ -352,7 +715,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "contacts",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "AnyRegularMessageContent contacts; validar vCard y destinatario.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "sendmessagecontactlist",
@@ -363,7 +742,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "generateWAMessageContent",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          },
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "La rama contacts produce contactsArrayMessage cuando hay múltiples contactos.",
+        "next_step": "Validar vCards, nombres y recepción de lista."
+      }
     },
     {
       "id": "sendmessagepoll",
@@ -374,7 +769,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "poll:",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Encuesta con opciones tipadas; alcance y respuestas requieren prueba.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "sendmessageinteractive",
@@ -385,7 +796,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "Nombre protobuf interactiveMessage no demuestra un método público equivalente para el contrato interactivo WHAPI.",
+        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+      }
     },
     {
       "id": "sendmessagesticker",
@@ -396,7 +814,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "prepareWAMessageMedia",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          },
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "El mapa de medios incluye sticker; formato y restricciones requieren adaptación.",
+        "next_step": "Validar WebP y tamaño con fixtures antes de envío autorizado."
+      }
     },
     {
       "id": "sendmessagecarousel",
@@ -407,7 +841,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "AnyMessageContent expone album pero no carousel; no se encontró helper público de carrusel equivalente.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "sendmessagestory",
@@ -418,7 +859,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "statusJidList",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Envío a status@broadcast con lista de destinatarios; no implica paridad de stories WHAPI.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "sendmessagestoryaudio",
@@ -429,7 +886,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "prepareWAMessageMedia",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          },
+          {
+            "name": "relayMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Audio PTT admite fondo de estado y relay reconoce statusJidList; no prueba paridad de audiencias WHAPI.",
+        "next_step": "Diseñar audiencia explícita y verificar formato de estado de audio sin publicar automáticamente."
+      }
     },
     {
       "id": "sendmessagestorymedia",
@@ -440,7 +913,27 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "status@broadcast",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "statusJidList",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Existe envío a status@broadcast y opciones de audiencia; formato, privacidad y alcance de estados requieren prueba controlada.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "sendmessagestorytext",
@@ -451,7 +944,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "statusJidList",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Texto más opciones de estado; requiere selección explícita y aprobación de destinatarios.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "sendmediamessage",
@@ -462,7 +971,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "prepareWAMessageMedia",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          },
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Carga y generación específicas por tipo multimedia, no contrato HTTP WHAPI equivalente.",
+        "next_step": "Mapear tipos y validar MIME, cifrado, tamaño y resultados ambiguos."
+      }
     },
     {
       "id": "getmessage",
@@ -473,7 +998,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Detalle local con cita, menciones, reacciones y recibos observados; no recupera campos históricos ausentes."
+      "reason": "Detalle local con cita, menciones, reacciones y recibos observados; no recupera campos históricos ausentes.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Lectura por identificador depende de la persistencia local; no se encontró consulta pública universal de mensaje remoto por ID.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "forwardmessage",
@@ -484,7 +1016,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "forward",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Contenido forward referencia WAMessage disponible; no recupera automáticamente mensajes faltantes.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "markmessageasread",
@@ -495,7 +1043,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "readMessages",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Método público envía recibos para claves de mensajes concretos.",
+        "next_step": "Exigir claves válidas y aprobación de efecto externo."
+      }
     },
     {
       "id": "deletemessage",
@@ -506,7 +1066,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "delete:",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Revocación de clave WAMessageKey; permisos y ventana del proveedor necesitan verificación.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "reacttomessage",
@@ -517,7 +1093,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "react",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Contenido react usa clave de mensaje.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "starmessage",
@@ -528,7 +1120,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "star",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Helper star aplica modificación de favoritos a mensajes identificados.",
+        "next_step": "Validar sincronización y parámetros de claves, sin mutación automática."
+      }
     },
     {
       "id": "removereactfrommessage",
@@ -539,7 +1143,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "react:",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Reacción tipada; retirada mediante contenido vacío debe probarse con clave exacta.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "pinmessage",
@@ -550,7 +1170,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "pin",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Contenido pin disponible; semántica y duración requieren verificación.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "unpinmessage",
@@ -561,7 +1197,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "generateWAMessageContent",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          },
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Rama pin genera pinInChatMessage con type configurable; desanclaje requiere valor de protocolo correcto.",
+        "next_step": "Confirmar tipo UNPIN y semántica temporal con fixtures antes de activar."
+      }
     },
     {
       "id": "sendevent",
@@ -572,7 +1224,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "event:",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Evento tipado con fechas y atributos opcionales.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "sendmessagequiz",
@@ -583,7 +1251,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "PollMessageOptions no constituye evidencia de un quiz con respuesta correcta equivalente.",
+        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+      }
     },
     {
       "id": "sendmessagequestion",
@@ -594,7 +1269,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró helper público para mensaje question específico; encuesta o texto no prueban equivalencia.",
+        "next_step": "Inspeccionar contrato WHAPI question y protocolo admitido antes de implementar."
+      }
     },
     {
       "id": "commentmessage",
@@ -605,7 +1287,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "Enviar texto o una cita no demuestra comentario de anuncio de comunidad; no se encontró helper público específico equivalente.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "markmessageasplayed",
@@ -616,7 +1305,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendReceipt",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "MessageReceiptType incluye played; mutación de recibo, no mera consulta.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getchats",
@@ -627,7 +1328,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Conversaciones persistidas."
+      "reason": "Conversaciones persistidas.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "La lista disponible se construye desde eventos/historial persistidos; no hay consulta pública exhaustiva de chats.",
+        "next_step": "Exponer paginación local y declarar cobertura de historial parcial."
+      }
     },
     {
       "id": "getchat",
@@ -638,7 +1346,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Detalle de chat procede del historial y eventos persistidos; no se encontró getter remoto universal con contrato WHAPI.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "deletechat",
@@ -649,7 +1364,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "chatModify",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "ChatModification incluye delete:true; requiere anclas de mensajes.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "archivechat",
@@ -660,7 +1387,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "chatModify",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "ChatModification admite archive y contexto de mensajes para parche de sincronización.",
+        "next_step": "Validar rango de mensajes y reconciliación de archivo/desarchivo."
+      }
     },
     {
       "id": "patchchat",
@@ -671,7 +1410,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "chatModify",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Modificaciones tipadas de chat disponibles; validar cada ajuste, permisos y sincronización, no asumir equivalencia global.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getcontacts",
@@ -682,7 +1433,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Contactos persistidos, consentimiento y bajas."
+      "reason": "Contactos persistidos, consentimiento y bajas.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Agenda construida desde eventos contacts/history; no método de listado remoto completo.",
+        "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+      }
     },
     {
       "id": "checkphones",
@@ -693,7 +1451,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "onWhatsApp",
+            "file": "node_modules/baileys/lib/Socket/socket.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Consulta registro de números PN; explícitamente no admite LID como número.",
+        "next_step": "Normalizar E164, limitar consultas y preservar resultados desconocidos."
+      }
     },
     {
       "id": "getcontact",
@@ -704,7 +1474,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Contacto observado requiere persistencia local y lecturas parciales opcionales; no existe evidencia de getter único con ficha completa WHAPI.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "addcontact",
@@ -715,7 +1492,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "addOrEditContact",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acción pública de contacto; validar SyncAction y sincronización.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "sendcontact",
@@ -726,7 +1515,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "generateWAMessageContent",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Un elemento contacts se codifica como contactMessage con vCard.",
+        "next_step": "Validar contrato de contacto único y consentimiento de envío."
+      }
     },
     {
       "id": "checkexist",
@@ -737,7 +1542,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "onWhatsApp",
+            "file": "node_modules/baileys/lib/Socket/socket.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Consulta existencia para números; el código rechaza LID como entrada y no verifica consentimiento.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getlidbyids",
@@ -748,7 +1565,19 @@
       "screen": "/#identities",
       "baileys": null,
       "test": "Pruebas locales de persistencia, conflictos, permisos y API; evidencia en docs/identities-local.md.",
-      "reason": "Relaciones LID/PN observadas y persistidas localmente; desconocidos y conflictos explícitos. Sin resolución remota ni teléfonos inferidos."
+      "reason": "Relaciones LID/PN observadas y persistidas localmente; desconocidos y conflictos explícitos. Sin resolución remota ni teléfonos inferidos.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getLIDsForPNs",
+            "file": "node_modules/baileys/lib/Signal/lid-mapping.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Repositorio Signal ofrece resolución PN a LID; no asumir correspondencias no recibidas.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "editcontact",
@@ -759,7 +1588,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "addOrEditContact",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Existe modificación de agenda mediante parche contact; no equivale a actualizar perfil ajeno.",
+        "next_step": "Mapear campos de agenda y distinguir edición local de sincronización remota."
+      }
     },
     {
       "id": "getlidbyid",
@@ -770,7 +1611,19 @@
       "screen": "/#identities",
       "baileys": null,
       "test": "Pruebas locales de persistencia, conflictos, permisos y API; evidencia en docs/identities-local.md.",
-      "reason": "Relaciones LID/PN observadas y persistidas localmente; desconocidos y conflictos explícitos. Sin resolución remota ni teléfonos inferidos."
+      "reason": "Relaciones LID/PN observadas y persistidas localmente; desconocidos y conflictos explícitos. Sin resolución remota ni teléfonos inferidos.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getLIDForPN",
+            "file": "node_modules/baileys/lib/Signal/lid-mapping.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Repositorio de mapeos expone búsqueda PN a LID; puede consultar USync, resultado ausente no autoriza inventar identidad.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "deletecontact",
@@ -781,7 +1634,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "removeContact",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Borrado remoto de contacto; requiere aprobación específica.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getcontactabout",
@@ -792,7 +1657,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Acerca de cuando WhatsApp permite consultarlo."
+      "reason": "Acerca de cuando WhatsApp permite consultarlo.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "fetchStatus",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "fetchStatus consulta texto about/status de JIDs; no obtiene historias temporales.",
+        "next_step": "Validar privacidad y respuesta ausente sin inferir texto vacío."
+      }
     },
     {
       "id": "getidbylid",
@@ -803,7 +1680,19 @@
       "screen": "/#identities",
       "baileys": null,
       "test": "Pruebas locales de persistencia, conflictos, permisos y API; evidencia en docs/identities-local.md.",
-      "reason": "Relaciones LID/PN observadas y persistidas localmente; desconocidos y conflictos explícitos. Sin resolución remota ni teléfonos inferidos."
+      "reason": "Relaciones LID/PN observadas y persistidas localmente; desconocidos y conflictos explícitos. Sin resolución remota ni teléfonos inferidos.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getPNForLID",
+            "file": "node_modules/baileys/lib/Signal/lid-mapping.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Repositorio expone búsqueda inversa de correspondencia conocida; no garantiza resolver todo LID.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "sendmepresence",
@@ -814,7 +1703,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendPresenceUpdate",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Presencia available/unavailable; mutación explícita.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getpresence",
@@ -825,7 +1726,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Eventos de presencia entregados por WhatsApp; no seguimiento garantizado."
+      "reason": "Eventos de presencia entregados por WhatsApp; no seguimiento garantizado.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "presenceSubscribe",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Suscripción a presencia produce eventos asíncronos; no devuelve estado actual garantizado.",
+        "next_step": "Persistir eventos con fecha y distinguir desconocido de offline."
+      }
     },
     {
       "id": "subscribepresence",
@@ -836,7 +1749,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "presenceSubscribe",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Suscripción de presencia disponible; privacidad y eventos recibidos limitan información.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "sendpresence",
@@ -847,7 +1772,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendPresenceUpdate",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Presencia de chat composing/recording; verificar destinatario.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getgroups",
@@ -858,7 +1795,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Metadatos disponibles de grupos participantes, consultados por el worker."
+      "reason": "Metadatos disponibles de grupos participantes, consultados por el worker.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupFetchAllParticipating",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Consulta grupos participantes; la respuesta necesita validación para evitar vacío por fallo.",
+        "next_step": "Usar contenedor IQ verificado y cobertura explícita."
+      }
     },
     {
       "id": "creategroup",
@@ -869,7 +1818,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupCreate",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Creación de grupo disponible; participación y restricciones deben verificarse con aprobación.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "acceptgroupinvite",
@@ -880,7 +1841,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupAcceptInvite",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acepta código de invitación; código es secreto y la acción cambia membresía.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getgroup",
@@ -891,7 +1864,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Detalle en snapshot; refresco de lectura mediante /api/v1/sync."
+      "reason": "Detalle en snapshot; refresco de lectura mediante /api/v1/sync.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupMetadata",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Obtiene metadatos de grupo por JID conocido.",
+        "next_step": "Validar permisos y metadatos faltantes; conservar origen y fecha."
+      }
     },
     {
       "id": "updategroupinfo",
@@ -902,7 +1887,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupUpdateSubject",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          },
+          {
+            "name": "groupUpdateDescription",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Actualiza título y descripción; no acredita todos los campos ni permisos del endpoint WHAPI.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "leavegroup",
@@ -913,7 +1914,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupLeave",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Salida de grupo remota; operación irreversible desde el panel sin nuevo ingreso.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "updategroupsetting",
@@ -924,7 +1937,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupSettingUpdate",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acepta ajustes concretos announcement/not_announcement/locked/unlocked; no todos los ajustes WHAPI.",
+        "next_step": "Mapear cada ajuste permitido y comprobar permisos admin."
+      }
     },
     {
       "id": "getgroupinvite",
@@ -935,7 +1960,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupInviteCode",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Obtiene código de invitación sensible; requiere permisos y tratamiento de secreto.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "revokegroupinvite",
@@ -946,7 +1983,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupRevokeInvite",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Revoca invitación; no registrar el código.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "addgroupparticipant",
@@ -957,7 +2006,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acción add disponible; resultado puede exigir invitación o fallar por privacidad.",
+        "next_step": "Registrar resultado por participante y no equiparar aceptación a incorporación."
+      }
     },
     {
       "id": "removegroupparticipant",
@@ -968,7 +2029,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acción de participantes disponible; comprobar remove, permisos y resultado por participante.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getgroupicon",
@@ -979,7 +2052,19 @@
       "screen": "/#groups",
       "baileys": "profilePictureUrl",
       "test": "local/avatars.test.mjs, local/worker.test.mjs, local/backend.test.mjs; pruebas simuladas, equivalencia completa no verificada.",
-      "reason": "Lectura manual de foto de un grupo conocido, con caché privada autenticada. Depende de visibilidad y respuesta de WhatsApp; sin edición."
+      "reason": "Lectura manual de foto de un grupo conocido, con caché privada autenticada. Depende de visibilidad y respuesta de WhatsApp; sin edición.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "profilePictureUrl",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Lectura URL temporal; cachear solo imagen validada sin guardar URL firmada.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "setgroupicon",
@@ -990,7 +2075,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "updateProfilePicture",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "El método acepta JID de grupo para foto; exige permisos y formato válido.",
+        "next_step": "Validar imagen y rol antes de acción autorizada."
+      }
     },
     {
       "id": "deletegroupicon",
@@ -1001,7 +2098,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "removeProfilePicture",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "El método acepta JID; validar operación de grupo y permisos de administrador.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "demotegroupadmin",
@@ -1012,7 +2121,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "ParticipantAction admite demote; requiere permiso administrador.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "promotetogroupadmin",
@@ -1023,7 +2144,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acción promote expuesta sobre participantes de grupo.",
+        "next_step": "Exigir aprobación exacta y comprobar respuesta por participante."
+      }
     },
     {
       "id": "sendgroupinvite",
@@ -1034,7 +2167,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "groupInvite:",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Existe contenido groupInvite; envío externo requiere aprobación y no equivale a agregar participante.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getgroupmetadatabyinvitecode",
@@ -1045,7 +2194,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupGetInviteInfo",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Consulta por código; no exponer código en logs.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getgroupapplicationslist",
@@ -1056,7 +2217,19 @@
       "screen": "/#communities",
       "baileys": null,
       "test": "Fixtures de respuesta IQ, permisos y API; docs/community-reads.md.",
-      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa."
+      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupRequestParticipantsList",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Consulta membership_approval_requests; helper puede devolver vacío si falta contenedor.",
+        "next_step": "Usar lectura IQ verificada y distinguir error de lista vacía."
+      }
     },
     {
       "id": "approvegroupapplicationslist",
@@ -1067,7 +2240,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupRequestParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/groups.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Actualización de solicitudes disponible; validar acción approve, permisos y errores por solicitante.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "rejectgroupapplicationslist",
@@ -1078,7 +2263,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "groupRequestParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acción reject para solicitudes; no activar desde consulta pasiva.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getstories",
@@ -1089,7 +2286,14 @@
       "screen": "/#stories",
       "baileys": null,
       "test": "Fixtures de expiración, revocación, permisos y sanitización; docs/stories-local.md.",
-      "reason": "Texto y metadatos de estados vigentes recibidos; sin historial completo, descarga, publicación ni confirmaciones de lectura."
+      "reason": "Texto y metadatos de estados vigentes recibidos; sin historial completo, descarga, publicación ni confirmaciones de lectura.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Solo estados recibidos por eventos pueden listarse localmente; no hay listado público exhaustivo garantizado.",
+        "next_step": "Filtrar expiración/revocación y no emitir recibos de lectura."
+      }
     },
     {
       "id": "createstory",
@@ -1100,7 +2304,27 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "status@broadcast",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "statusJidList",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Existe envío a status@broadcast y opciones de audiencia; formato, privacidad y alcance de estados requieren prueba controlada.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "createstorytext",
@@ -1111,7 +2335,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "statusJidList",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Publicación texto mediante sendMessage y opciones status; no probada.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "createstorymedia",
@@ -1122,7 +2362,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "relayMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "El relay reconoce destino status y lista explícita statusJidList para medios compatibles.",
+        "next_step": "Validar audiencia, formato y permisos; publicación requiere aprobación."
+      }
     },
     {
       "id": "createstoryaudio",
@@ -1133,7 +2389,27 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "status@broadcast",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "statusJidList",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Existe envío a status@broadcast y opciones de audiencia; formato, privacidad y alcance de estados requieren prueba controlada.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getstory",
@@ -1144,7 +2420,14 @@
       "screen": "/#stories",
       "baileys": null,
       "test": "Fixtures de expiración, revocación, permisos y sanitización; docs/stories-local.md.",
-      "reason": "Texto y metadatos de estados vigentes recibidos; sin historial completo, descarga, publicación ni confirmaciones de lectura."
+      "reason": "Texto y metadatos de estados vigentes recibidos; sin historial completo, descarga, publicación ni confirmaciones de lectura.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Solo estados efectivamente recibidos; no método público getStory por ID.",
+        "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+      }
     },
     {
       "id": "copystory",
@@ -1155,7 +2438,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró operación pública de copia de estado preservando contrato WHAPI; reenviar contenido es otra semántica.",
+        "next_step": "Definir copia y audiencia antes de evaluar composición con consentimiento."
+      }
     },
     {
       "id": "getmessageviewstatuses",
@@ -1166,7 +2456,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Recibos por participante recibidos desde la vinculación; no garantiza listado completo de visualizaciones."
+      "reason": "Recibos por participante recibidos desde la vinculación; no garantiza listado completo de visualizaciones.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Estados de lectura requieren guardar message-receipt.update observado; no garantizan lista histórica completa de vistas o espectadores.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "getnewsletters",
@@ -1177,7 +2474,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Canales ya conocidos por esta sesión; sin descubrimiento global."
+      "reason": "Canales ya conocidos por esta sesión; sin descubrimiento global.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "Métodos newsletterMetadata/FetchMessages no prueban listado completo de canales.",
+        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+      }
     },
     {
       "id": "createnewsletter",
@@ -1188,7 +2492,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterCreate",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Creación específica de canal mediante consulta WMex.",
+        "next_step": "Validar campos y resultado con cuenta autorizada antes de exposición."
+      }
     },
     {
       "id": "findnewsletter",
@@ -1199,7 +2515,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "newsletterMetadata consulta clave conocida; no se encontró búsqueda pública por filtros o descubrimiento general equivalente.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "recommendednewsletter",
@@ -1210,7 +2533,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró método público para recomendaciones de canales por país.",
+        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+      }
     },
     {
       "id": "getnewsletter",
@@ -1221,7 +2551,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Metadatos de un canal conocido; sin seguirlo ni modificar sus propiedades."
+      "reason": "Metadatos de un canal conocido; sin seguirlo ni modificar sus propiedades.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterMetadata",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Consulta metadatos por JID o clave de invitación según tipo.",
+        "next_step": "Validar tipo y respuesta, sin prometer directorio completo."
+      }
     },
     {
       "id": "deletenewsletter",
@@ -1232,7 +2574,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterDelete",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Eliminación disponible; operación destructiva requiere validar propiedad y aprobación.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "editnewsletter",
@@ -1243,7 +2597,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterUpdate",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Actualización de campos soportados; permisos y contrato difieren.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "subscribenewsletter",
@@ -1254,7 +2620,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterFollow",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Follow cambia suscripción del canal por JID.",
+        "next_step": "Confirmar destino y aprobación antes de mutación."
+      }
     },
     {
       "id": "unsubscribenewsletter",
@@ -1265,7 +2643,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterUnfollow",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Dejar de seguir disponible; confirmar respuesta y alcance de la cuenta.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "subscribenewsletterinvite",
@@ -1276,7 +2666,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterMetadata",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "newsletterFollow",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Resolver invitación a JID y seguir son dos operaciones; no paridad directa.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "unsubscribenewsletterinvite",
@@ -1287,7 +2693,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterMetadata",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          },
+          {
+            "name": "newsletterUnfollow",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Puede componerse resolución de código invite y unfollow por JID; no helper directo por código.",
+        "next_step": "Validar resolución inequívoca y requerir aprobación de desuscripción."
+      }
     },
     {
       "id": "trackingnewsletter",
@@ -1298,7 +2720,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "subscribeNewsletterUpdates",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Suscripción de actualizaciones disponible; no garantiza historial ni entrega de todos los eventos.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getmessagesnewsletter",
@@ -1309,7 +2743,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterFetchMessages",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Lectura con count/since/after; respuesta y paginación requieren adaptador verificado.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "createnewsletteradmininvite",
@@ -1320,7 +2766,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "El tipo protobuf newsletterAdminInviteMessage existe, pero no se encontró helper público de creación de invitación administrativa.",
+        "next_step": "Investigar autorización y flujo específico; no equiparar envío genérico a invitación válida."
+      }
     },
     {
       "id": "revokenewsletteradmininvite",
@@ -1331,7 +2784,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró método público para revocar invitación de administrador; newsletterDemote cambia un rol y no es equivalente.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "acceptnewsletteradminrequest",
@@ -1342,7 +2802,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró método público para aceptar solicitud de administración.",
+        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+      }
     },
     {
       "id": "demotenewsletteradmin",
@@ -1353,7 +2820,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterDemote",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Método específico para degradar administrador del canal por JID.",
+        "next_step": "Validar rol, destinatario y respuesta con aprobación explícita."
+      }
     },
     {
       "id": "sendnewsletterinvite",
@@ -1364,7 +2843,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró contenido tipado o helper público de invitación de newsletter; enviar un enlace de texto no demuestra equivalencia.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "getnewsletterbyinvitecode",
@@ -1375,7 +2861,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "newsletterMetadata",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Tipo invite permite metadatos por código.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "addnewslettermessagepaidpartnership",
@@ -1386,7 +2884,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró método público para etiquetar mensaje como asociación pagada.",
+        "next_step": "Revisar evolución del protocolo; no simular etiqueta local como cambio remoto."
+      }
     },
     {
       "id": "uploadmedia",
@@ -1397,7 +2902,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Carga con alcance de conexión; formato propio WIS."
+      "reason": "Carga con alcance de conexión; formato propio WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "waUploadToServer",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Primitive de carga disponible; cifrado, metadatos, retención e identificador reutilizable requieren contrato propio.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getmediafiles",
@@ -1408,7 +2925,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Inventario paginado de archivos registrados localmente, con acceso autenticado; no lista todo el almacenamiento remoto."
+      "reason": "Inventario paginado de archivos registrados localmente, con acceso autenticado; no lista todo el almacenamiento remoto.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Inventario del almacenamiento WIS; no listado remoto de todos los archivos WhatsApp.",
+        "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+      }
     },
     {
       "id": "getmedia",
@@ -1419,7 +2943,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Lectura privada de archivos realmente descargados; medios históricos pueden no estar disponibles."
+      "reason": "Lectura privada de archivos realmente descargados; medios históricos pueden no estar disponibles.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "downloadMediaMessage",
+            "file": "node_modules/baileys/lib/Utils/messages.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Descarga y descifra usando mensaje y claves disponibles; no equivale a resolver todo ID WHAPI.",
+        "next_step": "Exigir referencia persistida autorizada, validar MIME y mantener credenciales privadas."
+      }
     },
     {
       "id": "deletemedia",
@@ -1430,7 +2966,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Eliminar archivo local no elimina copias remotas; no se encontró API pública de borrado del servidor multimedia.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "getbusinessprofile",
@@ -1441,7 +2984,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Snapshot Business si la cuenta y WhatsApp lo permiten; sin edición."
+      "reason": "Snapshot Business si la cuenta y WhatsApp lo permiten; sin edición.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getBusinessProfile",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Perfil Business disponible; campos parciales según servidor.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "editbusinessprofile",
@@ -1452,7 +3007,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "updateBussinesProfile",
+            "file": "node_modules/baileys/lib/Socket/business.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Método con nombre literal updateBussinesProfile; campos definidos de dirección/email/descripción/web/horarios.",
+        "next_step": "Mapear campos soportados y verificar respuesta; aprobación para cambios."
+      }
     },
     {
       "id": "getproducts",
@@ -1463,7 +3030,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Catálogo público visible de la cuenta propia; indica error, alcance parcial y truncamiento. No expone administración ni productos ocultos."
+      "reason": "Catálogo público visible de la cuenta propia; indica error, alcance parcial y truncamiento. No expone administración ni productos ocultos.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getCatalog",
+            "file": "node_modules/baileys/lib/Socket/business.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Lectura de catálogo con límite y cursor; permisos, paginación y campos no equivalentes hasta probar.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "createproduct",
@@ -1474,7 +3053,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "productCreate",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Creación Business disponible; permisos y respuesta requieren validación real aprobada.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getcontactproducts",
@@ -1485,7 +3076,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getCatalog",
+            "file": "node_modules/baileys/lib/Socket/business.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "getCatalog acepta jid y cursor; disponibilidad depende del catálogo accesible.",
+        "next_step": "Validar contenedor y paginación; distinguir público, privado y no expuesto."
+      }
     },
     {
       "id": "getproduct",
@@ -1496,7 +3099,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getCatalog",
+            "file": "node_modules/baileys/lib/Socket/business.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Candidato indirecto: buscar producto dentro del catálogo disponible, no getter público específico por ID.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "sendproduct",
@@ -1507,7 +3122,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          },
+          {
+            "name": "product",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "WASendableProduct disponible; validar imágenes y catálogo antes de habilitar.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "updateproduct",
@@ -1518,7 +3149,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "productUpdate",
+            "file": "node_modules/baileys/lib/Socket/business.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Actualiza producto por ID con conversión de datos y medios.",
+        "next_step": "Mapear propiedades admitidas y exigir aprobación antes de cambio comercial."
+      }
     },
     {
       "id": "deleteproduct",
@@ -1529,7 +3172,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "productDelete",
+            "file": "node_modules/baileys/lib/Socket/business.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Borrado por IDs disponible; validar catálogo propio, permisos y confirmación.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getorderitems",
@@ -1540,7 +3195,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getOrderDetails",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Consulta orderId y tokenBase64; no guardar credencial de pedido ni afirmar listado general.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "sendcatalog",
@@ -1551,7 +3218,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "getCatalog lee catálogo y productMessage representa producto; no se encontró helper público dedicado a enviar catálogo de un contacto.",
+        "next_step": "Revisar contrato y mensaje interactivo requerido sin asumir sendMessage suficiente."
+      }
     },
     {
       "id": "createcollection",
@@ -1562,7 +3236,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "Se encontró getCollections pero no helper público de creación de colecciones; existencia de protocolo no demuestra soporte.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "getcollectionslist",
@@ -1573,7 +3254,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Colecciones públicas visibles de la cuenta propia; respuesta vacía verificada en esta cuenta. No replica el catálogo privado ni su edición."
+      "reason": "Colecciones públicas visibles de la cuenta propia; respuesta vacía verificada en esta cuenta. No replica el catálogo privado ni su edición.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getCollections",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Wrapper puede convertir ausencia de respuesta en vacío; usar adaptador verificado.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getcollection",
@@ -1584,7 +3277,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getCollections",
+            "file": "node_modules/baileys/lib/Socket/business.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Lista colecciones de un JID; obtener una colección por ID requiere selección local y verificar cobertura.",
+        "next_step": "Inspeccionar paginación y campos; no declarar ausencia por lista incompleta."
+      }
     },
     {
       "id": "editcollection",
@@ -1595,7 +3300,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "Se encontró lectura de colecciones, no helper público de edición con contrato equivalente.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "deletecollection",
@@ -1606,7 +3318,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró método público de eliminación de colección.",
+        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+      }
     },
     {
       "id": "getcollectionproductlist",
@@ -1617,7 +3336,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getCollections",
+            "file": "node_modules/baileys/lib/Socket/business.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Respuesta puede incluir productos de colección con límites; no helper dedicado de paginación por colección identificado.",
+        "next_step": "Validar límites y productos realmente recibidos antes de declarar lista completa."
+      }
     },
     {
       "id": "getreachouttimelock",
@@ -1628,7 +3359,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "fetchAccountReachoutTimelock",
+            "file": "node_modules/baileys/lib/Socket/socket.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Consulta específica disponible; no es puntuación de riesgo ni garantía de cuenta segura.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getnewchatlimit",
@@ -1639,7 +3382,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "fetchNewChatMessageCap",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Lectura de límite reportado; no equivale a cantidad segura de envíos.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getlabels",
@@ -1650,7 +3405,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Etiquetas recibidas por eventos de WhatsApp; inventario histórico completo no garantizado."
+      "reason": "Etiquetas recibidas por eventos de WhatsApp; inventario histórico completo no garantizado.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Etiquetas llegan por sincronización/eventos; no se encontró fetch público exhaustivo de etiquetas.",
+        "next_step": "Persistir labels.edit con bajas y declarar cobertura observada."
+      }
     },
     {
       "id": "createlabel",
@@ -1661,7 +3423,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "addLabel",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "App-state de etiquetas disponible; validar campos LabelAction y sincronización Business.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getlabelassociations",
@@ -1672,7 +3446,14 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Asociaciones que la sesión haya recibido; no crea ni modifica etiquetas."
+      "reason": "Asociaciones que la sesión haya recibido; no crea ni modifica etiquetas.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Asociaciones observadas por eventos labels.association; no listado remoto completo.",
+        "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+      }
     },
     {
       "id": "addlabelassociation",
@@ -1683,7 +3464,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "addChatLabel",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          },
+          {
+            "name": "addMessageLabel",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Helpers separados para asociación de etiqueta con chat o mensaje.",
+        "next_step": "Mapear recurso y claves; validar sincronización bajo aprobación."
+      }
     },
     {
       "id": "deletelabelassociation",
@@ -1694,7 +3491,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "removeChatLabel",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          },
+          {
+            "name": "removeMessageLabel",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Retirada de asociación de chat o mensaje disponible; distinguir alcance del ID recibido.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "renamelabel",
@@ -1705,7 +3518,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "addLabel",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "LabelActionBody permite edición de etiqueta; verificar significado y sincronización.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "deletelabel",
@@ -1716,7 +3541,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "addLabel",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Helper aplica parche labelEditAction con flag deleted, aunque no se llama deleteLabel.",
+        "next_step": "Comprobar id/color/order y deleted:true; no confundir eliminar asociación."
+      }
     },
     {
       "id": "blacklistadd",
@@ -1727,7 +3564,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "updateBlockStatus",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Bloqueo remoto disponible; distinguir del opt-out comercial local y verificar acción block.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "blacklistremove",
@@ -1738,7 +3587,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "updateBlockStatus",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acción unblock disponible; requiere aprobación de mutación.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getblacklist",
@@ -1749,7 +3610,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Consulta administrativa de bloqueados, sin altas ni bajas."
+      "reason": "Consulta administrativa de bloqueados, sin altas ni bajas.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "fetchBlocklist",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Método consulta lista de bloqueo; requiere comprobar contenedor y permisos.",
+        "next_step": "Validar respuesta para distinguir vacío de fallo y restringir datos sensibles."
+      }
     },
     {
       "id": "getcommunities",
@@ -1760,7 +3633,19 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Comunidades identificadas entre los grupos entregados por WhatsApp."
+      "reason": "Comunidades identificadas entre los grupos entregados por WhatsApp.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityFetchAllParticipating",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Lectura de comunidades participantes disponible; no implica descubrimiento de comunidades externas.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "createcommunity",
@@ -1771,7 +3656,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityCreate",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Creación de comunidad; permisos y respuesta no probados.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getcommunity",
@@ -1782,7 +3679,19 @@
       "screen": "/#communities",
       "baileys": null,
       "test": "Fixtures de respuesta IQ, permisos y API; docs/community-reads.md.",
-      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa."
+      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityMetadata",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Obtiene metadatos por JID de comunidad; no garantiza subgrupos incluidos.",
+        "next_step": "Validar consulta y separar subgrupos de metadatos generales."
+      }
     },
     {
       "id": "deactivatecommunity",
@@ -1793,7 +3702,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "communityLeave abandona la comunidad y no acredita desactivación para todos; no se encontró helper público equivalente.",
+        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+      }
     },
     {
       "id": "revokecommunityinvite",
@@ -1804,7 +3720,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityRevokeInvite",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Revoca código de invitación; secreto no debe persistirse.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "unlinkgroupfromcommunity",
@@ -1815,7 +3743,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityUnlinkGroup",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Desvincula groupJid de parentCommunityJid mediante operación específica.",
+        "next_step": "Verificar relación y permisos; aprobación explícita antes de mutación."
+      }
     },
     {
       "id": "linkgrouptocommunity",
@@ -1826,7 +3766,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityLinkGroup",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Vinculación disponible; requiere permisos y validación de ambos grupos.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "joinincommunitygroup",
@@ -1837,7 +3789,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "communityAcceptInvite acepta comunidad y communityLinkGroup vincula grupos; no prueba solicitud WHAPI de ingreso a subgrupo específico.",
+        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+      }
     },
     {
       "id": "creategroupincommunity",
@@ -1848,7 +3807,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityCreateGroup",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Crea grupo con participantes y comunidad padre.",
+        "next_step": "Validar padre y consentimientos; documentar efecto de creación antes de aprobar."
+      }
     },
     {
       "id": "changecommunitysettings",
@@ -1859,7 +3830,27 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communitySettingUpdate",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          },
+          {
+            "name": "communityMemberAddMode",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          },
+          {
+            "name": "communityJoinApprovalMode",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Existen ajustes concretos; no asumir cobertura de todos los campos WHAPI.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "addcommunityparticipant",
@@ -1870,7 +3861,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "ParticipantAction add disponible; validar permisos.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "removecommunityparticipant",
@@ -1881,7 +3884,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acción remove sobre participantes de comunidad, distinta de quitar un subgrupo.",
+        "next_step": "Comprobar alcance en grupos vinculados y resultado por participante."
+      }
     },
     {
       "id": "promotecommunityparticipant",
@@ -1892,7 +3907,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Acción de participantes disponible; verificar promote, autoridad y resultado individual.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "demotecommunityparticipant",
@@ -1903,7 +3930,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityParticipantsUpdate",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "ParticipantAction demote disponible; validar rol resultante.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "getcommunitysubgroups",
@@ -1914,7 +3953,19 @@
       "screen": "/#communities",
       "baileys": null,
       "test": "Fixtures de respuesta IQ, permisos y API; docs/community-reads.md.",
-      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa."
+      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "communityFetchLinkedGroups",
+            "file": "node_modules/baileys/lib/Socket/communities.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Consulta sub_groups tras resolver comunidad; necesita validar contenedor para evitar falso vacío.",
+        "next_step": "Usar JID de comunidad conocido y respuesta IQ verificada."
+      }
     },
     {
       "id": "createevent",
@@ -1925,7 +3976,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "event:",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Contenido EventMessageOptions disponible; no prueba equivalencia de todos los campos WHAPI.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "getbotlist",
@@ -1936,7 +4003,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "getBotListV2",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Lista pública de bots; no implica automatización habilitada.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "sendbotmessage",
@@ -1947,7 +4026,14 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "No se encontró helper público específico para conversación con AI bot y sus metadatos; texto genérico no prueba compatibilidad.",
+        "next_step": "Revisar identidad bot, autorización y contrato específico antes de cualquier envío."
+      }
     },
     {
       "id": "createcallevent",
@@ -1958,7 +4044,23 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "sendMessage",
+            "file": "node_modules/baileys/lib/Socket/messages-send.js"
+          },
+          {
+            "name": "isScheduleCall",
+            "file": "node_modules/baileys/lib/Types/Message.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Evento puede indicar llamada y programación; no inicia una llamada ni acredita aceptación.",
+        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+      }
     },
     {
       "id": "rejectcall",
@@ -1969,7 +4071,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "rejectCall",
+            "file": "node_modules/baileys/lib/Socket/index.d.ts"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Rechazo de llamada por ID/from; acción remota explícita.",
+        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+      }
     },
     {
       "id": "creategroupcalllink",
@@ -1980,7 +4094,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [
+          {
+            "name": "createCallLink",
+            "file": "node_modules/baileys/lib/Socket/chats.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "Crea enlace de llamada audio/video; no recibe groupJid ni acredita equivalencia de vínculo asociado a grupo WHAPI.",
+        "next_step": "Comparar contrato de group call link y probar permisos; no anunciar paridad hasta verificar."
+      }
     },
     {
       "id": "getcall",
@@ -1991,7 +4117,14 @@
       "screen": "/#calls",
       "baileys": null,
       "test": "Pruebas locales de eventos, persistencia y API; llamadas reales no provocadas.",
-      "reason": "Llamadas observadas por la sesión y persistidas localmente; no recupera el historial completo ni inicia llamadas."
+      "reason": "Llamadas observadas por la sesión y persistidas localmente; no recupera el historial completo ni inicia llamadas.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "local_only",
+        "reason": "Solo registro local de eventos call observados; no se encontró consulta pública universal de llamada por ID.",
+        "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+      }
     },
     {
       "id": "makecall",
@@ -2002,7 +4135,19 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS."
+      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "baileys_audit": {
+        "version": "7.0.0-rc14",
+        "methods": [],
+        "support": "no_public_method_found",
+        "reason": "createCallLink genera enlace y rejectCall rechaza; no método público para iniciar llamada de atención.",
+        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+      }
     }
-  ]
+  ],
+  "baileys_audit": {
+    "version": "7.0.0-rc14",
+    "reviewed_at": "2026-09-27T16:13:13.598Z",
+    "scope": "Installed public declarations and source; candidate support is not implementation or verified equivalence."
+  }
 }

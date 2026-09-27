@@ -1,0 +1,706 @@
+[
+  {
+    "id": "getchannelsettings",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Preferencias propias de WIS; no equivalencia con configuración del canal WHAPI.",
+    "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+  },
+  {
+    "id": "getallowedevents",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Catálogo local de eventos y webhooks; Baileys expone eventos pero no el contrato WHAPI.",
+    "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+  },
+  {
+    "id": "loginuser",
+    "methods": [
+      {
+        "name": "connection.update",
+        "file": "node_modules/baileys/lib/Types/Events.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Evento QR de conexión; conversión base64 y vencimiento corresponden al panel.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "loginuserviaauthcode",
+    "methods": [
+      {
+        "name": "requestPairingCode",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Código de emparejamiento por teléfono; no autenticación WHAPI.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getcontactprofile",
+    "methods": [
+      {
+        "name": "fetchStatus",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "profilePictureUrl",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Datos parciales de perfil y foto; no perfil unificado equivalente.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getusername",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "Contact.username existe como dato recibido; no método público dedicado para consultar username.",
+    "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+  },
+  {
+    "id": "getmessagesbychatid",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Historial persistido local; fetchMessageHistory solicita entrega parcial pero no pagina historial remoto completo.",
+    "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+  },
+  {
+    "id": "sendmessagevideo",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "video",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "AnyMediaMessageContent video; formato y entrega deben verificarse.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "sendmessageaudio",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "audio",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "AnyMediaMessageContent audio; códec y entrega requieren pruebas.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "sendmessagelinkpreview",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "linkPreview",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "AnyRegularMessageContent linkPreview; generación y compatibilidad no verificadas.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "sendmessagecontact",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "contacts",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "AnyRegularMessageContent contacts; validar vCard y destinatario.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "sendmessageinteractive",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "Nombre protobuf interactiveMessage no demuestra un método público equivalente para el contrato interactivo WHAPI.",
+    "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+  },
+  {
+    "id": "sendmessagestory",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "statusJidList",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Envío a status@broadcast con lista de destinatarios; no implica paridad de stories WHAPI.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "sendmessagestorytext",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "statusJidList",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Texto más opciones de estado; requiere selección explícita y aprobación de destinatarios.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "forwardmessage",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "forward",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Contenido forward referencia WAMessage disponible; no recupera automáticamente mensajes faltantes.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "reacttomessage",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "react",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Contenido react usa clave de mensaje.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "pinmessage",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "pin",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Contenido pin disponible; semántica y duración requieren verificación.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "sendmessagequiz",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "PollMessageOptions no constituye evidencia de un quiz con respuesta correcta equivalente.",
+    "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+  },
+  {
+    "id": "markmessageasplayed",
+    "methods": [
+      {
+        "name": "sendReceipt",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "MessageReceiptType incluye played; mutación de recibo, no mera consulta.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "deletechat",
+    "methods": [
+      {
+        "name": "chatModify",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "ChatModification incluye delete:true; requiere anclas de mensajes.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getcontacts",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Agenda construida desde eventos contacts/history; no método de listado remoto completo.",
+    "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+  },
+  {
+    "id": "addcontact",
+    "methods": [
+      {
+        "name": "addOrEditContact",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acción pública de contacto; validar SyncAction y sincronización.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getlidbyids",
+    "methods": [
+      {
+        "name": "getLIDsForPNs",
+        "file": "node_modules/baileys/lib/Signal/lid-mapping.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Repositorio Signal ofrece resolución PN a LID; no asumir correspondencias no recibidas.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "deletecontact",
+    "methods": [
+      {
+        "name": "removeContact",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Borrado remoto de contacto; requiere aprobación específica.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "sendmepresence",
+    "methods": [
+      {
+        "name": "sendPresenceUpdate",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Presencia available/unavailable; mutación explícita.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "sendpresence",
+    "methods": [
+      {
+        "name": "sendPresenceUpdate",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Presencia de chat composing/recording; verificar destinatario.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "acceptgroupinvite",
+    "methods": [
+      {
+        "name": "groupAcceptInvite",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acepta código de invitación; código es secreto y la acción cambia membresía.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "leavegroup",
+    "methods": [
+      {
+        "name": "groupLeave",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Salida de grupo remota; operación irreversible desde el panel sin nuevo ingreso.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "revokegroupinvite",
+    "methods": [
+      {
+        "name": "groupRevokeInvite",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Revoca invitación; no registrar el código.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getgroupicon",
+    "methods": [
+      {
+        "name": "profilePictureUrl",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Lectura URL temporal; cachear solo imagen validada sin guardar URL firmada.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "demotegroupadmin",
+    "methods": [
+      {
+        "name": "groupParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "ParticipantAction admite demote; requiere permiso administrador.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getgroupmetadatabyinvitecode",
+    "methods": [
+      {
+        "name": "groupGetInviteInfo",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Consulta por código; no exponer código en logs.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "rejectgroupapplicationslist",
+    "methods": [
+      {
+        "name": "groupRequestParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acción reject para solicitudes; no activar desde consulta pasiva.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "createstorytext",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "statusJidList",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Publicación texto mediante sendMessage y opciones status; no probada.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getstory",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Solo estados efectivamente recibidos; no método público getStory por ID.",
+    "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+  },
+  {
+    "id": "getnewsletters",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "Métodos newsletterMetadata/FetchMessages no prueban listado completo de canales.",
+    "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+  },
+  {
+    "id": "recommendednewsletter",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró método público para recomendaciones de canales por país.",
+    "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+  },
+  {
+    "id": "editnewsletter",
+    "methods": [
+      {
+        "name": "newsletterUpdate",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Actualización de campos soportados; permisos y contrato difieren.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "subscribenewsletterinvite",
+    "methods": [
+      {
+        "name": "newsletterMetadata",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "newsletterFollow",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Resolver invitación a JID y seguir son dos operaciones; no paridad directa.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getmessagesnewsletter",
+    "methods": [
+      {
+        "name": "newsletterFetchMessages",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Lectura con count/since/after; respuesta y paginación requieren adaptador verificado.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "acceptnewsletteradminrequest",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró método público para aceptar solicitud de administración.",
+    "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+  },
+  {
+    "id": "getnewsletterbyinvitecode",
+    "methods": [
+      {
+        "name": "newsletterMetadata",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Tipo invite permite metadatos por código.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getmediafiles",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Inventario del almacenamiento WIS; no listado remoto de todos los archivos WhatsApp.",
+    "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+  },
+  {
+    "id": "getbusinessprofile",
+    "methods": [
+      {
+        "name": "getBusinessProfile",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Perfil Business disponible; campos parciales según servidor.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "createproduct",
+    "methods": [
+      {
+        "name": "productCreate",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Creación Business disponible; permisos y respuesta requieren validación real aprobada.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "sendproduct",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      },
+      {
+        "name": "product",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "WASendableProduct disponible; validar imágenes y catálogo antes de habilitar.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getorderitems",
+    "methods": [
+      {
+        "name": "getOrderDetails",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Consulta orderId y tokenBase64; no guardar credencial de pedido ni afirmar listado general.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getcollectionslist",
+    "methods": [
+      {
+        "name": "getCollections",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Wrapper puede convertir ausencia de respuesta en vacío; usar adaptador verificado.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "deletecollection",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró método público de eliminación de colección.",
+    "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+  },
+  {
+    "id": "getnewchatlimit",
+    "methods": [
+      {
+        "name": "fetchNewChatMessageCap",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Lectura de límite reportado; no equivale a cantidad segura de envíos.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getlabelassociations",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Asociaciones observadas por eventos labels.association; no listado remoto completo.",
+    "next_step": "Documentar alcance del dato local y lagunas frente al método WHAPI."
+  },
+  {
+    "id": "renamelabel",
+    "methods": [
+      {
+        "name": "addLabel",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "LabelActionBody permite edición de etiqueta; verificar significado y sincronización.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "blacklistremove",
+    "methods": [
+      {
+        "name": "updateBlockStatus",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acción unblock disponible; requiere aprobación de mutación.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "createcommunity",
+    "methods": [
+      {
+        "name": "communityCreate",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Creación de comunidad; permisos y respuesta no probados.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "revokecommunityinvite",
+    "methods": [
+      {
+        "name": "communityRevokeInvite",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Revoca código de invitación; secreto no debe persistirse.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "joinincommunitygroup",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "communityAcceptInvite acepta comunidad y communityLinkGroup vincula grupos; no prueba solicitud WHAPI de ingreso a subgrupo específico.",
+    "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+  },
+  {
+    "id": "addcommunityparticipant",
+    "methods": [
+      {
+        "name": "communityParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "ParticipantAction add disponible; validar permisos.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "demotecommunityparticipant",
+    "methods": [
+      {
+        "name": "communityParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "ParticipantAction demote disponible; validar rol resultante.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "getbotlist",
+    "methods": [
+      {
+        "name": "getBotListV2",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Lista pública de bots; no implica automatización habilitada.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "rejectcall",
+    "methods": [
+      {
+        "name": "rejectCall",
+        "file": "node_modules/baileys/lib/Socket/index.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Rechazo de llamada por ID/from; acción remota explícita.",
+    "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+  },
+  {
+    "id": "makecall",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "createCallLink genera enlace y rejectCall rechaza; no método público para iniciar llamada de atención.",
+    "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+  }
+]

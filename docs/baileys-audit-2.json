@@ -1,0 +1,722 @@
+[
+  {
+    "id": "resetchannelsettings",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Configuración propia del canal WHAPI; no es una operación de WhatsApp.",
+    "next_step": "Definir valores por defecto y reset de configuración local."
+  },
+  {
+    "id": "webhooktest",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Prueba de entrega HTTP del servicio, ajena al socket WhatsApp.",
+    "next_step": "Preparar simulación firmada; envío real exige aprobación."
+  },
+  {
+    "id": "loginuserimage",
+    "methods": [
+      {
+        "name": "makeWASocket",
+        "file": "node_modules/baileys/lib/Socket/index.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "El socket emite connection.update.qr; no entrega una imagen QR.",
+    "next_step": "Renderizar el payload en imagen temporal protegida y comprobar vencimiento."
+  },
+  {
+    "id": "logoutuser",
+    "methods": [
+      {
+        "name": "logout",
+        "file": "node_modules/baileys/lib/Socket/socket.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Invalida la conexión y credenciales vinculadas.",
+    "next_step": "Probar revocación con cuenta de prueba y aprobación explícita."
+  },
+  {
+    "id": "updateuserprofile",
+    "methods": [
+      {
+        "name": "updateProfileName",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      },
+      {
+        "name": "updateProfileStatus",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      },
+      {
+        "name": "updateProfilePicture",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Nombre, texto de perfil y foto tienen métodos separados; no equivalencia de todos los campos WHAPI.",
+    "next_step": "Mapear campos admitidos y validar cada mutación con aprobación."
+  },
+  {
+    "id": "setusername",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró setter público de username; updateProfileName cambia el nombre visible, no el identificador username.",
+    "next_step": "Revisar futuras versiones y documentar diferencia semántica."
+  },
+  {
+    "id": "sendmessagetext",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "generateWAMessageContent",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "El contenido text tiene generación específica de mensaje.",
+    "next_step": "Validar cola, consentimiento e idempotencia antes de prueba autorizada."
+  },
+  {
+    "id": "sendmessageshort",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "prepareWAMessageMedia",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "La rama ptv convierte videoMessage en ptvMessage; no cualquier video equivale a PTV.",
+    "next_step": "Validar codecs, formato y recepción PTV en prueba autorizada."
+  },
+  {
+    "id": "sendmessagevoice",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "prepareWAMessageMedia",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Audio con ptt:true produce mensaje de voz y procesa waveform.",
+    "next_step": "Validar audio Opus y límites antes de envío aprobado."
+  },
+  {
+    "id": "sendmessagelocation",
+    "methods": [
+      {
+        "name": "generateWAMessageContent",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      },
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Existe rama locationMessage para ubicación estática; no implica ubicación en vivo.",
+    "next_step": "Mapear coordenadas y campos de ubicación y probar con aprobación."
+  },
+  {
+    "id": "sendmessagecontactlist",
+    "methods": [
+      {
+        "name": "generateWAMessageContent",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      },
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "La rama contacts produce contactsArrayMessage cuando hay múltiples contactos.",
+    "next_step": "Validar vCards, nombres y recepción de lista."
+  },
+  {
+    "id": "sendmessagesticker",
+    "methods": [
+      {
+        "name": "prepareWAMessageMedia",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      },
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "El mapa de medios incluye sticker; formato y restricciones requieren adaptación.",
+    "next_step": "Validar WebP y tamaño con fixtures antes de envío autorizado."
+  },
+  {
+    "id": "sendmessagestoryaudio",
+    "methods": [
+      {
+        "name": "prepareWAMessageMedia",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      },
+      {
+        "name": "relayMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Audio PTT admite fondo de estado y relay reconoce statusJidList; no prueba paridad de audiencias WHAPI.",
+    "next_step": "Diseñar audiencia explícita y verificar formato de estado de audio sin publicar automáticamente."
+  },
+  {
+    "id": "sendmediamessage",
+    "methods": [
+      {
+        "name": "prepareWAMessageMedia",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      },
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Carga y generación específicas por tipo multimedia, no contrato HTTP WHAPI equivalente.",
+    "next_step": "Mapear tipos y validar MIME, cifrado, tamaño y resultados ambiguos."
+  },
+  {
+    "id": "markmessageasread",
+    "methods": [
+      {
+        "name": "readMessages",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Método público envía recibos para claves de mensajes concretos.",
+    "next_step": "Exigir claves válidas y aprobación de efecto externo."
+  },
+  {
+    "id": "starmessage",
+    "methods": [
+      {
+        "name": "star",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Helper star aplica modificación de favoritos a mensajes identificados.",
+    "next_step": "Validar sincronización y parámetros de claves, sin mutación automática."
+  },
+  {
+    "id": "unpinmessage",
+    "methods": [
+      {
+        "name": "generateWAMessageContent",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      },
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Rama pin genera pinInChatMessage con type configurable; desanclaje requiere valor de protocolo correcto.",
+    "next_step": "Confirmar tipo UNPIN y semántica temporal con fixtures antes de activar."
+  },
+  {
+    "id": "sendmessagequestion",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró helper público para mensaje question específico; encuesta o texto no prueban equivalencia.",
+    "next_step": "Inspeccionar contrato WHAPI question y protocolo admitido antes de implementar."
+  },
+  {
+    "id": "getchats",
+    "methods": [],
+    "support": "local_only",
+    "reason": "La lista disponible se construye desde eventos/historial persistidos; no hay consulta pública exhaustiva de chats.",
+    "next_step": "Exponer paginación local y declarar cobertura de historial parcial."
+  },
+  {
+    "id": "archivechat",
+    "methods": [
+      {
+        "name": "chatModify",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "ChatModification admite archive y contexto de mensajes para parche de sincronización.",
+    "next_step": "Validar rango de mensajes y reconciliación de archivo/desarchivo."
+  },
+  {
+    "id": "checkphones",
+    "methods": [
+      {
+        "name": "onWhatsApp",
+        "file": "node_modules/baileys/lib/Socket/socket.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Consulta registro de números PN; explícitamente no admite LID como número.",
+    "next_step": "Normalizar E164, limitar consultas y preservar resultados desconocidos."
+  },
+  {
+    "id": "sendcontact",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "generateWAMessageContent",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Un elemento contacts se codifica como contactMessage con vCard.",
+    "next_step": "Validar contrato de contacto único y consentimiento de envío."
+  },
+  {
+    "id": "editcontact",
+    "methods": [
+      {
+        "name": "addOrEditContact",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Existe modificación de agenda mediante parche contact; no equivale a actualizar perfil ajeno.",
+    "next_step": "Mapear campos de agenda y distinguir edición local de sincronización remota."
+  },
+  {
+    "id": "getcontactabout",
+    "methods": [
+      {
+        "name": "fetchStatus",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "fetchStatus consulta texto about/status de JIDs; no obtiene historias temporales.",
+    "next_step": "Validar privacidad y respuesta ausente sin inferir texto vacío."
+  },
+  {
+    "id": "getpresence",
+    "methods": [
+      {
+        "name": "presenceSubscribe",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Suscripción a presencia produce eventos asíncronos; no devuelve estado actual garantizado.",
+    "next_step": "Persistir eventos con fecha y distinguir desconocido de offline."
+  },
+  {
+    "id": "getgroups",
+    "methods": [
+      {
+        "name": "groupFetchAllParticipating",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Consulta grupos participantes; la respuesta necesita validación para evitar vacío por fallo.",
+    "next_step": "Usar contenedor IQ verificado y cobertura explícita."
+  },
+  {
+    "id": "getgroup",
+    "methods": [
+      {
+        "name": "groupMetadata",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Obtiene metadatos de grupo por JID conocido.",
+    "next_step": "Validar permisos y metadatos faltantes; conservar origen y fecha."
+  },
+  {
+    "id": "updategroupsetting",
+    "methods": [
+      {
+        "name": "groupSettingUpdate",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acepta ajustes concretos announcement/not_announcement/locked/unlocked; no todos los ajustes WHAPI.",
+    "next_step": "Mapear cada ajuste permitido y comprobar permisos admin."
+  },
+  {
+    "id": "addgroupparticipant",
+    "methods": [
+      {
+        "name": "groupParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acción add disponible; resultado puede exigir invitación o fallar por privacidad.",
+    "next_step": "Registrar resultado por participante y no equiparar aceptación a incorporación."
+  },
+  {
+    "id": "setgroupicon",
+    "methods": [
+      {
+        "name": "updateProfilePicture",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "El método acepta JID de grupo para foto; exige permisos y formato válido.",
+    "next_step": "Validar imagen y rol antes de acción autorizada."
+  },
+  {
+    "id": "promotetogroupadmin",
+    "methods": [
+      {
+        "name": "groupParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acción promote expuesta sobre participantes de grupo.",
+    "next_step": "Exigir aprobación exacta y comprobar respuesta por participante."
+  },
+  {
+    "id": "getgroupapplicationslist",
+    "methods": [
+      {
+        "name": "groupRequestParticipantsList",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Consulta membership_approval_requests; helper puede devolver vacío si falta contenedor.",
+    "next_step": "Usar lectura IQ verificada y distinguir error de lista vacía."
+  },
+  {
+    "id": "getstories",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Solo estados recibidos por eventos pueden listarse localmente; no hay listado público exhaustivo garantizado.",
+    "next_step": "Filtrar expiración/revocación y no emitir recibos de lectura."
+  },
+  {
+    "id": "createstorymedia",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "relayMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "El relay reconoce destino status y lista explícita statusJidList para medios compatibles.",
+    "next_step": "Validar audiencia, formato y permisos; publicación requiere aprobación."
+  },
+  {
+    "id": "copystory",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró operación pública de copia de estado preservando contrato WHAPI; reenviar contenido es otra semántica.",
+    "next_step": "Definir copia y audiencia antes de evaluar composición con consentimiento."
+  },
+  {
+    "id": "createnewsletter",
+    "methods": [
+      {
+        "name": "newsletterCreate",
+        "file": "node_modules/baileys/lib/Socket/newsletter.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Creación específica de canal mediante consulta WMex.",
+    "next_step": "Validar campos y resultado con cuenta autorizada antes de exposición."
+  },
+  {
+    "id": "getnewsletter",
+    "methods": [
+      {
+        "name": "newsletterMetadata",
+        "file": "node_modules/baileys/lib/Socket/newsletter.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Consulta metadatos por JID o clave de invitación según tipo.",
+    "next_step": "Validar tipo y respuesta, sin prometer directorio completo."
+  },
+  {
+    "id": "subscribenewsletter",
+    "methods": [
+      {
+        "name": "newsletterFollow",
+        "file": "node_modules/baileys/lib/Socket/newsletter.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Follow cambia suscripción del canal por JID.",
+    "next_step": "Confirmar destino y aprobación antes de mutación."
+  },
+  {
+    "id": "unsubscribenewsletterinvite",
+    "methods": [
+      {
+        "name": "newsletterMetadata",
+        "file": "node_modules/baileys/lib/Socket/newsletter.js"
+      },
+      {
+        "name": "newsletterUnfollow",
+        "file": "node_modules/baileys/lib/Socket/newsletter.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Puede componerse resolución de código invite y unfollow por JID; no helper directo por código.",
+    "next_step": "Validar resolución inequívoca y requerir aprobación de desuscripción."
+  },
+  {
+    "id": "createnewsletteradmininvite",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "El tipo protobuf newsletterAdminInviteMessage existe, pero no se encontró helper público de creación de invitación administrativa.",
+    "next_step": "Investigar autorización y flujo específico; no equiparar envío genérico a invitación válida."
+  },
+  {
+    "id": "demotenewsletteradmin",
+    "methods": [
+      {
+        "name": "newsletterDemote",
+        "file": "node_modules/baileys/lib/Socket/newsletter.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Método específico para degradar administrador del canal por JID.",
+    "next_step": "Validar rol, destinatario y respuesta con aprobación explícita."
+  },
+  {
+    "id": "addnewslettermessagepaidpartnership",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró método público para etiquetar mensaje como asociación pagada.",
+    "next_step": "Revisar evolución del protocolo; no simular etiqueta local como cambio remoto."
+  },
+  {
+    "id": "getmedia",
+    "methods": [
+      {
+        "name": "downloadMediaMessage",
+        "file": "node_modules/baileys/lib/Utils/messages.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Descarga y descifra usando mensaje y claves disponibles; no equivale a resolver todo ID WHAPI.",
+    "next_step": "Exigir referencia persistida autorizada, validar MIME y mantener credenciales privadas."
+  },
+  {
+    "id": "editbusinessprofile",
+    "methods": [
+      {
+        "name": "updateBussinesProfile",
+        "file": "node_modules/baileys/lib/Socket/business.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Método con nombre literal updateBussinesProfile; campos definidos de dirección/email/descripción/web/horarios.",
+    "next_step": "Mapear campos soportados y verificar respuesta; aprobación para cambios."
+  },
+  {
+    "id": "getcontactproducts",
+    "methods": [
+      {
+        "name": "getCatalog",
+        "file": "node_modules/baileys/lib/Socket/business.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "getCatalog acepta jid y cursor; disponibilidad depende del catálogo accesible.",
+    "next_step": "Validar contenedor y paginación; distinguir público, privado y no expuesto."
+  },
+  {
+    "id": "updateproduct",
+    "methods": [
+      {
+        "name": "productUpdate",
+        "file": "node_modules/baileys/lib/Socket/business.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Actualiza producto por ID con conversión de datos y medios.",
+    "next_step": "Mapear propiedades admitidas y exigir aprobación antes de cambio comercial."
+  },
+  {
+    "id": "sendcatalog",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "getCatalog lee catálogo y productMessage representa producto; no se encontró helper público dedicado a enviar catálogo de un contacto.",
+    "next_step": "Revisar contrato y mensaje interactivo requerido sin asumir sendMessage suficiente."
+  },
+  {
+    "id": "getcollection",
+    "methods": [
+      {
+        "name": "getCollections",
+        "file": "node_modules/baileys/lib/Socket/business.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Lista colecciones de un JID; obtener una colección por ID requiere selección local y verificar cobertura.",
+    "next_step": "Inspeccionar paginación y campos; no declarar ausencia por lista incompleta."
+  },
+  {
+    "id": "getcollectionproductlist",
+    "methods": [
+      {
+        "name": "getCollections",
+        "file": "node_modules/baileys/lib/Socket/business.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Respuesta puede incluir productos de colección con límites; no helper dedicado de paginación por colección identificado.",
+    "next_step": "Validar límites y productos realmente recibidos antes de declarar lista completa."
+  },
+  {
+    "id": "getlabels",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Etiquetas llegan por sincronización/eventos; no se encontró fetch público exhaustivo de etiquetas.",
+    "next_step": "Persistir labels.edit con bajas y declarar cobertura observada."
+  },
+  {
+    "id": "addlabelassociation",
+    "methods": [
+      {
+        "name": "addChatLabel",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      },
+      {
+        "name": "addMessageLabel",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Helpers separados para asociación de etiqueta con chat o mensaje.",
+    "next_step": "Mapear recurso y claves; validar sincronización bajo aprobación."
+  },
+  {
+    "id": "deletelabel",
+    "methods": [
+      {
+        "name": "addLabel",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Helper aplica parche labelEditAction con flag deleted, aunque no se llama deleteLabel.",
+    "next_step": "Comprobar id/color/order y deleted:true; no confundir eliminar asociación."
+  },
+  {
+    "id": "getblacklist",
+    "methods": [
+      {
+        "name": "fetchBlocklist",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Método consulta lista de bloqueo; requiere comprobar contenedor y permisos.",
+    "next_step": "Validar respuesta para distinguir vacío de fallo y restringir datos sensibles."
+  },
+  {
+    "id": "getcommunity",
+    "methods": [
+      {
+        "name": "communityMetadata",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Obtiene metadatos por JID de comunidad; no garantiza subgrupos incluidos.",
+    "next_step": "Validar consulta y separar subgrupos de metadatos generales."
+  },
+  {
+    "id": "unlinkgroupfromcommunity",
+    "methods": [
+      {
+        "name": "communityUnlinkGroup",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Desvincula groupJid de parentCommunityJid mediante operación específica.",
+    "next_step": "Verificar relación y permisos; aprobación explícita antes de mutación."
+  },
+  {
+    "id": "creategroupincommunity",
+    "methods": [
+      {
+        "name": "communityCreateGroup",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Crea grupo con participantes y comunidad padre.",
+    "next_step": "Validar padre y consentimientos; documentar efecto de creación antes de aprobar."
+  },
+  {
+    "id": "removecommunityparticipant",
+    "methods": [
+      {
+        "name": "communityParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acción remove sobre participantes de comunidad, distinta de quitar un subgrupo.",
+    "next_step": "Comprobar alcance en grupos vinculados y resultado por participante."
+  },
+  {
+    "id": "getcommunitysubgroups",
+    "methods": [
+      {
+        "name": "communityFetchLinkedGroups",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Consulta sub_groups tras resolver comunidad; necesita validar contenedor para evitar falso vacío.",
+    "next_step": "Usar JID de comunidad conocido y respuesta IQ verificada."
+  },
+  {
+    "id": "sendbotmessage",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró helper público específico para conversación con AI bot y sus metadatos; texto genérico no prueba compatibilidad.",
+    "next_step": "Revisar identidad bot, autorización y contrato específico antes de cualquier envío."
+  },
+  {
+    "id": "creategroupcalllink",
+    "methods": [
+      {
+        "name": "createCallLink",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "createCallLink acepta video y event.startTime y devuelve token; WHAPI requiere start_time y devuelve link. Candidato mediante conversion de fecha y construccion del enlace, sin paridad verificada.",
+    "next_step": "Confirmar unidad y zona temporal de start_time, validar token y URL, y probar con aprobacion explicita."
+  }
+]

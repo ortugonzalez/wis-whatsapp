@@ -1,0 +1,718 @@
+[
+  {
+    "id": "checkhealth",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Salud y arranque del proceso son responsabilidad local; connection.update permite observar el socket, no reproduce el wakeup alojado de WHAPI.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  },
+  {
+    "id": "updatechannelsettings",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Configuración del canal alojado WHAPI requiere contrato local propio; no equivale a ajustes remotos de WhatsApp.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  },
+  {
+    "id": "getlimits",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Los límites de servicio WHAPI no son límites garantizados por Baileys; cuotas propias requieren almacenamiento y controles locales.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  },
+  {
+    "id": "loginuserrowdata",
+    "methods": [
+      {
+        "name": "connection.update",
+        "file": "node_modules/baileys/lib/Socket/socket.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "El evento de conexión contiene QR efímero; no es un método HTTP de login ni garantiza equivalencia del formato rowdata.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getuserprofile",
+    "methods": [
+      {
+        "name": "fetchStatus",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      },
+      {
+        "name": "profilePictureUrl",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Lecturas parciales de estado y foto; el perfil propio exige combinar identidad autenticada y campos disponibles sin garantizar el esquema WHAPI.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getaccountregistrationdate",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró getter público de fecha de creación de cuenta; registrationId criptográfico no representa una fecha.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "getmessages",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Consulta paginada requiere mensajes persistidos localmente; fetchMessageHistory solicita fragmentos al teléfono y no ofrece archivo completo consultable.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  },
+  {
+    "id": "sendmessageimage",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "image:",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Imagen declarada en AnyMediaMessageContent.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "sendmessagegif",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "gifPlayback",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Vídeo con gifPlayback, no un GIF arbitrario sin conversión.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "sendmessagedocument",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "document:",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Documento con MIME y nombre opcional.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "sendmessagelivelocation",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "Existe nombre liveLocationMessage en tipos de protocolo, pero AnyMessageContent expone location estática; no se encontró método público de sesión de ubicación en vivo.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "sendmessagepoll",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "poll:",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Encuesta con opciones tipadas; alcance y respuestas requieren prueba.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "sendmessagecarousel",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "AnyMessageContent expone album pero no carousel; no se encontró helper público de carrusel equivalente.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "sendmessagestorymedia",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "status@broadcast",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "statusJidList",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Existe envío a status@broadcast y opciones de audiencia; formato, privacidad y alcance de estados requieren prueba controlada.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getmessage",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Lectura por identificador depende de la persistencia local; no se encontró consulta pública universal de mensaje remoto por ID.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  },
+  {
+    "id": "deletemessage",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "delete:",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Revocación de clave WAMessageKey; permisos y ventana del proveedor necesitan verificación.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "removereactfrommessage",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "react:",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Reacción tipada; retirada mediante contenido vacío debe probarse con clave exacta.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "sendevent",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "event:",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Evento tipado con fechas y atributos opcionales.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "commentmessage",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "Enviar texto o una cita no demuestra comentario de anuncio de comunidad; no se encontró helper público específico equivalente.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "getchat",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Detalle de chat procede del historial y eventos persistidos; no se encontró getter remoto universal con contrato WHAPI.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  },
+  {
+    "id": "patchchat",
+    "methods": [
+      {
+        "name": "chatModify",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Modificaciones tipadas de chat disponibles; validar cada ajuste, permisos y sincronización, no asumir equivalencia global.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getcontact",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Contacto observado requiere persistencia local y lecturas parciales opcionales; no existe evidencia de getter único con ficha completa WHAPI.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  },
+  {
+    "id": "checkexist",
+    "methods": [
+      {
+        "name": "onWhatsApp",
+        "file": "node_modules/baileys/lib/Socket/socket.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Consulta existencia para números; el código rechaza LID como entrada y no verifica consentimiento.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getlidbyid",
+    "methods": [
+      {
+        "name": "getLIDForPN",
+        "file": "node_modules/baileys/lib/Signal/lid-mapping.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Repositorio de mapeos expone búsqueda PN a LID; puede consultar USync, resultado ausente no autoriza inventar identidad.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getidbylid",
+    "methods": [
+      {
+        "name": "getPNForLID",
+        "file": "node_modules/baileys/lib/Signal/lid-mapping.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Repositorio expone búsqueda inversa de correspondencia conocida; no garantiza resolver todo LID.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "subscribepresence",
+    "methods": [
+      {
+        "name": "presenceSubscribe",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Suscripción de presencia disponible; privacidad y eventos recibidos limitan información.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "creategroup",
+    "methods": [
+      {
+        "name": "groupCreate",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Creación de grupo disponible; participación y restricciones deben verificarse con aprobación.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "updategroupinfo",
+    "methods": [
+      {
+        "name": "groupUpdateSubject",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      },
+      {
+        "name": "groupUpdateDescription",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Actualiza título y descripción; no acredita todos los campos ni permisos del endpoint WHAPI.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getgroupinvite",
+    "methods": [
+      {
+        "name": "groupInviteCode",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Obtiene código de invitación sensible; requiere permisos y tratamiento de secreto.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "removegroupparticipant",
+    "methods": [
+      {
+        "name": "groupParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acción de participantes disponible; comprobar remove, permisos y resultado por participante.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "deletegroupicon",
+    "methods": [
+      {
+        "name": "removeProfilePicture",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "El método acepta JID; validar operación de grupo y permisos de administrador.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "sendgroupinvite",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "groupInvite:",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Existe contenido groupInvite; envío externo requiere aprobación y no equivale a agregar participante.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "approvegroupapplicationslist",
+    "methods": [
+      {
+        "name": "groupRequestParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/groups.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Actualización de solicitudes disponible; validar acción approve, permisos y errores por solicitante.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "createstory",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "status@broadcast",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "statusJidList",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Existe envío a status@broadcast y opciones de audiencia; formato, privacidad y alcance de estados requieren prueba controlada.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "createstoryaudio",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "status@broadcast",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "statusJidList",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Existe envío a status@broadcast y opciones de audiencia; formato, privacidad y alcance de estados requieren prueba controlada.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getmessageviewstatuses",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Estados de lectura requieren guardar message-receipt.update observado; no garantizan lista histórica completa de vistas o espectadores.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  },
+  {
+    "id": "findnewsletter",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "newsletterMetadata consulta clave conocida; no se encontró búsqueda pública por filtros o descubrimiento general equivalente.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "deletenewsletter",
+    "methods": [
+      {
+        "name": "newsletterDelete",
+        "file": "node_modules/baileys/lib/Socket/newsletter.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Eliminación disponible; operación destructiva requiere validar propiedad y aprobación.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "unsubscribenewsletter",
+    "methods": [
+      {
+        "name": "newsletterUnfollow",
+        "file": "node_modules/baileys/lib/Socket/newsletter.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Dejar de seguir disponible; confirmar respuesta y alcance de la cuenta.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "trackingnewsletter",
+    "methods": [
+      {
+        "name": "subscribeNewsletterUpdates",
+        "file": "node_modules/baileys/lib/Socket/newsletter.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Suscripción de actualizaciones disponible; no garantiza historial ni entrega de todos los eventos.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "revokenewsletteradmininvite",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró método público para revocar invitación de administrador; newsletterDemote cambia un rol y no es equivalente.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "sendnewsletterinvite",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "No se encontró contenido tipado o helper público de invitación de newsletter; enviar un enlace de texto no demuestra equivalencia.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "uploadmedia",
+    "methods": [
+      {
+        "name": "waUploadToServer",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Primitive de carga disponible; cifrado, metadatos, retención e identificador reutilizable requieren contrato propio.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "deletemedia",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Eliminar archivo local no elimina copias remotas; no se encontró API pública de borrado del servidor multimedia.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  },
+  {
+    "id": "getproducts",
+    "methods": [
+      {
+        "name": "getCatalog",
+        "file": "node_modules/baileys/lib/Socket/business.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Lectura de catálogo con límite y cursor; permisos, paginación y campos no equivalentes hasta probar.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getproduct",
+    "methods": [
+      {
+        "name": "getCatalog",
+        "file": "node_modules/baileys/lib/Socket/business.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Candidato indirecto: buscar producto dentro del catálogo disponible, no getter público específico por ID.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "deleteproduct",
+    "methods": [
+      {
+        "name": "productDelete",
+        "file": "node_modules/baileys/lib/Socket/business.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Borrado por IDs disponible; validar catálogo propio, permisos y confirmación.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "createcollection",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "Se encontró getCollections pero no helper público de creación de colecciones; existencia de protocolo no demuestra soporte.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "editcollection",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "Se encontró lectura de colecciones, no helper público de edición con contrato equivalente.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "getreachouttimelock",
+    "methods": [
+      {
+        "name": "fetchAccountReachoutTimelock",
+        "file": "node_modules/baileys/lib/Socket/socket.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Consulta específica disponible; no es puntuación de riesgo ni garantía de cuenta segura.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "createlabel",
+    "methods": [
+      {
+        "name": "addLabel",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "App-state de etiquetas disponible; validar campos LabelAction y sincronización Business.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "deletelabelassociation",
+    "methods": [
+      {
+        "name": "removeChatLabel",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      },
+      {
+        "name": "removeMessageLabel",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Retirada de asociación de chat o mensaje disponible; distinguir alcance del ID recibido.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "blacklistadd",
+    "methods": [
+      {
+        "name": "updateBlockStatus",
+        "file": "node_modules/baileys/lib/Socket/chats.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Bloqueo remoto disponible; distinguir del opt-out comercial local y verificar acción block.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getcommunities",
+    "methods": [
+      {
+        "name": "communityFetchAllParticipating",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Lectura de comunidades participantes disponible; no implica descubrimiento de comunidades externas.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "deactivatecommunity",
+    "methods": [],
+    "support": "no_public_method_found",
+    "reason": "communityLeave abandona la comunidad y no acredita desactivación para todos; no se encontró helper público equivalente.",
+    "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+  },
+  {
+    "id": "linkgrouptocommunity",
+    "methods": [
+      {
+        "name": "communityLinkGroup",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Vinculación disponible; requiere permisos y validación de ambos grupos.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "changecommunitysettings",
+    "methods": [
+      {
+        "name": "communitySettingUpdate",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      },
+      {
+        "name": "communityMemberAddMode",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      },
+      {
+        "name": "communityJoinApprovalMode",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Existen ajustes concretos; no asumir cobertura de todos los campos WHAPI.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "promotecommunityparticipant",
+    "methods": [
+      {
+        "name": "communityParticipantsUpdate",
+        "file": "node_modules/baileys/lib/Socket/communities.js"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Acción de participantes disponible; verificar promote, autoridad y resultado individual.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "createevent",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "event:",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Contenido EventMessageOptions disponible; no prueba equivalencia de todos los campos WHAPI.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "createcallevent",
+    "methods": [
+      {
+        "name": "sendMessage",
+        "file": "node_modules/baileys/lib/Socket/messages-send.js"
+      },
+      {
+        "name": "isScheduleCall",
+        "file": "node_modules/baileys/lib/Types/Message.d.ts"
+      }
+    ],
+    "support": "candidate",
+    "reason": "Evento puede indicar llamada y programación; no inicia una llamada ni acredita aceptación.",
+    "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+  },
+  {
+    "id": "getcall",
+    "methods": [],
+    "support": "local_only",
+    "reason": "Solo registro local de eventos call observados; no se encontró consulta pública universal de llamada por ID.",
+    "next_step": "Documentar alcance de datos locales y diferencias de contrato; no presentar esta función como paridad remota."
+  }
+]
