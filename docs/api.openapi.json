@@ -425,9 +425,9 @@
     "/coverage": {
       "get": {
         "summary": "Get observed local data coverage",
-        "description": "Returns aggregate entity counts, persisted snapshot field names, and the count of records containing each field. Field names longer than 100 characters or beyond the first 100 names per snapshot kind are omitted and counted. It never returns message or contact values and never claims complete history.",
+        "description": "Returns aggregate entity counts, persisted top-level and nested snapshot paths, and the count of records containing each path. Array indexes are normalized as [] without rewriting quoted literal keys. Paths longer than 100 characters or beyond the first 100 names per snapshot kind are omitted and counted. Field inventory rows stream from SQLite; retained paths are capped at 10,000 per record and snapshot kind, with field_inventory_truncated indicating a cap. Query time still scales with total snapshot data scanned. It never returns message or contact values and never claims complete history.",
         "responses": {
-          "200": { "description": "Coverage counts, observed snapshot fields with per-field record counts, omitted field counts, and message type counts" },
+          "200": { "description": "Coverage counts, observed top-level and nested field paths with per-path record counts, omitted field counts, cap indicator, and message type counts" },
           "401": { "description": "Authentication required" },
           "403": { "description": "Insufficient scope" }
         }
