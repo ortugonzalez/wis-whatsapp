@@ -4007,6 +4007,133 @@
           }
         }
       }
+    },
+    "/capability-fields": {
+      "get": {
+        "summary": "Search public reference field metadata",
+        "description": "Search documented WHAPI request and response field names. Results never include example values or account data.",
+        "security": [
+          {
+            "BearerAuth": [
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            },
+            "description": "Field name, operation, endpoint, or tag."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching public schema fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "query",
+                        "total",
+                        "results"
+                      ],
+                      "properties": {
+                        "query": {
+                          "type": "string"
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "captured_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "results": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "capability_id": {
+                                "type": "string"
+                              },
+                              "operation_id": {
+                                "type": "string"
+                              },
+                              "endpoint_method": {
+                                "type": "string"
+                              },
+                              "endpoint_path": {
+                                "type": "string"
+                              },
+                              "direction": {
+                                "type": "string",
+                                "enum": [
+                                  "request",
+                                  "response"
+                                ]
+                              },
+                              "response_status": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "field_path": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "required": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Read scope required"
+          }
+        }
+      }
     }
   }
 }
