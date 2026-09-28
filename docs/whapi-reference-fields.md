@@ -2,7 +2,7 @@
 
 `public/whapi-fields.json` contiene un inventario estructural fechado de los 182 métodos públicos encontrados en el índice oficial de WHAPI. Se extraen nombres de parámetros, rutas de campos, tipos, obligatoriedad y enumeraciones de sus definiciones OpenAPI. Se omiten ejemplos, credenciales y descripciones comerciales.
 
-Última extracción 2026-09-27 22:09 UTC: 182 métodos, 181 operaciones HTTP, 59.813 apariciones de campos y 5.389 rutas distintas entre request y response; no falló ninguna definición. Las apariciones se repiten entre métodos, respuestas y variantes de esquema, así que estos totales describen el inventario documental, no 59.813 valores disponibles en la cuenta vinculada.
+Última extracción 2026-09-28 02:23 UTC: 182 métodos, 181 operaciones HTTP, 59.813 apariciones de campos y 5.389 rutas distintas entre request y response; se volvieron a consultar las 182 definiciones oficiales y no falló ninguna. Las apariciones se repiten entre métodos, respuestas y variantes de esquema, así que estos totales describen el inventario documental, no 59.813 valores disponibles en la cuenta vinculada.
 
 Regenerar desde la raíz: `rtk proxy node scripts/whapi-fields.mjs`.
 
