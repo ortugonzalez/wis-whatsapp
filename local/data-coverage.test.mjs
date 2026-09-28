@@ -5,8 +5,8 @@ import {buildDataCoverage} from './data-coverage.mjs';
 
 test('coverage reports counts and observed field names without field values or secrets',()=>{
  const db=new DatabaseSync(':memory:');
- db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
- db.prepare('INSERT INTO contacts VALUES(?,?)').run('c1','549111@s.whatsapp.net');db.prepare('INSERT INTO conversations VALUES(?,?)').run('v1','549111@s.whatsapp.net');db.prepare('INSERT INTO messages VALUES(?,?,?)').run('m1','wamid-1','text');
+ db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ db.prepare('INSERT INTO contacts VALUES(?,?)').run('c1','549111@s.whatsapp.net');db.prepare('INSERT INTO conversations VALUES(?,?)').run('v1','549111@s.whatsapp.net');db.prepare('INSERT INTO messages(id,wa_message_id,type) VALUES(?,?,?)').run('m1','wamid-1','text');
  db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('chat','549111@s.whatsapp.net',JSON.stringify({id:'private-jid',pinned:false,secret:'hidden',accessToken:'hidden',profile:{about:'private-about',details:{verified:false,token:'private-token'}},participants:[{jid:'private-participant',role:'admin'},{jid:'private-participant-2',role:'user'}],'item[0]':{value:'zero'},'item[1]':{value:'one'}}),'2026-01-01T00:00:00.000Z');
  db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('chat','549112@s.whatsapp.net',JSON.stringify({id:'other-private-jid',unreadCount:0,[`${'x'.repeat(100)}a`]:1,[`${'x'.repeat(100)}b`]:1}),'2026-01-02T00:00:00.000Z');
  db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)').run('cmd-private-1','account','done','sensitive-target-1','sensitive-error', '2026-01-03T00:00:00.000Z');db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)').run('cmd-private-2','account','failed','sensitive-target-2','sensitive-error', '2026-01-04T00:00:00.000Z');db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)').run('cmd-private-3','blocklist','running','sensitive-target-3',null,'2026-01-05T00:00:00.000Z');
@@ -14,21 +14,21 @@ test('coverage reports counts and observed field names without field values or s
 });
 
 test('coverage bounds pathological field inventories and reports truncation',()=>{
- const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
  const payload=JSON.stringify(Object.fromEntries(Array.from({length:10001},(_,i)=>[`field_${String(i).padStart(5,'0')}`,i])));
  db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('large','row-1',payload,'2026-01-01T00:00:00.000Z');
  try{const row=buildDataCoverage(db).snapshot_kinds[0];assert.equal(row.records,1);assert.equal(row.fields.length,100);assert.equal(row.field_counts.length,100);assert.equal(row.omitted_fields,9900);assert.equal(row.field_inventory_truncated,true);}finally{db.close();}
 });
 
 test('coverage counts identity observations without exposing identifiers',()=>{
- const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
  db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('identity','private-lid',JSON.stringify({lid:'private-lid',pn:'private-pn@s.whatsapp.net',status:'observed'}),'2026-01-01T00:00:00.000Z');
  db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('identity','malformed','not-json','2026-01-02T00:00:00.000Z');
  try{const coverage=buildDataCoverage(db);assert.deepEqual(coverage.entities.identity_observations,{known:2,with_whatsapp_id:1,metadata_records:2});assert.equal(JSON.stringify(coverage.entities).includes('private'),false);}finally{db.close();}
 });
 
 test('coverage reports only allowlisted read error codes and hides command targets',()=>{
- const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
  db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)').run('private-id-1','catalog','failed','private-target-1','provider_error','2026-01-01T00:00:00.000Z');
  db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)').run('private-id-2','contact_profile','failed','private-target-2','raw-secret-detail','2026-01-02T00:00:00.000Z');
  db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)').run('private-id-3','contact_profile','failed','private-target-3','another-secret-detail','2026-01-03T00:00:00.000Z');
@@ -36,7 +36,13 @@ test('coverage reports only allowlisted read error codes and hides command targe
 });
 
 test('coverage flags read error groups beyond the display limit',()=>{
- const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
  const insert=db.prepare('INSERT INTO read_commands VALUES(?,?,?,?,?,?)');for(let i=0;i<101;i++)insert.run(`id-${i}`,`kind-${i}`,'failed',`private-target-${i}`,'provider_error','2026-01-01T00:00:00.000Z');
  try{const coverage=buildDataCoverage(db);assert.equal(coverage.read_errors.length,100);assert.equal(coverage.read_errors_truncated,true);assert.ok(coverage.read_errors.every(row=>row.code==='provider_error'));}finally{db.close();}
+});
+
+test('coverage separates live and imported message freshness without exposing arbitrary source labels',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const insert=db.prepare('INSERT INTO messages(id,wa_message_id,type,source,direction,created_at) VALUES(?,?,?,?,?,?)');insert.run('m1','wa-1','text','import','in','2026-01-01T00:00:00.000Z');insert.run('m2','wa-2','image','live','in','2026-01-06T00:00:00.000Z');insert.run('m3','wa-3','text','live','out','2026-01-07T00:00:00.000Z');insert.run('m4','wa-4','text','private-source','out','invalid-date');
+ try{const coverage=buildDataCoverage(db);assert.deepEqual(coverage.message_sources,[{source:'live_inbound',count:1,latest_at:'2026-01-06T00:00:00.000Z'},{source:'live_outbound',count:1,latest_at:'2026-01-07T00:00:00.000Z'},{source:'import_inbound',count:1,latest_at:'2026-01-01T00:00:00.000Z'},{source:'other',count:1,latest_at:null}]);assert.equal(coverage.live_inbound_count,1);assert.equal(coverage.last_live_message_at,'2026-01-06T00:00:00.000Z');assert.equal(JSON.stringify(coverage).includes('private-source'),false);}finally{db.close();}
 });

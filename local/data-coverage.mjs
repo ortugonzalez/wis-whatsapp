@@ -73,6 +73,17 @@ export function buildDataCoverage(db) {
   const errorPlaceholders = SAFE_READ_ERROR_CODES.map(() => '?').join(',');
   const readErrorRows = db.prepare(`SELECT kind,CASE WHEN error IN (${errorPlaceholders}) THEN error ELSE 'read_failed' END AS code,count(*) AS count,max(updated_at) AS last_updated_at FROM read_commands WHERE status='failed' GROUP BY kind,code ORDER BY kind,code LIMIT 101`).all(...SAFE_READ_ERROR_CODES);
   const readErrors = readErrorRows.slice(0,100).map(row => ({ kind: row.kind, code: row.code, count: row.count, last_updated_at: typeof row.last_updated_at === 'string' && Number.isFinite(Date.parse(row.last_updated_at)) ? new Date(row.last_updated_at).toISOString() : null }));
+  const rawMessageSources = db.prepare("SELECT source,direction,count(*) AS count,MAX(CASE WHEN datetime(created_at) IS NOT NULL THEN created_at END) AS latest_at FROM messages GROUP BY source,direction").all();
+  const messageSources = new Map();
+  for (const row of rawMessageSources) {
+    const origin = row.source === 'live' ? 'live' : row.source === 'import' ? 'import' : 'other';
+    const direction = row.direction === 'in' ? 'inbound' : row.direction === 'out' ? 'outbound' : 'other';
+    const source = origin === 'other' || direction === 'other' ? 'other' : `${origin}_${direction}`;
+    const prior = messageSources.get(source) || { source, count: 0, latest_at: null };
+    prior.count += row.count;
+    if (typeof row.latest_at === 'string' && Number.isFinite(Date.parse(row.latest_at)) && (!prior.latest_at || row.latest_at > prior.latest_at)) prior.latest_at = new Date(row.latest_at).toISOString();
+    messageSources.set(source, prior);
+  }
   return {
     entities: {
       contacts: { known: count('SELECT count(*) AS count FROM contacts'), with_whatsapp_id: count("SELECT count(*) AS count FROM contacts WHERE wa_jid IS NOT NULL AND wa_jid!=''"), metadata_records: kindCount('contact') },
@@ -82,6 +93,9 @@ export function buildDataCoverage(db) {
       messages: { stored: count('SELECT count(*) AS count FROM messages'), with_whatsapp_id: count("SELECT count(*) AS count FROM messages WHERE wa_message_id IS NOT NULL AND wa_message_id!=''"), metadata_records: kindCount('message') },
     },
     message_types: db.prepare('SELECT type,count(*) AS count FROM messages GROUP BY type ORDER BY type').all().map(row => ({ type: row.type, count: row.count })),
+    message_sources: ['live_inbound','live_outbound','import_inbound','import_outbound','other'].filter(source => messageSources.has(source)).map(source => messageSources.get(source)),
+    live_inbound_count: messageSources.get('live_inbound')?.count ?? 0,
+    last_live_message_at: messageSources.get('live_inbound')?.latest_at ?? null,
     snapshot_kinds: snapshotKinds,
     read_commands: db.prepare('SELECT kind,status,count(*) AS count,max(updated_at) AS last_updated_at FROM read_commands GROUP BY kind,status ORDER BY kind,status').all().map(row => ({ kind: row.kind, status: row.status, count: row.count, last_updated_at: typeof row.last_updated_at === 'string' && Number.isFinite(Date.parse(row.last_updated_at)) ? new Date(row.last_updated_at).toISOString() : null })),
     read_errors: readErrors,
