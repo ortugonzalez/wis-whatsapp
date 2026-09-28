@@ -360,7 +360,7 @@ test('late provider failure is correlated and sanitized after local read timeout
 test('Business, privacy, community and known-newsletter reads are bounded and strip secrets',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();
  const dir=mkdtempSync(resolve(tmpdir(),'wis-catalog-test-'));const ev=new EventEmitter();
- let catalogCalls=0,newsletterCalls=0,empty=false,failReads=false,communityMode='one';const own='5491111115679@s.whatsapp.net';
+ let catalogCalls=0,newsletterCalls=0,empty=false,failReads=false,failFirstNewsletter=false,emptyNewsletterResponses=false,mismatchNewsletter=false,communityMode='one';const own='5491111115679@s.whatsapp.net';
  const socket={ev,user:{id:own},end(){},
   getCatalog:async options=>{if(failReads)throw Error('remote secret');assert.equal(options.jid,own);assert.equal(options.limit,100);catalogCalls++;return {products:empty?[]:Array.from({length:100},(_,i)=>({id:`${catalogCalls}-${i}`,name:'Product',price:1000,currency:'ARS',description:'Description',imageUrls:{original:'signed-secret'},privateKey:'never-store'})),nextPageCursor:empty?undefined:'cursor-'+catalogCalls};},
   getCollections:async(jid,limit)=>{assert.equal(jid,own);assert.equal(limit,100);return {collections:[{id:'c',name:'Collection',products:[{id:'p',name:'Product',price:10,currency:'ARS',secret:'never-store'}],status:{status:'APPROVED',canAppeal:false,secret:'never-store'}}]};},
@@ -368,23 +368,29 @@ test('Business, privacy, community and known-newsletter reads are bounded and st
   communityFetchAllParticipating:async()=>{if(failReads)throw Error('remote secret');return communityMode==='empty'?{}:communityMode==='many'?Object.fromEntries(Array.from({length:2001},(_,i)=>[`${1000+i}@g.us`,{id:`${1000+i}@g.us`,isCommunity:true,subject:'Large community'}])):{'123@g.us':{id:'123@g.us',isCommunity:true,subject:'Community',inviteCode:'never-store'}};},
   communityMetadata:async id=>({id,isCommunity:true,subject:'Community',inviteCode:'never-store'}),
   communityFetchLinkedGroups:async id=>({communityJid:id,isCommunity:true,linkedGroups:[{id:'456@g.us',subject:'Linked',size:3,secret:'never-store'}]}),
-  newsletterMetadata:async(type,id)=>{newsletterCalls++;assert.equal(type,'jid');return {id,name:'Channel',subscribers:7,invite:'never-store',picture:{id:'image',mediaKey:'never-store',directPath:'signed-secret'}};},
+  newsletterMetadata:async(type,id)=>{newsletterCalls++;assert.equal(type,'jid');if(failFirstNewsletter&&id==='123@newsletter'){failFirstNewsletter=false;throw Error('provider failure secret');}if(emptyNewsletterResponses)return null;return {id:mismatchNewsletter&&id==='123@newsletter'?'999@newsletter':id,name:'Channel',subscribers:7,invite:'never-store',picture:{id:'image',mediaKey:'never-store',directPath:'signed-secret'}};},
   sendMessage(){throw Error('mutation forbidden');},productCreate(){throw Error('mutation forbidden');}
  };
  const fake={default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
  const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),mediaDir:resolve(dir,'media'),readIntervalMs:0});
  try {
   ev.emit('connection.update',{connection:'open'});db.prepare('DELETE FROM read_commands').run();
-  ev.emit('chats.upsert',[{id:'123@newsletter',name:'Channel'}]);let n=0;
+  ev.emit('chats.upsert',[{id:'123@newsletter',name:'Channel'},{id:'456@newsletter',name:'Second Channel'}]);let n=0;
   const command=async(kind,target=null)=>{const id=String(++n);const now=new Date().toISOString();db.prepare("INSERT INTO read_commands(id,kind,target,status,created_at,updated_at) VALUES(?,?,?,'pending',?,?)").run(id,kind,target,now,now);await worker.drainReads();return db.prepare('SELECT status FROM read_commands WHERE id=?').get(id).status;};
-  for(const kind of ['catalog','collections','blocklist','communities','newsletters'])assert.equal(await command(kind),'done');
+  for(const kind of ['catalog','collections','blocklist','communities'])assert.equal(await command(kind),'done');
+  failFirstNewsletter=true;assert.equal(await command('newsletters'),'done');
   assert.equal(await command('community','123@g.us'),'done');
-  assert.equal(catalogCalls,3);assert.equal(newsletterCalls,1);
+  assert.equal(catalogCalls,3);assert.equal(newsletterCalls,2);
   assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE kind='product'").get().n,300);
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='catalog'").get().payload).truncated,true);
   assert.deepEqual(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='blocklist'").get().payload).ids,['123456789@s.whatsapp.net']);
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='community'").get().payload).linked_groups[0].subject,'Linked');
-  assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletter'").get().payload).subscribers,7);
+  assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletter' AND resource_id='456@newsletter'").get().payload).subscribers,7);
+  const failedNewsletter=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletter' AND resource_id='123@newsletter'").get().payload);assert.equal(failedNewsletter.available,false);assert.equal(failedNewsletter.error,'read_failed');
+  const newsletterSummary=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletters'").get().payload);assert.equal(newsletterSummary.count,1);assert.equal(newsletterSummary.attempted_count,2);assert.equal(newsletterSummary.failure_count,1);assert.equal(newsletterSummary.partial,true);assert.equal(newsletterSummary.complete,false);
+  assert.equal(await command('newsletters'),'done');const recoveredNewsletter=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletter' AND resource_id='123@newsletter'").get().payload);assert.equal(recoveredNewsletter.available,true);assert.equal(recoveredNewsletter.response_verified,true);const recoveredSummary=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletters'").get().payload);assert.equal(recoveredSummary.failure_count,0);assert.equal(recoveredSummary.complete,true);
+  emptyNewsletterResponses=true;assert.equal(await command('newsletters'),'failed');const failedSummary=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletters'").get().payload);assert.equal(failedSummary.error,'invalid_response');assert.equal(failedSummary.failure_count,2);emptyNewsletterResponses=false;
+  mismatchNewsletter=true;assert.equal(await command('newsletters'),'done');const mismatchedNewsletter=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletter' AND resource_id='123@newsletter'").get().payload);assert.equal(mismatchedNewsletter.available,false);assert.equal(mismatchedNewsletter.error,'invalid_response');assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletter' AND resource_id='456@newsletter'").get().payload).available,true);const mismatchSummary=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletters'").get().payload);assert.equal(mismatchSummary.failure_count,1);assert.equal(mismatchSummary.partial,true);mismatchNewsletter=false;
   assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE payload LIKE '%never-store%' OR payload LIKE '%signed-secret%'").get().n,0);
   failReads=true;assert.equal(await command('catalog'),'failed');assert.equal(await command('communities'),'failed');
   assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE kind='product'").get().n,300);
@@ -398,7 +404,7 @@ test('Business, privacy, community and known-newsletter reads are bounded and st
   assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE kind='community'").get().n,0);
   const communities=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='communities'").get().payload);
   assert.equal(communities.available,true);assert.equal(communities.stale,false);assert.equal(communities.count,0);
-  assert.equal(await command('newsletter','999@newsletter'),'failed');assert.equal(newsletterCalls,1);
+  assert.equal(await command('newsletter','999@newsletter'),'failed');assert.equal(newsletterCalls,8);
   empty=true;assert.equal(await command('catalog'),'done');
   assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE kind='product'").get().n,0);
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='catalog'").get().payload).product_count,0);

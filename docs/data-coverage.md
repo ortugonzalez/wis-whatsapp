@@ -27,3 +27,8 @@ El detalle de canales permite una consulta administrativa de solo lectura por c√
 ### Perfiles de contactos conocidos
 
 La lectura manual de perfil solo usa contactos ya guardados con JID exacto. Consulta el estado de WhatsApp y, para un PN, el perfil Business expuesto por Baileys. Guarda `available_fields` y evidencia de correlacion; omite campos vacios o ausentes, limita sitios y horarios y elimina las claves no permitidas. Un LID nunca se convierte a PN. Si ninguna lectura obtiene respuesta del proveedor, la operacion queda fallida. La cobertura local cuenta las rutas observadas sin exponer sus valores.
+
+
+### Actualizacion programada de canales
+
+La ruta newsletters intenta refrescar hasta 20 canales ya conocidos localmente. Si una respuesta falla, conserva los datos anteriores marcados como desactualizados y continua mientras el socket no tenga una lectura sin resolver. El resumen registra attempted_count, failure_count, unattempted_count, partial y complete. Esta lista no representa un directorio global de canales.

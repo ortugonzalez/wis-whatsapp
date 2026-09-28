@@ -79,7 +79,7 @@ export function callSnapshot(value,prior={},now=new Date().toISOString()) {
 }
 export function classifyReadError(error) {
   // Never expose provider messages/data: they can contain request material.
-  const local={read_timeout:'read_timeout',previous_read_unresolved:'read_pending',connection_unavailable:'disconnected',connection_changed:'disconnected',capability_unavailable:'method_missing',account_identity_unavailable:'identity_unavailable',invalid_target:'invalid_target',unknown_community:'unknown_target',unknown_newsletter:'unknown_target',unsupported_read_command:'method_missing',newsletter_unavailable:'not_found',order_message_unavailable:'order_message_unavailable',order_credential_unavailable:'order_credential_unavailable'};
+  const local={read_timeout:'read_timeout',previous_read_unresolved:'read_pending',connection_unavailable:'disconnected',connection_changed:'disconnected',capability_unavailable:'method_missing',account_identity_unavailable:'identity_unavailable',invalid_target:'invalid_target',unknown_community:'unknown_target',unknown_newsletter:'unknown_target',unsupported_read_command:'method_missing',newsletter_unavailable:'not_found',invalid_newsletter_metadata_response:'invalid_response',order_message_unavailable:'order_message_unavailable',order_credential_unavailable:'order_credential_unavailable'};
   const marker=typeof error?.message==='string'?error.message:'';
   const candidate=error?.output?.statusCode ?? error?.statusCode ?? error?.status ?? error?.status_code;
   const status_code=Number.isInteger(candidate) && candidate>=100 && candidate<=599?candidate:null;
@@ -616,14 +616,14 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       } else if(command.kind==='newsletter' || command.kind==='newsletters') {
         const known=db.prepare("SELECT wa_chat_id AS id FROM conversations WHERE wa_chat_id LIKE '%@newsletter' UNION SELECT resource_id AS id FROM snapshots WHERE kind='newsletter' ORDER BY id LIMIT 21").all().map(x=>x.id);
         const targets=command.kind==='newsletter'?[command.target]:known.slice(0,20);
-        let count=0;
+        let count=0,attempted=0,failures=0,firstFailure=null,firstError=null;
         for(const id of targets) {
           if(!/^\d+@newsletter$/.test(id || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=? LIMIT 1").get(id,id))throw new Error('unknown_newsletter');
-          const value=await readCall(current,'newsletterMetadata',['jid',id]);
-          if(!value)throw new Error('newsletter_unavailable');
-          snapshot('newsletter',id,{...safeNewsletter(value),available:true,error:null});count++;
+          attempted++;
+          try{const value=await readCall(current,'newsletterMetadata',['jid',id]);if(!value||typeof value!=='object'||value.id!==id)throw new Error('invalid_newsletter_metadata_response');snapshot('newsletter',id,{...safeNewsletter(value),available:true,response_verified:true,error:null});count++;}
+          catch(error){if(!owns()||sock!==current)throw new Error('connection_changed');const failure=classifyReadError(error);firstFailure??=failure;firstError??=error;failures++;const prior=db.prepare("SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=?").get(id);snapshot('newsletter',id,{available:false,response_verified:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});if(command.kind==='newsletter')throw error;if(unresolvedRead?.socket===current)break;}
         }
-        if(command.kind==='newsletters')snapshot('newsletters','wis-5679',{available:true,count,known_only:true,truncated:known.length>20,error:null});
+        if(command.kind==='newsletters'){const truncated=known.length>20,unattempted=targets.length-attempted,partial=truncated||failures>0||unattempted>0;snapshot('newsletters','wis-5679',{available:count>0||targets.length===0,response_verified:count>0,count,attempted_count:attempted,failure_count:failures,unattempted_count:unattempted,known_only:true,truncated,partial,complete:!partial,error:count===0&&failures>0?firstFailure?.code:null,source:'known_local_channels'});if(count===0&&failures>0)throw firstError||new Error('read_failed');}
       } else if(!['account','all'].includes(command.kind))throw new Error('unsupported_read_command');
       if(!owns() || sock!==current)throw new Error('connection_changed');
       db.prepare("UPDATE read_commands SET status='done',updated_at=? WHERE id=?").run(new Date().toISOString(),command.id);
