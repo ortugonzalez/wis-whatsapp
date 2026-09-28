@@ -1999,7 +1999,7 @@
     },
     "/settings": {
       "get": {
-        "summary": "Administrator local display preferences, never credentials or production toggles",
+        "summary": "Administrator display preferences and local scheduled read-only sync",
         "responses": {
           "200": {
             "description": "Local persisted data; no WhatsApp write",
@@ -2009,7 +2009,68 @@
                   "type": "object",
                   "properties": {
                     "data": {
-                      "type": "object"
+                      "type": "object",
+                      "properties": {
+                        "scheduled_reads": {
+                          "type": "object",
+                          "properties": {
+                            "enabled": {
+                              "type": "boolean"
+                            },
+                            "interval_minutes": {
+                              "type": "integer",
+                              "enum": [
+                                15,
+                                30,
+                                60,
+                                120
+                              ]
+                            },
+                            "next_run_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            },
+                            "last_kind": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "all",
+                                "blocklist",
+                                "communities",
+                                "catalog",
+                                "collections",
+                                "newsletters",
+                                null
+                              ]
+                            },
+                            "last_enqueued_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            },
+                            "last_status": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "pending",
+                                "running",
+                                "done",
+                                "failed",
+                                null
+                              ]
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -2025,7 +2086,7 @@
         }
       },
       "patch": {
-        "summary": "Persist display preferences only",
+        "summary": "Persist display preferences or configure local read-only sync",
         "requestBody": {
           "required": true,
           "content": {
@@ -2052,6 +2113,19 @@
                       "dark",
                       "system"
                     ]
+                  },
+                  "scheduled_reads_enabled": {
+                    "type": "boolean",
+                    "description": "Pause or enable the local rotation of read-only WhatsApp metadata reads."
+                  },
+                  "scheduled_reads_interval_minutes": {
+                    "type": "integer",
+                    "enum": [
+                      15,
+                      30,
+                      60,
+                      120
+                    ]
                   }
                 },
                 "required": []
@@ -2068,7 +2142,68 @@
                   "type": "object",
                   "properties": {
                     "data": {
-                      "type": "object"
+                      "type": "object",
+                      "properties": {
+                        "scheduled_reads": {
+                          "type": "object",
+                          "properties": {
+                            "enabled": {
+                              "type": "boolean"
+                            },
+                            "interval_minutes": {
+                              "type": "integer",
+                              "enum": [
+                                15,
+                                30,
+                                60,
+                                120
+                              ]
+                            },
+                            "next_run_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            },
+                            "last_kind": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "all",
+                                "blocklist",
+                                "communities",
+                                "catalog",
+                                "collections",
+                                "newsletters",
+                                null
+                              ]
+                            },
+                            "last_enqueued_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            },
+                            "last_status": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "pending",
+                                "running",
+                                "done",
+                                "failed",
+                                null
+                              ]
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
