@@ -427,9 +427,15 @@
         "summary": "Get observed local data coverage",
         "description": "Returns aggregate entity counts, persisted top-level and nested snapshot paths, the count of records containing each path, and the latest snapshot write time for a record containing the path. It also groups read commands by kind and status with counts and latest update time, without exposing command IDs, targets, or error fields. Snapshots may merge older fields, so this is not the field value's refresh time. Array indexes are normalized as [] without rewriting quoted literal keys. Paths longer than 100 characters or beyond the first 100 names per snapshot kind are omitted and counted. Field inventory rows stream from SQLite; retained paths are capped at 10,000 per record and snapshot kind, with field_inventory_truncated indicating a cap. Query time still scales with total snapshot data scanned. It never returns message or contact values and never claims complete history.",
         "responses": {
-          "200": { "description": "Coverage counts, observed top-level and nested field paths with per-path record counts and latest snapshot write times, omitted field counts, cap indicator, message type counts, and command counts grouped by kind/status, plus allowlisted failed-read codes, without targets, command IDs or raw error text" },
-          "401": { "description": "Authentication required" },
-          "403": { "description": "Insufficient scope" }
+          "200": {
+            "description": "Coverage counts, observed top-level and nested field paths with per-path record counts and latest snapshot write times, omitted field counts, cap indicator, message type counts, and command counts grouped by kind/status, plus allowlisted failed-read codes, without targets, command IDs or raw error text"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
+          }
         }
       }
     },
@@ -437,13 +443,30 @@
       "get": {
         "summary": "Read cached WhatsApp registration checks for known contacts",
         "parameters": [
-          { "name": "id", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 100 }, "description": "Local contact ID; omit to list cached results." }
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "description": "Local contact ID; omit to list cached results."
+          }
         ],
         "responses": {
-          "200": { "description": "Registered, explicitly not registered, or unknown; absence is never converted to false" },
-          "401": { "description": "Authentication required" },
-          "403": { "description": "Insufficient scope" },
-          "404": { "description": "Unknown contact" }
+          "200": {
+            "description": "Registered, explicitly not registered, or unknown; absence is never converted to false"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
+          },
+          "404": {
+            "description": "Unknown contact"
+          }
         }
       }
     },
@@ -2089,8 +2112,16 @@
                   "properties": {
                     "data": {
                       "oneOf": [
-                        { "type": "array", "items": { "type": "object" } },
-                        { "type": "object", "description": "One read command when the id query parameter is supplied" }
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "description": "One read command when the id query parameter is supplied"
+                        }
                       ]
                     },
                     "meta": {
@@ -2129,14 +2160,17 @@
           }
         },
         "parameters": [
-      {
-        "name": "id",
-        "in": "query",
-        "required": false,
-        "schema": { "type": "string", "maxLength": 100 },
-        "description": "Return one persisted command by exact ID instead of a paginated list"
-      },
-      {
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "description": "Return one persisted command by exact ID instead of a paginated list"
+          },
+          {
             "name": "limit",
             "in": "query",
             "schema": {
@@ -3928,32 +3962,155 @@
       "post": {
         "summary": "Administrator-only temporary group metadata lookup by invite code",
         "description": "The invite code is sent in a local POST body and passed to the Baileys worker over in-memory IPC. It is not written to SQLite, audit events, or logs. Read-only. The normalized fields are a partial mapping; this endpoint does not join a group, create or revoke a link, or send messages. One lookup per administrator every five seconds.",
-        "security": [{"cookieAuth": []}],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": {"application/json": {"schema": {"type": "object", "required": ["invite_code"], "additionalProperties": false, "properties": {"invite_code": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$"}}}}}
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "invite_code"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "invite_code": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "Mapped Baileys group metadata; field equivalence remains partial until validated against an authorized live response",
-            "content": {"application/json": {"schema": {"type": "object", "required": ["data", "meta"], "properties": {
-              "data": {"type": "object", "properties": {
-                "id": {"type": "string"}, "name_at": {"type": "integer"}, "name": {"type": "string"},
-                "participants": {"type": "array", "items": {"type": "object", "required": ["id", "rank"], "properties": {"id": {"type": "string"}, "rank": {"type": "string", "enum": ["admin", "member", "creator"]}}}},
-                "participantsCount": {"type": "integer"}, "created_at": {"type": "integer"}, "created_by": {"type": "string"}, "ephemeral": {"type": "integer"}
-              }},
-              "meta": {"type": "object", "required": ["source", "response_verified", "observed_at", "available_fields", "participants_truncated"], "properties": {"source": {"type": "string"}, "response_verified": {"type": "boolean"}, "observed_at": {"type": "string", "format": "date-time"}, "available_fields": {"type": "object", "additionalProperties": {"type": "boolean"}}, "participants_truncated": {"type": "boolean"}}}
-            }}}}
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name_at": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "participants": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "rank"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "rank": {
+                                "type": "string",
+                                "enum": [
+                                  "admin",
+                                  "member",
+                                  "creator"
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "participantsCount": {
+                          "type": "integer"
+                        },
+                        "created_at": {
+                          "type": "integer"
+                        },
+                        "created_by": {
+                          "type": "string"
+                        },
+                        "ephemeral": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "required": [
+                        "source",
+                        "response_verified",
+                        "observed_at",
+                        "available_fields",
+                        "participants_truncated"
+                      ],
+                      "properties": {
+                        "source": {
+                          "type": "string"
+                        },
+                        "response_verified": {
+                          "type": "boolean"
+                        },
+                        "observed_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "available_fields": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "boolean"
+                          }
+                        },
+                        "participants_truncated": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
-          "400": {"description": "Invalid invite code"},
-          "401": {"description": "Authentication required"},
-          "403": {"description": "Administrator browser session required"},
-          "409": {"description": "Another read is unresolved"},
-          "429": {"description": "Lookup rate limit"},
-          "501": {"description": "Baileys method unavailable"},
-          "502": {"description": "Provider returned an invalid or failed response"},
-          "503": {"description": "WhatsApp connection unavailable"},
-          "504": {"description": "Provider read timed out"}
+          "400": {
+            "description": "Invalid invite code"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrator browser session required"
+          },
+          "409": {
+            "description": "Another read is unresolved"
+          },
+          "429": {
+            "description": "Lookup rate limit"
+          },
+          "501": {
+            "description": "Baileys method unavailable"
+          },
+          "502": {
+            "description": "Provider returned an invalid or failed response"
+          },
+          "503": {
+            "description": "WhatsApp connection unavailable"
+          },
+          "504": {
+            "description": "Provider read timed out"
+          }
         }
       }
     },
@@ -4043,8 +4200,8 @@
     },
     "/capability-fields": {
       "get": {
-        "summary": "Search public reference field metadata",
-        "description": "Search documented WHAPI request and response field names. Results never include example values or account data.",
+        "summary": "Paginated public WHAPI field catalog and search",
+        "description": "Enumerates documented parameter, request and response field metadata in bounded pages, or searches by field, operation, endpoint or tag. Returns no example values or account data.",
         "security": [
           {
             "BearerAuth": [
@@ -4056,13 +4213,13 @@
           {
             "name": "q",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "minLength": 2,
               "maxLength": 100
             },
-            "description": "Field name, operation, endpoint, or tag."
+            "description": "Optional field name, operation, endpoint, location or tag; requires at least two characters when supplied."
           },
           {
             "name": "limit",
@@ -4070,9 +4227,20 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 100,
-              "default": 50
+              "maximum": 500,
+              "default": 100
             }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0
+            },
+            "description": "Zero-based row offset for browsing or search results."
           }
         ],
         "responses": {
@@ -4091,11 +4259,17 @@
                       "required": [
                         "query",
                         "total",
-                        "results"
+                        "offset",
+                        "limit",
+                        "results",
+                        "captured_at"
                       ],
                       "properties": {
                         "query": {
-                          "type": "string"
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         },
                         "total": {
                           "type": "integer"
@@ -4124,6 +4298,7 @@
                               "direction": {
                                 "type": "string",
                                 "enum": [
+                                  "parameter",
                                   "request",
                                   "response"
                                 ]
@@ -4132,7 +4307,8 @@
                                 "type": [
                                   "string",
                                   "null"
-                                ]
+                                ],
+                                "description": "HTTP status when direction is response."
                               },
                               "field_path": {
                                 "type": "string"
@@ -4145,9 +4321,35 @@
                               },
                               "required": {
                                 "type": "boolean"
+                              },
+                              "location": {
+                                "type": "string",
+                                "description": "Query, path, header or body location; parameter examples are never returned."
+                              },
+                              "description": {
+                                "type": "string",
+                                "maxLength": 300
+                              },
+                              "enum_values": {
+                                "type": "array",
+                                "maxItems": 100,
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Documented allowed values, when present."
+                              },
+                              "enum_truncated": {
+                                "type": "boolean",
+                                "description": "True when more than 100 documented values exist or unsupported enum values were omitted."
                               }
                             }
                           }
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
                         }
                       }
                     }

@@ -20,15 +20,60 @@ function fieldRows(method) {
       endpoint_path: operation.path ?? '',
       tags: Array.isArray(operation.tags) ? operation.tags : [],
     };
-    for (const field of operation.request_fields ?? []) rows.push({ ...details, direction: 'request', response_status: null, ...field });
+    for (const parameter of operation.parameters ?? []) rows.push({
+      ...details,
+      direction: 'parameter',
+      response_status: null,
+      path: parameter.name ?? '',
+      type: parameter.type ?? parameter.schema?.type ?? '',
+      required: parameter.required === true,
+      enum: parameter.enum ?? parameter.schema?.enum,
+      description: parameter.description ?? '',
+      location: parameter.in ?? '',
+    });
+    for (const field of operation.request_fields ?? []) rows.push({ ...details, direction: 'request', response_status: null, location: 'body', ...field });
     for (const [status, fields] of Object.entries(operation.response_fields ?? {})) {
-      for (const field of fields ?? []) rows.push({ ...details, direction: 'response', response_status: status, ...field });
+      for (const field of fields ?? []) rows.push({ ...details, direction: 'response', response_status: status, location: 'body', ...field });
     }
   }
   return rows;
 }
 
-export async function searchCapabilityFields(root, query, limit = 100) {
+function publicRow(method, row) {
+  const enumSource = Array.isArray(row.enum) ? row.enum : [];
+  const enumValues = enumSource.slice(0, 100).filter(value => ['string', 'number', 'boolean'].includes(typeof value)).map(value => String(value));
+  return {
+    capability_id: method.id,
+    operation_id: row.operation_id,
+    endpoint_method: row.endpoint_method,
+    endpoint_path: row.endpoint_path,
+    tags: row.tags,
+    direction: row.direction,
+    response_status: row.response_status,
+    location: row.location,
+    field_path: row.path,
+    type: row.type,
+    required: row.required === true,
+    enum_values: enumValues,
+    enum_truncated: enumSource.length > 100 || enumValues.length < Math.min(enumSource.length, 100),
+    description: typeof row.description === 'string' ? row.description.slice(0, 300) : '',
+  };
+}
+
+export async function listCapabilityFields(root, limit = 100, offset = 0) {
+  const inventory = await loadInventory(root);
+  const results = [];
+  let total = 0;
+  for (const method of inventory.methods ?? []) {
+    for (const row of fieldRows(method)) {
+      if (total >= offset && results.length < limit) results.push(publicRow(method, row));
+      total++;
+    }
+  }
+  return { query: null, total, offset, limit, results, captured_at: inventory.captured_at, source: inventory.source };
+}
+
+export async function searchCapabilityFields(root, query, limit = 100, offset = 0) {
   const q = typeof query === 'string' ? query.trim().toLocaleLowerCase('en') : '';
   if (q.length < 2 || q.length > 100) return { query: q, total: 0, results: [] };
   const inventory = await loadInventory(root);
@@ -38,23 +83,11 @@ export async function searchCapabilityFields(root, query, limit = 100) {
     const rows = fieldRows(method);
     const methodContext = `${method.id ?? ''} ${method.version ?? ''}`;
     for (const row of rows) {
-      const searchable = `${methodContext} ${row.operation_id} ${row.endpoint_method} ${row.endpoint_path} ${row.tags.join(' ')} ${row.path ?? ''} ${row.type ?? ''} ${row.description ?? ''}`.toLocaleLowerCase('en');
+      const searchable = `${methodContext} ${row.operation_id} ${row.endpoint_method} ${row.endpoint_path} ${row.tags.join(' ')} ${row.direction} ${row.location ?? ''} ${row.path ?? ''} ${row.type ?? ''} ${row.description ?? ''}`.toLocaleLowerCase('en');
       if (!searchable.includes(q)) continue;
+      if (total >= offset && results.length < limit) results.push(publicRow(method, row));
       total++;
-      if (results.length < limit) results.push({
-        capability_id: method.id,
-        operation_id: row.operation_id,
-        endpoint_method: row.endpoint_method,
-        endpoint_path: row.endpoint_path,
-        tags: row.tags,
-        direction: row.direction,
-        response_status: row.response_status,
-        field_path: row.path,
-        type: row.type,
-        required: row.required === true,
-        description: typeof row.description === 'string' ? row.description.slice(0, 300) : '',
-      });
     }
   }
-  return { query: q, total, results, captured_at: inventory.captured_at, source: inventory.source };
+  return { query: q, total, offset, limit, results, captured_at: inventory.captured_at, source: inventory.source };
 }

@@ -24,8 +24,19 @@ test('capability field search requires authentication and returns bounded metada
     const body = await response.json();
     assert.ok(body.data.total >= body.data.results.length);
     assert.ok(body.data.results.length <= 3);
-    assert.ok(body.data.results.every(row => row.field_path && ['request', 'response'].includes(row.direction)));
-    assert.equal(JSON.stringify(body).includes('token'), false);
+    assert.ok(body.data.results.every(row => row.field_path && ['parameter', 'request', 'response'].includes(row.direction)));
+    assert.equal(JSON.stringify(body).includes('example'), false);
+    const firstPage = await fetch(`${base}/api/v1/capability-fields?limit=2`, { headers: { Cookie: cookie } });
+    assert.equal(firstPage.status, 200);
+    const firstPageBody = await firstPage.json();
+    assert.equal(firstPageBody.data.offset, 0);
+    assert.equal(firstPageBody.data.results.length, 2);
+    assert.ok(firstPageBody.data.total > 2);
+    const secondPage = await fetch(`${base}/api/v1/capability-fields?limit=2&offset=2`, { headers: { Cookie: cookie } });
+    const secondPageBody = await secondPage.json();
+    assert.equal(secondPageBody.data.offset, 2);
+    assert.notEqual(secondPageBody.data.results[0].field_path, firstPageBody.data.results[0].field_path);
+    assert.equal((await fetch(`${base}/api/v1/capability-fields?offset=-1`, { headers: { Cookie: cookie } })).status, 400);
     const fractional = await fetch(`${base}/api/v1/capability-fields?q=participants&limit=2.5`, { headers: { Cookie: cookie } });
     assert.ok((await fractional.json()).data.results.length <= 2);
   } finally {
