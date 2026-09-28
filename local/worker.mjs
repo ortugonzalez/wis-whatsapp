@@ -315,6 +315,7 @@ export function normalizeContent(m) {
   const unsupported=Object.keys(m).find(k=>k.endsWith('Message') && !['protocolMessage','senderKeyDistributionMessage','messageContextInfo','fastRatchetKeySenderKeyDistributionMessage'].includes(k));
   return unsupported?{type:'unsupported',body:`Contenido disponible: ${unsupported}`,details:{wire_type:unsupported}}:null;
 }
+function safeMessageStubType(message){const value=message?.messageStubType;return Number.isSafeInteger(value)&&value>=0?value:typeof value==='string'&&/^[A-Za-z0-9_]{1,64}$/.test(value)?value:null;}
 export function messageContext(message) {
   const entry=Object.values(message || {}).find(value=>value && typeof value==='object' && value.contextInfo);
   const ctx=entry?.contextInfo;
@@ -701,7 +702,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           const normalized=normalizeContent(content);
           if(!normalized||normalized.type!==prior.type||typeof normalized.body!=='string'||normalized.body!==prior.body)continue;
           const observed_at=new Date().toISOString();
-          const payload={type:normalized.type,details:normalized.details,...messageContext(content),source:prior.source,timestamp:prior.created_at,metadata_backfilled:true,metadata_observed_at:observed_at};
+          const stubType=safeMessageStubType(msg),payload={type:normalized.type,details:normalized.details,...messageContext(content),...(stubType!==null?{messageStubType:stubType}:{}),source:prior.source,timestamp:prior.created_at,metadata_backfilled:true,metadata_observed_at:observed_at};
           db.prepare("INSERT OR IGNORE INTO snapshots(kind,resource_id,payload,updated_at) VALUES('message',?,?,?)").run(waId,JSON.stringify(payload),observed_at);
           continue;
         }
@@ -741,7 +742,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if (!owns()) return;
         db.prepare(`INSERT OR IGNORE INTO messages(id,conversation_id,wa_message_id,direction,type,body,media_path,delivery_status,source,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)`)
           .run(randomUUID(),chat.id,waId,msg.key.fromMe?'out':'in',type,body,media,msg.key.fromMe?'sent':'delivered',source,at);
-        snapshot('message',waId,{type,details,...messageContext(m),participant:msg.key.participant || null,push_name:msg.pushName || null,source,timestamp:at});
+        const stubType=safeMessageStubType(msg);snapshot('message',waId,{type,details,...messageContext(m),...(stubType!==null?{messageStubType:stubType}:{}),participant:msg.key.participant || null,push_name:msg.pushName || null,source,timestamp:at});
         db.prepare('UPDATE conversations SET last_message_preview=?,last_message_at=? WHERE id=? AND (last_message_at IS NULL OR last_message_at<=?)').run(body || `[${type}]`,at,chat.id,at);
         if (msg.message) { cache.set(waId,msg.message); if(cache.size>1000) cache.delete(cache.keys().next().value); }
       } catch { console.error('message_persistence_failed'); }

@@ -20,6 +20,8 @@ Las respuestas usan `{data: ...}` o `{error: código}`. Las listas paginadas inc
 | `capabilities`, `reference-fields` | Cobertura WIS y campos de referencia WHAPI, diferenciados |
 | `webhooks`, `webhook-deliveries`, `webhook-events` | Configuración desactivada, trazabilidad y contrato de eventos |
 
+`GET /messages` admite `type`, `conversation_id`, `q`, `from_me`, `time_from`, `time_to`, `normal_types`, `author`, `sort` y `limit` (o `count` como alias). Los filtros consultan únicamente mensajes guardados localmente; no solicitan historial nuevo a WhatsApp. `time_from` y `time_to` aceptan Unix en segundos o milisegundos. `normal_types=true` excluye eventos con `messageStubType` observado en el mensaje; ese metadato se guarda para nuevas recepciones cuando Baileys lo entrega. `author` compara el chat directo o participantes guardados y puede quedar incompleto. La página tiene un máximo local de 200 registros y la cobertura del historial no se considera completa.
+
 ## Envíos y archivos
 
 `POST /media` recibe JSON `{mime_type,base64}`, valida tipo y firma del archivo y devuelve `media_path`. Límite: 10 MiB. No descarga URLs arbitrarias. `POST /messages` recibe `{to,type,body,media_path?}` y requiere `Idempotency-Key`, permiso de envío, consentimiento válido, ausencia de baja y activación operativa autorizada. Los tipos disponibles son texto, imagen, audio y documento.

@@ -189,11 +189,12 @@ test('mock socket QR, persistent incoming history, no sends and graceful lease r
  assert.ok(db.prepare('SELECT qr_expires_at FROM connections').get().qr_expires_at);
  ev.emit('connection.update',{connection:'open'});
  assert.equal(db.prepare('SELECT phone FROM connections').get().phone,'5491111115679');
- ev.emit('messages.upsert',{messages:[{key:{id:'live',remoteJid:'123@g.us'},messageTimestamp:1700000001,message:{conversation:'new'}}]});
+ ev.emit('messages.upsert',{messages:[{key:{id:'live',remoteJid:'123@g.us'},messageTimestamp:1700000001,messageStubType:1,message:{conversation:'new'}}]});
  ev.emit('messaging-history.set',{messages:[{key:{id:'old',remoteJid:'123@g.us'},messageTimestamp:1700000000,message:{conversation:'old'}}]});
  await new Promise(r=>setTimeout(r,20));
  assert.equal(db.prepare('SELECT count(*) AS n FROM messages').get().n,2);
  assert.equal(db.prepare("SELECT source FROM messages WHERE wa_message_id='old'").get().source,'import');
+ assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='message' AND resource_id='live'").get().payload).messageStubType,1);
  assert.equal(db.prepare('SELECT last_message_preview FROM conversations').get().last_message_preview,'new');
  assert.equal(sends,0);await worker.stop();assert.equal(ended,1);
  assert.equal(db.prepare('SELECT lease_owner FROM connections').get().lease_owner,null);db.close();

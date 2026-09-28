@@ -1355,9 +1355,49 @@
                 "event_response"
               ]
             }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "description": "Alternative to limit; local maximum is 200 rows.",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 200 }
+          },
+          {
+            "name": "from_me",
+            "in": "query",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "time_from",
+            "in": "query",
+            "description": "Unix timestamp in seconds or milliseconds; filters persisted created_at values.",
+            "schema": { "type": "integer", "minimum": 1 }
+          },
+          {
+            "name": "time_to",
+            "in": "query",
+            "description": "Unix timestamp in seconds or milliseconds; filters persisted created_at values.",
+            "schema": { "type": "integer", "minimum": 1 }
+          },
+          {
+            "name": "normal_types",
+            "in": "query",
+            "description": "When true, excludes rows with an observed messageStubType. Rows without a stored snapshot remain included.",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "description": "Local exact match against direct-chat identifiers or observed group participants. It does not resolve unknown identities.",
+            "schema": { "type": "string", "pattern": "^\\+?[1-9][0-9]{6,14}(@lid|@s\\.whatsapp\\.net)?$" }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["asc", "desc"], "default": "desc" }
           }
         ],
-        "description": "Without id, q searches body across all conversations unless conversation_id narrows it. Returns total pagination. Message detail never implies complete reaction or history coverage. Received product/order/event rows retain observed metadata in detail; no order lookup, payment action, event creation or product sending is enabled. POST supported send types remain unchanged."
+        "description": "Without id, q searches body across all conversations unless conversation_id narrows it. Filters operate only on persisted local rows; no filter triggers a remote fetch. Timestamp values accept Unix seconds or milliseconds. normal_types=true excludes only messages with a recorded messageStubType. Author matching uses observed direct-chat IDs and participant snapshots and is therefore partial. Pagination is bounded to 200 rows. Message detail never implies complete reaction or history coverage. Received product/order/event rows retain observed metadata in detail; no order lookup, payment action, event creation or product sending is enabled. POST supported send types remain unchanged."
       },
       "post": {
         "summary": "Queue a message; accepted is not delivered",
