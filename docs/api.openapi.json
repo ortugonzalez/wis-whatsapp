@@ -4291,6 +4291,157 @@
         }
       }
     },
+    "/newsletter-invite-info": {
+      "post": {
+        "summary": "Administrator-only transient newsletter metadata lookup by invite code",
+        "description": "The code is sent in a local POST body and passed to the Baileys worker over in-memory IPC. It is not written to SQLite, audit events, or logs. Read-only and partial: only fields exposed by newsletterMetadata(invite) are returned; the lookup does not follow or join the newsletter. One lookup per administrator every five seconds.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "invite_code"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "invite_code": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial mapped newsletter metadata with explicit field availability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "type"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "const": "newsletter"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "subscribers_count": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "created_at": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "verification": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "required": [
+                        "source",
+                        "response_verified",
+                        "partial",
+                        "history_complete",
+                        "observed_at",
+                        "available_fields"
+                      ],
+                      "properties": {
+                        "source": {
+                          "type": "string"
+                        },
+                        "response_verified": {
+                          "type": "boolean"
+                        },
+                        "partial": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "history_complete": {
+                          "type": "boolean",
+                          "const": false
+                        },
+                        "observed_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "available_fields": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "boolean"
+                          }
+                        },
+                        "has_picture": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid invite code"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrator browser session required"
+          },
+          "404": {
+            "description": "Newsletter invite was not found"
+          },
+          "409": {
+            "description": "Another read is unresolved"
+          },
+          "429": {
+            "description": "Lookup rate limit"
+          },
+          "501": {
+            "description": "Baileys method unavailable"
+          },
+          "502": {
+            "description": "Provider returned an invalid or failed response"
+          },
+          "503": {
+            "description": "WhatsApp connection unavailable"
+          },
+          "504": {
+            "description": "Provider read timed out"
+          }
+        }
+      }
+    },
     "/group-invite": {
       "get": {
         "summary": "Administrator-only temporary invitation code for a known group",

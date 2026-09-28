@@ -2856,12 +2856,12 @@
       "id": "getnewsletterbyinvitecode",
       "name": "Get newsletter info by invite code",
       "source": "https://whapi.readme.io/reference/getnewsletterbyinvitecode.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
-      "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "status": "partial",
+      "endpoint": "/api/v1/newsletter-invite-info",
+      "screen": "/#channels",
+      "baileys": "newsletterMetadata('invite', code)",
+      "test": "newsletter-invite-info.test.mjs, backend.test.mjs, runtime.test.mjs y worker.test.mjs",
+      "reason": "Lectura administrativa transitoria; devuelve id, tipo, nombre, descripción, fecha de creación, seguidores y verificación cuando Baileys los expone. Omite estado del chat, último mensaje, código de invitación, URLs de imagen y otros campos de WHAPI.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [

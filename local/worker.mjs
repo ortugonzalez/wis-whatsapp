@@ -4,6 +4,7 @@ import { createPublicCatalogReader } from './catalog-http.mjs';
 import { createWebhookDispatcher } from './webhooks.mjs';
 import { cacheAvatar } from './avatars.mjs';
 import { groupMetadataByInviteCode, validGroupInviteCode } from './group-invite-info.mjs';
+import { newsletterByInviteMetadata, validNewsletterInviteCode } from './newsletter-invite-info.mjs';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -670,6 +671,15 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     try{return groupMetadataByInviteCode(await readCall(current,'groupGetInviteInfo',[inviteCode]));}
     finally{readBusy=false;}
   }
+  async function lookupNewsletterByInviteCode(inviteCode) {
+    if(!validNewsletterInviteCode(inviteCode))throw new Error('invalid_invite_code');
+    if(readBusy)throw new Error('previous_read_unresolved');
+    const current=sock;
+    if(!current||!owns()||connection().status!=='connected')throw new Error('connection_unavailable');
+    readBusy=true;lastReadAt=Date.now();
+    try{const value=await readCall(current,'newsletterMetadata',['invite',inviteCode]);if(!value)throw new Error('invalid_newsletter_metadata_response');return newsletterByInviteMetadata(value);}
+    finally{readBusy=false;}
+  }
   function revokeStory(key) {
     if(!owns()||!key?.id)return;
     if(typeof key.id!=='string'||!/^[\x21-\x7e]{1,256}$/.test(key.id))return;
@@ -1032,7 +1042,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   const onSignal=()=>void stop();
   process.once('SIGINT',onSignal);process.once('SIGTERM',onSignal);
   await tick();
-  return {stop,drainReads,lookupGroupMetadataByInviteCode};
+  return {stop,drainReads,lookupGroupMetadataByInviteCode,lookupNewsletterByInviteCode};
 }
 
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
@@ -1053,6 +1063,14 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
         }).catch(error=>{
           const code=['read_timeout','previous_read_unresolved','connection_unavailable','connection_changed','capability_unavailable','invalid_group_metadata_response','invalid_invite_code'].includes(error?.message)?error.message:classifyReadError(error).code;
           if(process.connected)process.send({type:'wis.group_invite_info.result',request_id:message.request_id,error:code},()=>{});
+        });
+      }
+      if(message?.type==='wis.newsletter_invite_info.lookup'&&typeof message.request_id==='string'){
+        void worker.lookupNewsletterByInviteCode(message.invite_code).then(result=>{
+          if(process.connected)process.send({type:'wis.newsletter_invite_info.result',request_id:message.request_id,result},()=>{});
+        }).catch(error=>{
+          const code=['read_timeout','previous_read_unresolved','connection_unavailable','connection_changed','capability_unavailable','invalid_newsletter_metadata_response','newsletter_unavailable','invalid_invite_code'].includes(error?.message)?error.message:classifyReadError(error).code;
+          if(process.connected)process.send({type:'wis.newsletter_invite_info.result',request_id:message.request_id,error:code},()=>{});
         });
       }
     });

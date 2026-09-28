@@ -232,6 +232,13 @@ test('catalog restarts a checked own-account read from page one when public cata
   assert.equal(nested.products_collected,false);assert.equal(nested.products_truncated,true);
  } finally {await worker.stop();db.close();}
 });
+test('newsletter invite lookup uses Baileys read metadata and never persists the invite code',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();const dir=mkdtempSync(resolve(tmpdir(),'wis-newsletter-invite-worker-')),ev=new EventEmitter(),code='ChannelInvite_123';let calls=0;
+ let emptyMetadata=false;const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},newsletterMetadata:async(type,key)=>{calls++;assert.equal(type,'invite');assert.equal(key,code);return emptyMetadata?null:{id:'12345@newsletter',name:'Canal',description:'Descripción',creation_time:1700000000,subscribers:42,verification:'VERIFIED',picture:{url:'https://cdn.invalid/?token=PRIVATE'},invite:code,owner:'private-owner'};}};
+ const fake={default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),readIntervalMs:0});
+ try{ev.emit('connection.update',{connection:'open'});const result=await worker.lookupNewsletterByInviteCode(code);assert.equal(result.data.name,'Canal');assert.equal(result.data.subscribers_count,42);assert.equal(result.data.type,'newsletter');assert.equal(result.meta.partial,true);assert.equal(result.meta.available_fields.verification,true);assert.equal(JSON.stringify(result).includes(code),false);assert.equal(JSON.stringify(result).includes('PRIVATE'),false);assert.equal(calls,1);assert.equal(db.prepare('SELECT count(*) n FROM read_commands WHERE target=?').get(code).n,0);assert.equal(db.prepare('SELECT count(*) n FROM snapshots WHERE payload LIKE ?').get('%'+code+'%').n,0);emptyMetadata=true;await assert.rejects(worker.lookupNewsletterByInviteCode(code),{message:'invalid_newsletter_metadata_response'});assert.equal(calls,2);await assert.rejects(worker.lookupNewsletterByInviteCode('https://whatsapp.com/channel/'+code),{message:'invalid_invite_code'});}
+ finally{await worker.stop();db.close();}
+});
 
 test('avatar reads require known targets, cache metadata only, and preserve stale file on failure',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();

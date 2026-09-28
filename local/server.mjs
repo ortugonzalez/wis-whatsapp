@@ -3,6 +3,7 @@ import {buildDataCoverage} from './data-coverage.mjs';
 import {listCapabilityFields,searchCapabilityFields} from './capability-fields.mjs';
 import {getScheduledReadSettings,getScheduledReadStatus,queueScheduledReadIfDue,updateScheduledReadSettings} from './scheduled-reads.mjs';
 import {createGroupInviteInfoRpc,validGroupInviteCode} from './group-invite-info.mjs';
+import {createNewsletterInviteInfoRpc,validNewsletterInviteCode} from './newsletter-invite-info.mjs';
 import {createServer} from 'node:http';
 import {randomBytes,randomUUID,createHash,scryptSync,timingSafeEqual} from 'node:crypto';
 import {readFile,writeFile,mkdir,realpath,stat} from 'node:fs/promises';
@@ -69,8 +70,9 @@ export async function bootstrap(database=db,directory=stateDir){
 async function jsonBody(req){let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>LOCAL_LIMITS.json_body_bytes)fail(413,'body_too_large');}try{const value=JSON.parse(raw||'{}');if(!value||typeof value!=='object'||Array.isArray(value))throw 0;return value;}catch{fail(400,'invalid_json');}}
 function cleanConnection(row){const {qr_payload,lease_owner,...safe}=row;return {...safe,identity_verified:Boolean(row.phone&&row.expected_phone_e164&&row.phone.replace(/\D/g,'')===row.expected_phone_e164.replace(/\D/g,'')),outbound_enabled:process.env.WIS_OUTBOUND_ENABLED==='true'};}
 export function makeServer(database=db,options={}){
- const directory=options.stateDir??stateDir;const failures=new Map(),readAuditTimes=new Map(),groupInviteLookups=new Map();
+ const directory=options.stateDir??stateDir;const failures=new Map(),readAuditTimes=new Map(),groupInviteLookups=new Map(),newsletterInviteLookups=new Map();
  const lookupGroupInviteInfo=options.lookupGroupInviteInfo??createGroupInviteInfoRpc();
+ const lookupNewsletterInviteInfo=options.lookupNewsletterInviteInfo??createNewsletterInviteInfoRpc();
  const audit=(action,actor,id)=>database.prepare('INSERT INTO audit(action,actor,resource_id,created_at) VALUES(?,?,?,?)').run(action,actor,id??null,now());
  const ownAvatarTarget=()=>{const connection=database.prepare("SELECT * FROM connections WHERE id='wis-5679'").get();return connection?.phone&&cleanConnection(connection).identity_verified?connection.phone.replace(/\D/g,'')+'@s.whatsapp.net':null;};
  const knownAvatarTarget=(target,admin)=>{if(typeof target!=='string'||target.length>150||! /^(?:\d+@(s\.whatsapp\.net|lid)|[0-9-]+@g\.us)$/.test(target))fail(400,'invalid_avatar_target');const connection=database.prepare("SELECT * FROM connections WHERE id='wis-5679'").get(),actual=connection?.phone?connection.phone.replace(/\D/g,'')+'@s.whatsapp.net':null;if(target===actual){if(!admin)fail(403,'administrator_required');if(target!==ownAvatarTarget())fail(409,'identity_not_verified');return target;}const contact=database.prepare("SELECT 1 FROM contacts WHERE wa_jid=? OR (phone_e164 IS NOT NULL AND replace(phone_e164,'+','')||'@s.whatsapp.net'=?)").get(target,target);const chat=database.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='group' AND resource_id=?").get(target,target);if(!contact&&!chat)fail(404,'unknown_avatar_target');return target;};
@@ -111,6 +113,12 @@ export function makeServer(database=db,options={}){
      const last=groupInviteLookups.get(actor.id)??0;if(Date.now()-last<5000)fail(429,'read_rate_limited');groupInviteLookups.set(actor.id,Date.now());
      let result;try{result=await lookupGroupInviteInfo.lookup(b.invite_code);}catch(error){const code=error?.message,status=code==='read_timeout'?504:code==='previous_read_unresolved'?409:code==='invalid_invite_code'?400:code==='connection_unavailable'||code==='connection_changed'?503:code==='capability_unavailable'?501:502;fail(status,['read_timeout','previous_read_unresolved','invalid_invite_code','connection_unavailable','connection_changed','capability_unavailable','invalid_group_metadata_response'].includes(code)?code:'read_failed');}
      audit('group.metadata_by_invite_code',actor.id,randomUUID());return send(result.data,200,result.meta);
+    }
+    if(resource==='newsletter-invite-info'&&method==='POST'){
+     auth('read',true);if(Object.keys(b).some(k=>k!=='invite_code')||!validNewsletterInviteCode(b.invite_code))fail(400,'invalid_invite_code');
+     const last=newsletterInviteLookups.get(actor.id)??0;if(Date.now()-last<5000)fail(429,'read_rate_limited');newsletterInviteLookups.set(actor.id,Date.now());
+     let result;try{result=await lookupNewsletterInviteInfo.lookup(b.invite_code);}catch(error){const code=error?.message,status=code==='read_timeout'?504:code==='previous_read_unresolved'?409:code==='invalid_invite_code'?400:code==='connection_unavailable'||code==='connection_changed'?503:code==='capability_unavailable'?501:502;fail(status,['read_timeout','previous_read_unresolved','invalid_invite_code','connection_unavailable','connection_changed','capability_unavailable','invalid_newsletter_metadata_response'].includes(code)?code:'read_failed');}
+     audit('newsletter.metadata_by_invite_code',actor.id,randomUUID());return send(result.data,200,result.meta);
     }
     if(method==='GET')res.once('finish',()=>{if(res.statusCode>=400)return;const key=actor.id+':'+resource,date=Date.now();if(date-(readAuditTimes.get(key)??0)<60000)return;try{audit('api.read.'+resource,actor.id);readAuditTimes.set(key,date);if(readAuditTimes.size>1000)for(const [k,t]of readAuditTimes)if(date-t>60000)readAuditTimes.delete(k);}catch{/* Never fail an already completed read on audit write contention. */}});
     const page=()=>{const limit=Number(url.searchParams.get('limit')??LOCAL_LIMITS.page_default),offset=Number(url.searchParams.get('offset')??0),q=url.searchParams.get('q')??'';if(!Number.isInteger(limit)||limit<1||limit>LOCAL_LIMITS.page_max||!Number.isSafeInteger(offset)||offset<0||q.length>LOCAL_LIMITS.search_max_chars)fail(400,'invalid_pagination');return {limit,offset,q};};
@@ -304,7 +312,7 @@ export function makeServer(database=db,options={}){
    if(method!=='GET')fail(405,'method_not_allowed');const relative=path==='/'?'index.html':decodeURIComponent(path.slice(1));if(relative.includes('..')||relative.includes('\\')||relative.startsWith('.'))fail(404,'not_found');const file=resolve(root,'local/public',relative);if(!file.startsWith(resolve(root,'local/public')+'/')&&!file.startsWith(resolve(root,'local/public')+'\\'))fail(404,'not_found');const data=await readFile(file);res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'})[extname(file)]??'application/octet-stream','Cache-Control':'no-store'});res.end(data);
   }catch(error){if(res.headersSent)return res.end();const status=error.status??(error.code==='ENOENT'?404:error.code?.startsWith('SQLITE_CONSTRAINT')?409:500);res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:error.status?error.message:status===404?'not_found':status===409?'conflict':'internal_error'}));}
  });
- server.once('close',()=>lookupGroupInviteInfo.close?.());
+ server.once('close',()=>{lookupGroupInviteInfo.close?.();lookupNewsletterInviteInfo.close?.();});
  const scheduledReadTimer=setInterval(()=>{try{const connection=database.prepare("SELECT * FROM connections WHERE id='wis-5679'").get();queueScheduledReadIfDue(database,{connected:connection?.status==='connected'&&cleanConnection(connection).identity_verified});}catch{console.error('scheduled_read_scheduler_failed');}},options.scheduledReadIntervalMs??30_000);
  scheduledReadTimer.unref?.();
  server.once('close',()=>clearInterval(scheduledReadTimer));

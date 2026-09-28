@@ -18,3 +18,7 @@ El catálogo de funciones permite navegar y buscar todas las definiciones públi
 ### Catalogo de la cuenta propia
 
 El worker intenta primero la consulta publica visible. Solo si WhatsApp devuelve el codigo reconocido `public_catalog_unavailable`, cambia a la consulta autenticada `getCatalog` de Baileys para la cuenta conectada. Si el error aparece durante la paginacion, descarta cursor y resultados publicos parciales y reinicia desde la primera pagina privada. El reemplazo de productos y resumen es atomico en SQLite. La respuesta se etiqueta `own_account` y `checked_baileys_iq_fallback`; no se confunde con catalogo publico ni habilita edicion. Timeouts, fallas de transporte y codigos distintos no provocan un segundo intento, porque la primera consulta puede seguir pendiente.
+
+### Canales por código de invitacion
+
+El detalle de canales permite una consulta administrativa de solo lectura por código. Baileys devuelve una parte de los metadatos; WIS indica qué campos están disponibles y omite estado del chat, último mensaje, imágenes con URL firmada y el código usado. El código solo viaja en memoria por la API y el IPC local; no se escribe en SQLite ni en auditoría.
