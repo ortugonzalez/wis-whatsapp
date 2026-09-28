@@ -2079,13 +2079,14 @@
                                 "null"
                               ],
                               "enum": [
-                                "all",
-                                "blocklist",
-                                "communities",
-                                "catalog",
-                                "collections",
-                                "newsletters",
-                                null
+                            "all",
+                            "blocklist",
+                            "communities",
+                            "catalog",
+                            "collections",
+                            "newsletters",
+                            "account_limits",
+                            null
                               ]
                             },
                             "last_enqueued_at": {
@@ -2212,13 +2213,14 @@
                                 "null"
                               ],
                               "enum": [
-                                "all",
-                                "blocklist",
-                                "communities",
-                                "catalog",
-                                "collections",
-                                "newsletters",
-                                null
+                            "all",
+                            "blocklist",
+                            "communities",
+                            "catalog",
+                            "collections",
+                            "newsletters",
+                            "account_limits",
+                            null
                               ]
                             },
                             "last_enqueued_at": {

@@ -22,6 +22,21 @@ test('scheduled read-only observations wait 15 minutes, rotate, and do not overl
     const second = queueScheduledReadIfDue(database, { now: start + 30 * 60_000, connected: true, id: 'scheduled-2' });
     assert.deepEqual({ status: second.status, kind: second.kind }, { status: 'queued', kind: 'blocklist' });
     assert.equal(getScheduledReadStatus(database, start + 30 * 60_000).last_status, 'pending');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(second.id);
+    const third = queueScheduledReadIfDue(database, { now: start + 45 * 60_000, connected: true, id: 'scheduled-3' });
+    assert.deepEqual({ status: third.status, kind: third.kind }, { status: 'queued', kind: 'communities' });
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(third.id);
+    const fourth = queueScheduledReadIfDue(database, { now: start + 60 * 60_000, connected: true, id: 'scheduled-4' });
+    assert.equal(fourth.kind, 'catalog');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(fourth.id);
+    const fifth = queueScheduledReadIfDue(database, { now: start + 75 * 60_000, connected: true, id: 'scheduled-5' });
+    assert.equal(fifth.kind, 'collections');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(fifth.id);
+    const sixth = queueScheduledReadIfDue(database, { now: start + 90 * 60_000, connected: true, id: 'scheduled-6' });
+    assert.equal(sixth.kind, 'newsletters');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(sixth.id);
+    const seventh = queueScheduledReadIfDue(database, { now: start + 105 * 60_000, connected: true, id: 'scheduled-7' });
+    assert.equal(seventh.kind, 'account_limits');
   } finally {
     database.close();
   }

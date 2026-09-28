@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-export const SCHEDULED_READ_KINDS = Object.freeze(['all', 'blocklist', 'communities', 'catalog', 'collections', 'newsletters']);
+export const SCHEDULED_READ_KINDS = Object.freeze(['all', 'blocklist', 'communities', 'catalog', 'collections', 'newsletters', 'account_limits']);
 export const SCHEDULED_READ_INTERVALS = Object.freeze([15, 30, 60, 120]);
 const SETTING_KEY = 'scheduled_reads';
 
