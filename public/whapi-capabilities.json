@@ -265,9 +265,9 @@
             "file": "node_modules/baileys/lib/Socket/chats.js"
           }
         ],
-        "support": "candidate",
+        "support": "partial",
         "reason": "Lecturas parciales de estado y foto; el perfil propio exige combinar identidad autenticada y campos disponibles sin garantizar el esquema WHAPI.",
-        "next_step": "Diseñar prueba aislada del contrato y permisos; la existencia del símbolo no prueba equivalencia WHAPI. Toda mutación real requiere aprobación."
+        "next_step": "Validar variables devueltas por la cuenta conectada; campos ausentes siguen siendo desconocidos."
       }
     },
     {
@@ -275,11 +275,11 @@
       "name": "Get profile",
       "source": "https://whapi.readme.io/reference/getcontactprofile.md",
       "status": "partial",
-      "endpoint": "/api/v1/snapshots",
+      "endpoint": "/api/v1/sync + /api/v1/contacts?id=ID",
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Snapshots de perfil solicitado por lectura; sin garantía de datos privados.",
+      "reason": "Lectura manual de estado y perfil Business para un contacto ya guardado. Solo se aceptan respuestas correlacionadas; campos parciales.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
@@ -288,13 +288,13 @@
             "file": "node_modules/baileys/lib/Socket/index.d.ts"
           },
           {
-            "name": "profilePictureUrl",
+            "name": "getBusinessProfile",
             "file": "node_modules/baileys/lib/Socket/index.d.ts"
           }
         ],
-        "support": "candidate",
-        "reason": "Datos parciales de perfil y foto; no perfil unificado equivalente.",
-        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+        "support": "partial",
+        "reason": "El panel consulta el estado y, para un PN ya guardado, el perfil Business. No devuelve un perfil unificado ni garantiza respuestas.",
+        "next_step": "Validar datos disponibles con respuestas reales del proveedor; nunca inferir perfiles ausentes."
       }
     },
     {
@@ -2980,11 +2980,11 @@
       "name": "Get business profile",
       "source": "https://whapi.readme.io/reference/getbusinessprofile.md",
       "status": "partial",
-      "endpoint": "/api/v1/account",
+      "endpoint": "/api/v1/account + /api/v1/contacts?id=ID",
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Snapshot Business si la cuenta y WhatsApp lo permiten; sin edición.",
+      "reason": "Snapshot Business propio o de un contacto PN guardado; campos expuestos dependen de WhatsApp y no se editan.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
@@ -2993,9 +2993,9 @@
             "file": "node_modules/baileys/lib/Socket/index.d.ts"
           }
         ],
-        "support": "candidate",
-        "reason": "Perfil Business disponible; campos parciales según servidor.",
-        "next_step": "Diseñar contrato propio y pruebas simuladas; verificar respuesta real solo con autorización pertinente. Existencia del método no acredita paridad WHAPI."
+        "support": "partial",
+        "reason": "getBusinessProfile se consulta para la cuenta propia y durante la lectura manual de contactos PN conocidos; el proveedor puede omitir el perfil.",
+        "next_step": "Validar variables devueltas en respuestas reales y mantener ausencias como desconocidas."
       }
     },
     {

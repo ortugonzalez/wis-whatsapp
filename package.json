@@ -14,7 +14,7 @@
     "legacy:build": "next build",
     "local:backup": "node local/backup.mjs",
     "local:backup:check": "node local/backup-check.mjs",
-    "test:local": "node --test local/*.test.mjs",
+    "test:local": "node --test --test-concurrency=1 local/*.test.mjs",
     "local:stop": "node local/control.mjs stop",
     "local:status": "node local/status.mjs",
     "local:reload-api": "node local/control.mjs reload-api"

@@ -22,3 +22,8 @@ El worker intenta primero la consulta publica visible. Solo si WhatsApp devuelve
 ### Canales por código de invitacion
 
 El detalle de canales permite una consulta administrativa de solo lectura por código. Baileys devuelve una parte de los metadatos; WIS indica qué campos están disponibles y omite estado del chat, último mensaje, imágenes con URL firmada y el código usado. El código solo viaja en memoria por la API y el IPC local; no se escribe en SQLite ni en auditoría.
+
+
+### Perfiles de contactos conocidos
+
+La lectura manual de perfil solo usa contactos ya guardados con JID exacto. Consulta el estado de WhatsApp y, para un PN, el perfil Business expuesto por Baileys. Guarda `available_fields` y evidencia de correlacion; omite campos vacios o ausentes, limita sitios y horarios y elimina las claves no permitidas. Un LID nunca se convierte a PN. Si ninguna lectura obtiene respuesta del proveedor, la operacion queda fallida. La cobertura local cuenta las rutas observadas sin exponer sus valores.

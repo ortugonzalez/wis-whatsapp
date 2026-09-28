@@ -573,7 +573,7 @@
             }
           }
         ],
-        "description": " Detail includes safe avatar metadata, or null when no eligible target exists. Contact detail conversations include exact stored FK or exact wa_jid/phone-derived JID matches with relation_origins: stored_contact_id, exact_wa_jid, exact_phone_jid. This read never uses ambiguous LID/PN mappings, modifies foreign keys, or changes consent."
+        "description": " Detail includes safe avatar metadata, or null when no eligible target exists. Contact detail conversations include exact stored FK or exact wa_jid/phone-derived JID matches with relation_origins: stored_contact_id, exact_wa_jid, exact_phone_jid. This read never uses ambiguous LID/PN mappings, modifies foreign keys, or changes consent. The panel can manually queue contact_profile for a known contact; it reads status and, for an exact PN JID, available Business-profile fields. Replies include presence and correlation evidence; absent fields are not inferred, and LIDs are not converted to phone JIDs."
       },
       "post": {
         "summary": "Create contact and record consent provenance",
@@ -2369,7 +2369,8 @@
         ]
       },
       "post": {
-        "summary": "Queue read-only account/group refresh; no sends or remote mutations",
+        "summary": "Queue read-only account, group or known-contact refresh; no sends or remote mutations",
+        "description": "contact_profile accepts only the exact WhatsApp JID of a contact already stored locally. It reads status and, for PN JIDs, the available Business profile. Field availability and response correlation are preserved; absent values are never inferred.",
         "requestBody": {
           "required": true,
           "content": {
