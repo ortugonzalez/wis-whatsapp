@@ -3029,8 +3029,8 @@
       "endpoint": "/api/v1/products",
       "screen": "/#capabilities",
       "baileys": null,
-      "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Catálogo público visible de la cuenta propia; indica error, alcance parcial y truncamiento. No expone administración ni productos ocultos.",
+      "test": "Fixtures del lector público y worker.test.mjs verifican el fallback autenticado. Datos reales de esta cuenta aún no confirmados; equivalencia completa no verificada.",
+      "reason": "Lectura parcial del catálogo propio: intenta visibilidad pública y, solo ante public_catalog_unavailable, consulta getCatalog autenticado con Baileys. No habilita administración ni garantiza productos ocultos.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [

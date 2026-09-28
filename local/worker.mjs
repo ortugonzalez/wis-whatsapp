@@ -549,22 +549,31 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(!jid)throw new Error('account_identity_unavailable');
         const publicScope=!contactCatalog&&Boolean(publicCatalogReaderFactory);
         if(publicScope && (!publicReader || publicReaderJid!==jid)){publicReader=publicCatalogReaderFactory({ownJid:jid});publicReaderJid=jid;}
-        const scope=contactCatalog?{scope:'contact_catalog',known_only:true,source:'checked_baileys_iq'}:publicScope?{scope:'public_catalog',known_only:true,source:'public_whatsapp_graphql'}:{};
+        let scope=contactCatalog?{scope:'contact_catalog',known_only:true,source:'checked_baileys_iq'}:publicScope?{scope:'public_catalog',known_only:true,source:'public_whatsapp_graphql'}:{};
         if(command.kind!=='collections') {
-          const products=new Map();const seenCursors=new Set();let cursor,pages=0,partial=false;
+          const products=new Map();const seenCursors=new Set();let cursor,pages=0,partial=false,usePublicCatalog=publicScope;
+          const previousCatalog=db.prepare("SELECT payload FROM snapshots WHERE kind='catalog' AND resource_id=?").get(jid);
+          let previousScope='observed_catalog';try{previousScope=JSON.parse(previousCatalog?.payload||'{}').scope||previousScope;}catch{}
           do {
-            const page=publicScope?await readCall(current,'publicCatalog',[{after:cursor || null}]):await readCall(current,'getCatalog',[{jid,limit:100,...(cursor?{cursor}:{})}]);
+            let page;
+            if(usePublicCatalog){try{page=await readCall(current,'publicCatalog',[{after:cursor || null}]);}catch(error){if(error?.code!=='public_catalog_unavailable')throw error;if(pages){products.clear();seenCursors.clear();cursor=undefined;pages=0;partial=false;}usePublicCatalog=false;scope={scope:'own_account',known_only:false,source:'checked_baileys_iq_fallback'};}}
+            if(!page)page=await readCall(current,'getCatalog',[{jid,limit:100,...(cursor?{cursor}:{})}]);
             if(!Array.isArray(page?.products))throw new Error('invalid_catalog_response');
             partial ||= Boolean(page.truncated);
             for(const p of page.products.slice(0,100)){const value=safeProduct(p);if(value.id!==undefined && value.id!==null)products.set(String(value.id),value);}
-            cursor=publicScope?(page.paging?.after || undefined):(typeof page.nextPageCursor==='string'?page.nextPageCursor:undefined);pages++;
+            cursor=usePublicCatalog?(page.paging?.after || undefined):(typeof page.nextPageCursor==='string'?page.nextPageCursor:undefined);pages++;
             if(cursor && seenCursors.has(cursor))break;
             if(cursor)seenCursors.add(cursor);
           } while(cursor && pages<3);
           // Replace the previous complete collection only when this read is complete.
-          if(!cursor && !partial)db.prepare("DELETE FROM snapshots WHERE kind='product' AND resource_id LIKE ?").run(jid+':%');
-          for(const [id,value] of products)snapshot('product',jid+':'+id,{...value,owner_jid:jid,available:true});
-          snapshot('catalog',jid,{available:true,response_verified:true,product_count:products.size,has_more:Boolean(cursor),truncated:Boolean(cursor)||partial,pages,source:'getCatalog',...scope,error:null,provider_code:null,status_code:null});
+          db.exec('BEGIN IMMEDIATE');
+          try {
+            if(previousScope!==scope.scope || (!cursor && !partial))db.prepare("DELETE FROM snapshots WHERE kind='product' AND resource_id LIKE ?").run(jid+':%');
+            for(const [id,value] of products)snapshot('product',jid+':'+id,{...value,owner_jid:jid,scope:scope.scope??'own_account',available:true});
+            snapshot('catalog',jid,{available:true,response_verified:true,product_count:products.size,has_more:Boolean(cursor),truncated:Boolean(cursor)||partial,pages,source:scope.source??'getCatalog',...scope,error:null,provider_code:null,status_code:null});
+            if(!owns() || sock!==current)throw new Error('connection_changed');
+            db.exec('COMMIT');
+          } catch(error) {try{db.exec('ROLLBACK');}catch{}throw error;}
         } else {
           const result=publicScope?await readCall(current,'publicCollections',[{}]):await readCall(current,'getCollections',[jid,100]);
           if(!Array.isArray(result?.collections))throw new Error('invalid_collections_response');
@@ -633,7 +642,8 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         const resource=['catalog','collections'].includes(command.kind)?current.user?.id?.replace(/:\d+(?=@)/,''):'wis-5679';
         if(summaryKind && resource) {
           const prior=db.prepare('SELECT payload FROM snapshots WHERE kind=? AND resource_id=?').get(summaryKind,resource);
-          snapshot(summaryKind,resource,{available:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,provider_code:failure.provider_code ?? null,...(publicCatalogReaderFactory && ['catalog','collections'].includes(command.kind)?{scope:'public_catalog',known_only:true,source:'public_whatsapp_graphql'}:{}),last_attempt_at:new Date().toISOString()});
+          let priorData={};try{priorData=JSON.parse(prior?.payload||'{}');}catch{}
+          snapshot(summaryKind,resource,{available:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,provider_code:failure.provider_code ?? null,...(publicCatalogReaderFactory && ['catalog','collections'].includes(command.kind)?{scope:priorData.scope??'public_catalog',known_only:priorData.known_only??true,source:priorData.source??'public_whatsapp_graphql'}:{}),last_attempt_at:new Date().toISOString()});
         }
         event('read.failed',command.target || 'wis-5679',{kind:command.kind,command_id:command.id,error:failure.code,status_code:failure.status_code});
       }
