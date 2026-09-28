@@ -3411,7 +3411,7 @@
         "methods": [],
         "support": "local_only",
         "reason": "Etiquetas llegan por sincronización/eventos; no se encontró fetch público exhaustivo de etiquetas.",
-        "next_step": "Persistir labels.edit con bajas y declarar cobertura observada."
+      "next_step": "El endpoint excluye tombstones de la lista activa y expone su conteo; mantener estado parcial porque la sincronización/eventos no prueban un inventario histórico completo."
       }
     },
     {

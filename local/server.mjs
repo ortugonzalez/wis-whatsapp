@@ -177,12 +177,13 @@ export function makeServer(database=db,options={}){
      return send({...safe,[collection?'collection_id':'product_id']:safe.id??null,id:row.resource_id,updated_at:row.updated_at},200,meta);
     }
     if(explorers[resource]&&method==='GET'){
-     const config=explorers[resource];let where='kind=?';let params=[config.kind];if(resource==='products')where+=" AND (json_extract(payload,'$.scope') IS NULL OR EXISTS (SELECT 1 FROM snapshots summary WHERE summary.kind='catalog' AND summary.resource_id=json_extract(snapshots.payload,'$.owner_jid') AND json_extract(summary.payload,'$.scope')=json_extract(snapshots.payload,'$.scope')))";if(page().q)where+=" AND (resource_id LIKE ? ESCAPE '\\' OR payload LIKE ? ESCAPE '\\')";
+     const config=explorers[resource];let where='kind=?';let params=[config.kind];if(resource==='labels')where+=" AND json_extract(payload,'$.deleted') IS NOT 1";if(resource==='products')where+=" AND (json_extract(payload,'$.scope') IS NULL OR EXISTS (SELECT 1 FROM snapshots summary WHERE summary.kind='catalog' AND summary.resource_id=json_extract(snapshots.payload,'$.owner_jid') AND json_extract(summary.payload,'$.scope')=json_extract(snapshots.payload,'$.scope')))";if(page().q)where+=" AND (resource_id LIKE ? ESCAPE '\\' OR payload LIKE ? ESCAPE '\\')";
      const observed=database.prepare('SELECT count(*) AS n,max(updated_at) AS last FROM snapshots WHERE kind IN(?,?)').get(config.kind,config.summary);
      const summaries=database.prepare('SELECT * FROM snapshots WHERE kind=? ORDER BY updated_at DESC').all(config.summary).map(row=>({resource_id:row.resource_id,...parseSnapshot(row)}));
      const collection_status=!observed.n?'not_collected':summaries.some(s=>s.data.available===false)?'unavailable':summaries.some(s=>s.data.truncated||s.data.has_more)?'truncated':summaries.some(s=>s.data.known_only)?'observed_partial':summaries.length&&summaries.every(s=>s.data.available===true&&s.data.response_verified===true)?'complete':'observed_partial';
      if(page().q)params.push(search(),search());
-     return paged('snapshots',where,params,'updated_at DESC,resource_id','*',row=>({...JSON.parse(row.payload),id:row.resource_id,updated_at:row.updated_at}),{observed:observed.n>0,collection_status,last_updated_at:observed.last,summaries});
+     const deletedCount=resource==='labels'?database.prepare("SELECT count(*) AS count FROM snapshots WHERE kind='label' AND json_extract(payload,'$.deleted')=1").get().count:undefined;
+     return paged('snapshots',where,params,'updated_at DESC,resource_id','*',row=>({...JSON.parse(row.payload),id:row.resource_id,updated_at:row.updated_at}),{observed:observed.n>0,collection_status,last_updated_at:observed.last,summaries,...(resource==='labels'?{deleted_count:deletedCount}:{})});
     }
     if(resource==='group-invite'&&method==='GET'){
      auth('read',true);const target=url.searchParams.get('target');if(!groupJid(target))fail(400,'invalid_group_jid');if(!database.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN('group','community') AND resource_id=?").get(target,target))fail(404,'unknown_target');

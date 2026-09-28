@@ -834,11 +834,17 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       current.ev.on('group-participants.update',guarded(value=>{
         event('group-participants.update',value.id,{...safeFields(value,['id','author','action']),participants:(value.participants || []).slice(0,4096).map(p=>safeFields(p,[...contactKeys,'admin']))});
       }));
-      current.ev.on('labels.edit',guarded(value=>{if(value.id)snapshot('label',String(value.id),safeFields(value,['id','name','color','deleted','predefinedId']));}));
+      current.ev.on('labels.edit',guarded(value=>{
+        if(!value.id)return;
+        const id=String(value.id);
+        snapshot('label',id,safeFields(value,['id','name','color','deleted','predefinedId']));
+        if(value.deleted===true)db.prepare("UPDATE snapshots SET payload=json_set(payload,'$.associated',json('false')),updated_at=? WHERE kind='label_association' AND json_extract(payload,'$.labelId')=?").run(new Date().toISOString(),id);
+      }));
       current.ev.on('labels.association',guarded(value=>{
         const association=safeFields(value.association,['type','chatId','messageId','labelId']);
-        event('labels.association',association.chatId || 'wis-5679',{type:value.type,association});
-        if(association.chatId && association.labelId)snapshot('label_association',`${association.chatId}:${association.labelId}:${association.messageId || ''}`,{...association,associated:value.type==='add'});
+        const labelDeleted=Boolean(association.labelId&&db.prepare("SELECT 1 FROM snapshots WHERE kind='label' AND resource_id=? AND json_extract(payload,'$.deleted')=1").get(association.labelId));
+        event('labels.association',association.chatId || 'wis-5679',{type:value.type,association,...(labelDeleted?{ignored_due_to_deleted_label:true}:{})});
+        if(association.chatId && association.labelId)snapshot('label_association',`${association.chatId}:${association.labelId}:${association.messageId || ''}`,{...association,associated:value.type==='add'&&!labelDeleted});
       }));
       current.ev.on('messages.reaction',guarded(values=>{
         for(const value of values.slice(0,1000)) {

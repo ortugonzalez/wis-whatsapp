@@ -135,6 +135,8 @@ test('read-only metadata commands persist account/groups, normalize events and r
   ev.emit('contacts.upsert',[{id:'555@lid',phoneNumber:'5491111111111@s.whatsapp.net',name:'Saved Name',verifiedName:'Business Name',secret:'never-store'}]);
   ev.emit('contacts.update',[{id:'555@lid',notify:'Push Name'}]);
   ev.emit('chats.upsert',[{id:'555@lid',name:'Saved Name',unreadCount:2,archived:true,tcToken:'never-store'}]);
+  const labelAssocAt=new Date().toISOString();db.prepare('INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES(?,?,?,?)').run('label_association','chat:retired:',JSON.stringify({chatId:'chat',labelId:'retired',associated:true}),labelAssocAt);
+  ev.emit('labels.edit',{id:'priority',name:'Priority',color:3,deleted:false});ev.emit('labels.edit',{id:'retired',name:'Retired',color:4,deleted:true});
   ev.emit('presence.update',{id:'555@lid',presences:{'555@lid':{lastKnownPresence:'available',lastSeen:123,secret:'never-store'}}});
   await worker.drainReads();
   const profile=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='profile'").get().payload);
@@ -144,6 +146,11 @@ test('read-only metadata commands persist account/groups, normalize events and r
   const contact=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='contact'").get().payload);
   assert.equal(contact.name,'Saved Name');assert.equal(contact.notify,'Push Name');
   assert.equal(db.prepare("SELECT display_name FROM contacts").get().display_name,'Saved Name');
+  assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='label' AND resource_id='priority'").get().payload).deleted,false);
+  assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='label' AND resource_id='retired'").get().payload).deleted,true);
+  ev.emit('labels.association',{type:'add',association:{type:'label_jid',chatId:'chat',labelId:'retired'}});
+  assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='label_association' AND resource_id='chat:retired:'").get().payload).associated,false);
+  assert.equal(JSON.parse(db.prepare("SELECT payload FROM events WHERE kind='labels.association'").get().payload).ignored_due_to_deleted_label,true);
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='group'").get().payload).subject,'Group');
   assert.equal(db.prepare("SELECT status FROM read_commands WHERE kind='all'").get().status,'done');
   assert.equal(db.prepare("SELECT payload FROM snapshots WHERE kind='chat' AND resource_id='555@lid'").get().payload.includes('tcToken'),false);

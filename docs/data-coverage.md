@@ -32,3 +32,5 @@ La lectura manual de perfil solo usa contactos ya guardados con JID exacto. Cons
 ### Actualizacion programada de canales
 
 La ruta newsletters intenta refrescar hasta 20 canales ya conocidos localmente. Si una respuesta falla, conserva los datos anteriores marcados como desactualizados y continua mientras el socket no tenga una lectura sin resolver. El resumen registra attempted_count, failure_count, unattempted_count, partial y complete. Esta lista no representa un directorio global de canales.
+
+Las etiquetas se recopilan desde eventos `labels.edit` y `labels.association`. `/api/v1/labels` lista solo las vigentes y devuelve `deleted_count`; las eliminadas quedan conservadas como tombstones para la cobertura local y sus asociaciones conocidas pasan a inactivas. El inventario sigue siendo parcial porque WhatsApp no ofrece aquí una lectura pública exhaustiva que demuestre que se recibieron todas las etiquetas históricas.
