@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-09-27T22:38:04.503Z",
+  "captured_at": "2026-09-29T14:25:14.569Z",
   "source": "https://whapi.readme.io/llms.txt",
   "capabilities": [
     {
@@ -155,12 +155,12 @@
       "id": "loginuserimage",
       "name": "Login user with QR-image",
       "source": "https://whapi.readme.io/reference/loginuserimage.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
+      "status": "partial",
+      "endpoint": "GET /api/whatsapp/qr",
+      "screen": "/#connection",
       "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "test": "El panel muestra un QR SVG efímero y la cuenta quedó conectada tras el escaneo. La suite local verifica acceso solo de administrador (anónimo 401, token read-only 403), formato SVG, no-cache, ausencia del payload en la respuesta de conexión y vencimiento.",
+      "reason": "El worker entrega un QR efímero y el panel lo renderiza como SVG protegido; permite vincular la cuenta, pero no replica el contrato HTTP de WHAPI.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
@@ -170,8 +170,8 @@
           }
         ],
         "support": "candidate",
-        "reason": "El socket emite connection.update.qr; no entrega una imagen QR.",
-        "next_step": "Renderizar el payload en imagen temporal protegida y comprobar vencimiento."
+        "reason": "Baileys emite el payload en connection.update.qr; WIS ya lo convierte en SVG temporal protegido, aunque ese método no entrega por sí mismo una imagen ni reproduce el endpoint de login de WHAPI.",
+        "next_step": "Conservar la regresión de autorización, SVG protegido y vencimiento; no anunciar equivalencia del contrato HTTP con WHAPI."
       }
     },
     {
@@ -337,31 +337,39 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "reason": "WHAPI documenta creation y last_registration como milisegundos. La versión fijada de Baileys no ofrece un getter público; WIS no convierte registrationId ni fechas locales en esos valores.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [],
         "support": "no_public_method_found",
         "reason": "No se encontró getter público de fecha de creación de cuenta; registrationId criptográfico no representa una fecha.",
-        "next_step": "Revisar contrato WHAPI y futuras versiones del SDK; ausencia en esta revisión no demuestra imposibilidad técnica."
+        "next_step": "Verificar si existe una lectura de solo lectura, correlacionada con la cuenta propia, en el protocolo disponible. Si no se demuestra, mantener pendiente y explicar la brecha en el panel."
       }
     },
     {
       "id": "getusername",
       "name": "Get account username",
       "source": "https://whapi.readme.io/reference/getusername.md",
-      "status": "pending",
-      "endpoint": null,
-      "screen": "/dashboard",
-      "baileys": null,
-      "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "status": "partial",
+      "endpoint": "GET /api/v1/account (username)",
+      "screen": "/account",
+      "baileys": [
+        "executeUSyncQuery",
+        "USyncQuery.withUsernameProtocol"
+      ],
+      "test": "local/worker.test.mjs",
+      "reason": "Partial: the read-only lookup is scoped to the linked account JID, and only an exactly correlated USync reply is accepted. The connected account returned no_exact_username_reply on 2026-09-28 07:54 UTC, so no username was verified; this does not prove the account has no username.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
-        "methods": [],
-        "support": "no_public_method_found",
-        "reason": "Contact.username existe como dato recibido; no método público dedicado para consultar username.",
-        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+        "methods": [
+          "executeUSyncQuery",
+          "USyncQuery",
+          "USyncUser",
+          "USyncUsernameProtocol"
+        ],
+        "support": "public_protocol_available",
+        "reason": "Baileys exposes USyncUsernameProtocol and executeUSyncQuery; the reply is checked against the own JID and stored only in local SQLite.",
+        "next_step": "Verify on the linked account whether WhatsApp returns a username; an empty result remains unverified."
       }
     },
     {
@@ -373,7 +381,7 @@
       "screen": "/dashboard",
       "baileys": null,
       "test": null,
-      "reason": "Método inventariado. Sin prueba de equivalencia; no disponible como endpoint WIS.",
+      "reason": "WHAPI documenta creation y last_registration como milisegundos. La versión fijada de Baileys no ofrece un getter público; WIS no convierte registrationId ni fechas locales en esos valores.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [],
@@ -2217,7 +2225,7 @@
       "screen": "/#communities",
       "baileys": null,
       "test": "Fixtures de respuesta IQ, permisos y API; docs/community-reads.md.",
-      "reason": "Lectura de grupos y comunidades conocidos, con disponibilidad y errores explícitos. Sin cambios de membresía ni garantía histórica completa.",
+      "reason": "Lectura de comunidades conocidas y consulta manual, solo administrativa, de su código de invitación efímero; el código desaparece tras cinco minutos y no se regenera ni revoca. Sin cambios de membresía ni garantía histórica completa; equivalencia remota pendiente.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
         "methods": [
@@ -3411,7 +3419,7 @@
         "methods": [],
         "support": "local_only",
         "reason": "Etiquetas llegan por sincronización/eventos; no se encontró fetch público exhaustivo de etiquetas.",
-      "next_step": "El endpoint excluye tombstones de la lista activa y expone su conteo; mantener estado parcial porque la sincronización/eventos no prueban un inventario histórico completo."
+        "next_step": "El endpoint excluye tombstones de la lista activa y expone su conteo; mantener estado parcial porque la sincronización/eventos no prueban un inventario histórico completo."
       }
     },
     {

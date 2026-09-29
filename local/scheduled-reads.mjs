@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-export const SCHEDULED_READ_KINDS = Object.freeze(['all', 'blocklist', 'communities', 'catalog', 'collections', 'newsletters', 'account_limits']);
+export const SCHEDULED_READ_KINDS = Object.freeze(['all', 'blocklist', 'communities', 'catalog', 'collections', 'newsletters', 'account_limits', 'account_username', 'contact_profiles', 'group_requests', 'avatars', 'bot_list', 'disappearing_mode']);
 export const SCHEDULED_READ_INTERVALS = Object.freeze([15, 30, 60, 120]);
 const SETTING_KEY = 'scheduled_reads';
 
@@ -93,15 +93,25 @@ export function queueScheduledReadIfDue(database, { now = Date.now(), connected 
 }
 
 export function getScheduledReadStatus(database, now = Date.now()) {
-  const schedule = getScheduledReadSettings(database, now);
+  // Status is also used by read-only diagnostics; an absent/corrupt setting
+  // must be projected in memory rather than initialized with a database write.
+  const schedule = readStored(database) || initialSchedule(now);
   const command = schedule.last_command_id ? database.prepare('SELECT status FROM read_commands WHERE id=?').get(schedule.last_command_id) : null;
   const lastStatus = ['pending', 'running', 'done', 'failed'].includes(command?.status) ? command.status : null;
+  const connection=database.prepare("SELECT status,phone,expected_phone_e164 FROM connections WHERE id='wis-5679'").get();
+  const identityVerified=Boolean(connection?.phone&&connection.expected_phone_e164&&connection.phone.replace(/\D/g,'')===connection.expected_phone_e164.replace(/\D/g,''));
+  const due=Boolean(schedule.enabled&&schedule.next_run_at&&Date.parse(schedule.next_run_at)<=now);
+  const active=Boolean(database.prepare("SELECT 1 AS active FROM read_commands WHERE status IN('pending','running') LIMIT 1").get());
+  const blockedReason=!schedule.enabled?'disabled':!due?'not_due':active?'read_in_progress':connection?.status!=='connected'||!identityVerified?'connection_required':null;
   return {
     enabled: schedule.enabled,
     interval_minutes: schedule.interval_minutes,
     next_run_at: schedule.next_run_at,
+    next_kind: SCHEDULED_READ_KINDS[schedule.cursor % SCHEDULED_READ_KINDS.length],
     last_kind: schedule.last_kind,
     last_enqueued_at: schedule.last_enqueued_at,
     last_status: lastStatus,
+    due,
+    blocked_reason: blockedReason,
   };
 }

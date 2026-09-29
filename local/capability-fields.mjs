@@ -60,34 +60,38 @@ function publicRow(method, row) {
   };
 }
 
-export async function listCapabilityFields(root, limit = 100, offset = 0) {
+export async function listCapabilityFields(root, limit = 100, offset = 0, filters = {}) {
   const inventory = await loadInventory(root);
   const results = [];
   let total = 0;
   for (const method of inventory.methods ?? []) {
+    if (filters.capability_id && method.id !== filters.capability_id) continue;
     for (const row of fieldRows(method)) {
+      if (filters.direction && row.direction !== filters.direction) continue;
       if (total >= offset && results.length < limit) results.push(publicRow(method, row));
       total++;
     }
   }
-  return { query: null, total, offset, limit, results, captured_at: inventory.captured_at, source: inventory.source };
+  return { query: null, capability_id: filters.capability_id ?? null, direction: filters.direction ?? null, total, offset, limit, results, captured_at: inventory.captured_at, source: inventory.source };
 }
 
-export async function searchCapabilityFields(root, query, limit = 100, offset = 0) {
+export async function searchCapabilityFields(root, query, limit = 100, offset = 0, filters = {}) {
   const q = typeof query === 'string' ? query.trim().toLocaleLowerCase('en') : '';
   if (q.length < 2 || q.length > 100) return { query: q, total: 0, results: [] };
   const inventory = await loadInventory(root);
   const results = [];
   let total = 0;
   for (const method of inventory.methods ?? []) {
+    if (filters.capability_id && method.id !== filters.capability_id) continue;
     const rows = fieldRows(method);
     const methodContext = `${method.id ?? ''} ${method.version ?? ''}`;
     for (const row of rows) {
+      if (filters.direction && row.direction !== filters.direction) continue;
       const searchable = `${methodContext} ${row.operation_id} ${row.endpoint_method} ${row.endpoint_path} ${row.tags.join(' ')} ${row.direction} ${row.location ?? ''} ${row.path ?? ''} ${row.type ?? ''} ${row.description ?? ''}`.toLocaleLowerCase('en');
       if (!searchable.includes(q)) continue;
       if (total >= offset && results.length < limit) results.push(publicRow(method, row));
       total++;
     }
   }
-  return { query: q, total, offset, limit, results, captured_at: inventory.captured_at, source: inventory.source };
+  return { query: q, capability_id: filters.capability_id ?? null, direction: filters.direction ?? null, total, offset, limit, results, captured_at: inventory.captured_at, source: inventory.source };
 }

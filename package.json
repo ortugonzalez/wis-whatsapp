@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "node local/start.mjs",
-    "build": "node --check local/server.mjs && node --check local/worker.mjs && node --check local/webhooks.mjs && node --check local/avatars.mjs && node --check local/public/app.js && node --check local/public/live.js && node --check local/public/explorer.js && node --check local/public/messages.js && node --check local/public/integrations.js && node --check local/public/avatars.js && node --check local/public/calls.js && node --check local/public/identities.js && node --check local/public/stories.js && node --check local/public/communities.js && node --check local/public/capability-audit.js && node --check local/public/account-limits.js && node --check local/public/data-coverage.js && node --check local/public/contact-checks.js && node --check local/public/scheduled-reads.js && node --check local/public/chat-details.js && node --check local/public/bots.js && node --check local/public/contact-catalog.js && node --check local/public/group-invite.js && node --check local/public/group-invite-info.js && node --check local/public/newsletter-invite-info.js && node --check local/public/limits.js && node --check local/group-invite-info.mjs && node --check local/newsletter-invite-info.mjs && node --check local/limits.mjs && node --check local/supervisor.mjs && node --check local/start.mjs && node --check local/control.mjs",
+    "build": "node --check local/server.mjs && node --check local/password-recovery.mjs && node --check local/worker.mjs && node --check local/webhooks.mjs && node --check local/avatars.mjs && node --check local/whapi-field-coverage.mjs && node --check local/whapi-field-coverage-cli.mjs && node --check local/public/app.js && node --check local/public/password-recovery.js && node --check local/public/login-status.js && node --check local/public/whapi-field-aliases.js && node --check local/public/live.js && node --check local/public/explorer.js && node --check local/public/messages.js && node --check local/public/integrations.js && node --check local/public/avatars.js && node --check local/public/calls.js && node --check local/public/identities.js && node --check local/public/stories.js && node --check local/public/communities.js && node --check local/public/capability-audit.js && node --check local/public/account-limits.js &&node --check local/public/account-username.js && node --check local/public/data-coverage.js && node --check local/public/contact-checks.js && node --check local/public/scheduled-reads.js && node --check local/public/overview-observability.js && node --check local/public/chat-details.js && node --check local/public/bots.js && node --check local/public/contact-catalog.js && node --check local/public/group-invite.js && node --check local/public/group-invite-info.js && node --check local/public/newsletter-invite-info.js && node --check local/public/limits.js && node --check local/group-invite-info.mjs && node --check local/newsletter-invite-info.mjs && node --check local/limits.mjs && node --check local/supervisor.mjs && node --check local/start.mjs && node --check local/control.mjs && node --check local/disappearing-mode.mjs && node --check local/public/disappearing-mode.js",
     "start": "node local/start.mjs",
     "lint": "eslint",
     "local:setup": "node local/setup.mjs",
     "worker": "node local/worker.mjs",
     "test:api": "node --test examples/webhook-dispatcher.test.mjs examples/n8n-contract.test.mjs",
+    "test": "node --test --test-concurrency=1 local/*.test.mjs",
     "test:worker": "npm --prefix workers/whatsapp-baileys test",
     "legacy:build": "next build",
     "local:backup": "node local/backup.mjs",
@@ -17,17 +18,19 @@
     "test:local": "node --test --test-concurrency=1 local/*.test.mjs",
     "local:stop": "node local/control.mjs stop",
     "local:status": "node local/status.mjs",
-    "local:reload-api": "node local/control.mjs reload-api"
+    "local:reload-api": "node local/control.mjs reload-api",
+    "audit:whapi-fields": "node local/whapi-field-coverage-cli.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
+    "baileys": "7.0.0-rc14",
     "next": "16.3.6",
+    "nodemailer": "^10.0.12",
+    "pino": "9.6.0",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "baileys": "7.0.0-rc14",
-    "pino": "9.6.0"
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14",

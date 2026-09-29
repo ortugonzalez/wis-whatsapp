@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createPublicCatalogReader,discoverPublicCatalogConfig,extractPublicCatalogConfig} from './catalog-http.mjs';
+import {PublicCatalogError,createPublicCatalogReader,discoverPublicCatalogConfig,extractPublicCatalogConfig} from './catalog-http.mjs';
 const config={token:'WA|FAKE_TEST_ONLY',catalog:'30445081048424116',collections:'9430970660362540'};
 const json=value=>new Response(JSON.stringify(value),{headers:{'content-type':'application/json'}});
 test('discovery resolves only named exported variable; never evaluates JS or chooses WWW credential',async()=>{
@@ -30,6 +30,22 @@ test('collections valid empty result differs from malformed/no response and auth
  }
  let calls=0;const reader=createPublicCatalogReader({ownJid:'5491111115679@s.whatsapp.net',discover:async()=>config,fetchImpl:async()=>{calls++;return new Response('SECRET error response',{status:403});}});
  await assert.rejects(reader.catalog(),e=>e.code==='access_denied' && !e.message.includes('SECRET'));assert.equal(calls,1);
+});
+test('public catalog request timeout aborts its HTTP request and returns a typed timeout',async()=>{
+ const reader=createPublicCatalogReader({ownJid:'5491111115679@s.whatsapp.net',discover:async()=>config,catalogTimeoutMs:5,fetchImpl:async(_url,{signal})=>new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(new Error('aborted')), {once:true}))});
+ await assert.rejects(reader.catalog(),error=>error.name==='PublicCatalogError'&&error.code==='public_catalog_http_timeout');
+});
+test('catalog discovery waits for every in-flight scan before returning a timeout',async()=>{
+ let releaseFirst,releaseSecond,settled=false;
+ const fetchImpl=async url=>{
+  if(url==='https://web.whatsapp.com/')return new Response('<script src="https://static.whatsapp.net/a.js"></script><script src="https://static.whatsapp.net/b.js"></script><script src="https://static.whatsapp.net/c.js"></script>');
+  if(url.endsWith('/a.js'))throw new PublicCatalogError('read_timeout');
+  return new Promise(resolve=>{if(url.endsWith('/b.js'))releaseFirst=()=>resolve(new Response(''));else releaseSecond=()=>resolve(new Response(''));});
+ };
+ const pending=discoverPublicCatalogConfig({fetchImpl}).catch(error=>error);
+ await new Promise(resolve=>setImmediate(resolve));assert.equal(typeof releaseFirst,'function');assert.equal(typeof releaseSecond,'function');
+ const observation=pending.then(error=>{settled=true;return error;});await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false);
+ releaseFirst();await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false);releaseSecond();const error=await observation;assert.equal(error.code,'read_timeout');
 });
 test('HTTP output bounds, malformed JSON and GraphQL errors remain sanitized',async()=>{
  for(const response of [new Response('notjson SECRET'),json({errors:[{message:'SECRET'}]}),new Response('SECRET',{headers:{'content-length':String(5*1024*1024)}})]) {

@@ -29,8 +29,8 @@ export function extractPublicCatalogConfig(source) {
     }
   }
   for(const [kind,name] of [['catalog','WAWebQueryCatalogQuery.graphql'],['collections','WAWebQueryProductCollectionsQuery.graphql']]) {
-    const module=moduleSource(source,name);
-    const id=module?.match(/\bid\s*:\s*["'](\d{10,30})["']/)?.[1];
+    const sourceModule=moduleSource(source,name);
+    const id=sourceModule?.match(/\bid\s*:\s*["'](\d{10,30})["']/)?.[1];
     if(id)output[kind]=id;
   }
   return output;
@@ -50,7 +50,7 @@ async function boundedText(response,maxBytes) {
 function statusError(status) {
   return new PublicCatalogError(status===401 || status===403?'access_denied':status===429?'rate_limited':status===404?'not_found':'provider_http_error',status);
 }
-async function fetchText(fetchImpl,url,options,maxBytes,timeoutMs) {
+async function fetchText(fetchImpl,url,options,maxBytes,timeoutMs,timeoutCode='read_timeout') {
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try {
     const response=await fetchImpl(url,{...options,credentials:'omit',redirect:'error',signal:controller.signal});
@@ -58,7 +58,7 @@ async function fetchText(fetchImpl,url,options,maxBytes,timeoutMs) {
     return await boundedText(response,maxBytes);
   } catch(error) {
     if(error instanceof PublicCatalogError)throw error;
-    throw new PublicCatalogError(controller.signal.aborted?'read_timeout':'transport_failed');
+    throw new PublicCatalogError(controller.signal.aborted?timeoutCode:'transport_failed');
   } finally {clearTimeout(timer);}
 }
 export async function discoverPublicCatalogConfig({fetchImpl=fetch,maxScripts=60}={}) {
@@ -75,7 +75,9 @@ export async function discoverPublicCatalogConfig({fetchImpl=fetch,maxScripts=60
       Object.assign(result,extractPublicCatalogConfig(source));
     }
   }
-  await Promise.all([scan(),scan(),scan()]);
+  const scans=await Promise.allSettled([scan(),scan(),scan()]);
+  const failed=scans.find(result=>result.status==='rejected');
+  if(failed)throw failed.reason;
   if(!result.token)throw new PublicCatalogError('public_catalog_config_unavailable');
   return result;
 }
@@ -98,7 +100,7 @@ function paging(value) {
   const after=value?.after ?? value?.cursors?.after;
   return {after:typeof after==='string'?after.slice(0,2048):null};
 }
-export function createPublicCatalogReader({ownJid,fetchImpl=fetch,discover=discoverPublicCatalogConfig}={}) {
+export function createPublicCatalogReader({ownJid,fetchImpl=fetch,discover=discoverPublicCatalogConfig,catalogTimeoutMs=30000}={}) {
   const jid=typeof ownJid==='string'?ownJid.replace(/:\d+(?=@)/,''):'';
   if(!/^[1-9]\d{7,14}@s\.whatsapp\.net$/.test(jid))throw new PublicCatalogError('invalid_own_jid');
   let configuration;
@@ -108,7 +110,7 @@ export function createPublicCatalogReader({ownJid,fetchImpl=fetch,discover=disco
     if(!configuration?.token || !/^\d{10,30}$/.test(configuration[kind] || ''))throw new PublicCatalogError('public_catalog_config_unavailable');
     const shared={after,width:'100',height:'100',direct_connection_encrypted_info:null,variant_info_fields:null,variant_thumbnail_height:null,variant_thumbnail_width:null};
     const request=kind==='catalog'?{product_catalog:{jid,allow_shop_source:'ALLOWSHOPSOURCE_TRUE',limit:'50',catalog_session_id:null,...shared}}:{collections:{biz_jid:jid,collection_limit:'50',item_limit:'50',...shared}};
-    const text=await fetchText(fetchImpl,ENDPOINT,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify({access_token:configuration.token,doc_id:configuration[kind],lang:'en_US',variables:{request}})},4*1024*1024,30000);
+    const text=await fetchText(fetchImpl,ENDPOINT,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify({access_token:configuration.token,doc_id:configuration[kind],lang:'en_US',variables:{request}})},4*1024*1024,catalogTimeoutMs,'public_catalog_http_timeout');
     let body;try{body=JSON.parse(text);}catch{throw new PublicCatalogError('invalid_json_response');}
     if(!plainObject(body))throw new PublicCatalogError('invalid_catalog_response');
     if(body.errors?.length || body.error) {

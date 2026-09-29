@@ -1,78 +1,53 @@
-> Arquitectura actual: SQLite, sin Supabase ni Docker. Ver [manual SQLite](sqlite-local.md). El contenido anterior debajo es histórico.
+# Operación de WIS WhatsApp local
 
-# WIS WhatsApp — operación local
+La instalación activa usa SQLite, un panel Node local y un worker Baileys. Supabase y Docker no forman parte del runtime. Para instalación reproducible, arquitectura y límites, consultar [SQLite local](sqlite-local.md).
 
-## Estado y límites
+## Inicio y acceso
 
-Conexión prevista: WIS · 5679. El número completo debe ingresarlo el administrador en Configuración de WhatsApp; no se deduce a partir de sus últimos cuatro dígitos. Los envíos requieren coincidencia exacta con la identidad vinculada.
-
-Entorno desarrollado en Windows, panel Next.js 16.3.6 y worker Baileys separados. Base, Auth, Realtime y archivos: Supabase local. La matriz `public/whapi-capabilities.json` inventaría 182 métodos de WHAPI; estados parciales y pendientes son brechas, no funciones verificadas.
-
-Durante esta implementación Docker Desktop falló antes de ofrecer un motor Linux: sockets AF_UNIX residuales y posteriormente `Lingering processes detected`. Se conservaron respaldos de directorios de sockets bajo LocalAppData (`Docker/run.wis-*`, `docker-secrets-engine.wis-*`); no se borraron volúmenes, contenedores ni bases. No se hizo un factory reset. Si persiste el error, cerrar el aviso con Stop processes y reiniciar Windows antes de intentar nuevamente. El reinicio no fue ejecutado por el agente.
-
-## Instalación y arranque
-
-Desde este repositorio, con Docker Desktop funcionando:
+Desde la raíz del worktree:
 
 ```powershell
-rtk npm ci
-rtk npm --prefix workers/whatsapp-baileys ci
-rtk npm run local:db
+rtk npm ci --ignore-scripts
 rtk npm run local:setup
-rtk npm run dev
+rtk npm start
 ```
 
-En otra terminal:
+Abrir `http://127.0.0.1:3010` en Chrome. El usuario administrador local se genera durante `local:setup`; sus datos quedan en `.local/admin-access.txt`. La base, credenciales y sesión están bajo `.local/`, excluida de Git y protegida con ACL en Windows. No pegues su contenido en chats ni informes.
 
-```powershell
-rtk npm run worker
-```
+El acceso requiere la contraseña de administrador. Si ya se ejecutó setup y no la tienes a mano, consulta el archivo local desde el equipo; no vuelvas a inicializar ni reemplaces la base para recuperarla. El setup existente no debe ejecutarse como procedimiento de recuperación.
 
-Abrir `http://localhost:3010`. Sin configuración o servicios disponibles se muestra `/setup`, nunca un dashboard con métricas inventadas. Supabase usa puertos 55320–55329 para separarse de otros proyectos. El bootstrap acepta exclusivamente 127.0.0.1/localhost:55321.
+Para detener ordenadamente panel y worker, usa `rtk npm run local:stop`. Reiniciar el panel no debería revocar la sesión. Evita terminar a la fuerza el proceso worker mientras mantiene el lease.
 
-El administrador inicial es `admin@wis.local`. La contraseña aleatoria queda en `.local/credentials.json`; no se imprime ni se incorpora a Git. El bootstrap protege `.local` y archivos de entorno con ACL del usuario y SYSTEM en Windows. No compartir esos archivos ni el QR.
+## Conexión de WhatsApp
 
-## Vincular y verificar
+El panel local y WIS Command Center son instalaciones diferentes y no comparten automáticamente la sesión. Una conexión visible en Command Center no indica que el worker SQLite local esté conectado.
 
-1. Ingresar con el administrador. Abrir Configuración de WhatsApp.
-2. Registrar el número E164 completo, incluido `+` y código de país.
-3. Solicitar QR y escanear desde WhatsApp → Dispositivos vinculados.
-4. Verificar que la identidad conectada coincide. La sesión persiste al reiniciar; «Cerrar sesión» sí la revoca.
-5. Conservar `WIS_OUTBOUND_ENABLED=false` tanto en panel como worker hasta aprobar una prueba real concreta. Esta instalación no realizó envíos.
+La pantalla de acceso muestra un estado local resumido antes de iniciar sesión (`/api/local-status`), incluido el último código de cierre y una causa de una lista fija cuando Baileys los informa. No devuelve número, identidad, QR, texto de error del proveedor ni datos de sesión. Para ver o solicitar el QR hay que autenticarse en el panel local.
 
-Una pérdida breve de red permite reconexión limitada; sesión revocada requiere nuevo QR. Un segundo worker no puede obtener el lease de una sesión en uso. Nunca arrancar local y servidor a la vez sobre la misma copia de credenciales.
+En el panel local, iniciar sesión, abrir **Conexión**, solicitar el QR temporal y escanearlo desde WhatsApp → **Dispositivos vinculados**. Confirmar en el panel la identidad completa devuelta por WhatsApp; el sufijo 5679 por sí solo no identifica una cuenta. No ejecutar un segundo worker ni copiar la carpeta de sesión a otra instalación mientras la sesión local esté activa.
 
-## Python, n8n y webhooks
+### Cierre `401 / logged_out` (`session_revoked`)
 
-Crear token desde Dashboard → Tokens. El token completo se muestra una vez; guardar en el gestor de secretos del consumidor. Revocarlo desde el panel. Ejemplos en `examples/python_client.py` y `examples/n8n-*.json`; los workflows vienen inactivos. Para n8n remoto, localhost de esta PC no es accesible: preparar servidor HTTPS o conectividad privada antes de operar, sin exponer directamente Supabase ni el worker.
+Este estado indica que Baileys recibió un cierre de sesión para las credenciales locales guardadas; por sí solo no prueba una suspensión, no identifica qué dispositivo lo causó y no significa que la conexión visible en otra instalación pertenezca a este worker. La orden **Conectar** reutiliza esas credenciales y puede repetir el mismo 401 en vez de generar un QR. No la repitas en ciclo ni borres manualmente `.local/baileys-auth` para forzar un QR. En esta versión no hay una recuperación segura automática de credenciales revocadas: conserva la sesión local y espera una recuperación controlada que respalde los archivos de autenticación de forma privada, detenga el único worker y retire solo la credencial local rechazada antes de iniciar una vinculación nueva. La acción **Cerrar sesión / logout** también borra los archivos JSON de autenticación de `.local/baileys-auth`, así que no la uses como sustituto del respaldo. No subas ese respaldo ni sus logs a Git, nube o chat. La nueva vinculación requiere que la persona con el teléfono escanee el QR y confirme la identidad.
 
-Registrar consentimiento y bajas desde Contactos. Todo envío verifica consentimiento en API, cola y nuevamente en worker. No usar `transactional` para eludir controles. Los grupos salientes y campañas permanecen bloqueados mientras no exista política de destinatarios y aprobación de ejecución.
+Los mensajes y el historial se limitan a lo que WhatsApp entregue durante la vinculación y sincronización; no se promete recuperar el historial anterior completo. Baileys es una integración no oficial y no puede garantizar que WhatsApp no suspenda la línea.
 
-Esta sección pertenece a la arquitectura histórica. El dispatcher activo ahora forma parte del worker SQLite; el antiguo ejecutable independiente no envía. Consultar `docs/webhooks-local.md` para el contrato vigente y la activación pendiente de aprobación.
+### Cierre `440 / connection_replaced`
 
-`examples/n8n-receive-webhook.json` es un tercer workflow inactivo que verifica HMAC, timestamp e identificador sin ejecutar acciones comerciales. Requiere conservar Raw Body, permitir `crypto` en Code y configurar `WIS_WEBHOOK_SECRET` con acceso desde el runner. No se cambiaron esos permisos en tu n8n ni se importó/activó el flujo. Antes de añadir acciones, agregar deduplicación durable por `event_id`. Referencia: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook .
+Este código indica que WhatsApp cerró el socket de Baileys como reemplazado; por sí solo no identifica qué instalación lo provocó ni significa que la línea esté suspendida. Comprueba primero que el QR se haya escaneado en `localhost:3010`, que exista un solo worker local y qué instalación mantiene la sesión en **Dispositivos vinculados**. Una conexión momentánea seguida por 440 no cuenta como estable. Conserva `.local/` y evita copiar, borrar o cerrar credenciales/dispositivos para “probar”; cuando se identifique la instancia propietaria, realiza un único reintento desde el panel local y verifica que permanezca conectada.
 
-Estados de operación: aceptar en cola no significa entregar. `outcome_unknown` requiere conciliación manual con teléfono, identificador y registros antes de reenviar. No borrar claves de idempotencia para forzar reintentos.
+## API, Python y n8n
 
-## Detener, respaldar y trasladar
+Python y n8n consumen `/api/v1` mediante tokens con permisos mínimos creados desde **Integraciones**. La sesión Baileys nunca se comparte directamente con consumidores. Los ejemplos de Python y los workflows incluidos están inactivos hasta que se configuren deliberadamente.
 
-- Detener panel y worker con Ctrl+C. `rtk npm run local:stop` conserva volúmenes Supabase. No usar `--no-backup` ni reset de DB sobre datos útiles.
-- Antes de respaldo consistente: detener worker y dispatcher; detener cambios desde panel. Respaldar PostgreSQL, objetos privados de Storage y `.local/baileys-auth` como una unidad; cifrar el respaldo y conservar las claves fuera del repositorio. No incluir secretos en informes.
-- Restaurar en entorno aislado y comprobar migraciones, membresías y objetos. Una copia SQL sola no restaura multimedia ni sesión de WhatsApp.
-- Traslado a servidor: HTTPS y autenticación, almacenamiento persistente, secretos protegidos y backups cifrados; detener primero el worker local, esperar vencimiento/liberación del lease y arrancar únicamente el del servidor. Hacer prueba de restauración antes del cambio. No se desplegó ningún servicio externo.
+Los envíos están deshabilitados por defecto. Requieren consentimiento registrado, ausencia de baja e idempotencia; aceptar una operación en cola no demuestra entrega. Un resultado ambiguo necesita conciliación antes de reintentar. No habilites envíos, webhooks o workflows sin revisar destinatario, contenido e impacto concretos.
 
-## Verificación disponible
+## Respaldo y recuperación
 
-```powershell
-rtk npm run build
-rtk npm run lint
-rtk node scripts/test-migrations.mjs
-rtk npm run test:worker
-rtk npm run test:api
-```
+`rtk npm run local:backup` genera una copia consistente de SQLite en `.local/backups/`. Esa copia no incluye archivos de sesión ni multimedia. Para una copia integral, detener panel y worker y proteger conjuntamente la base, la sesión y los archivos privados. Restaurar con ambos procesos detenidos; nunca iniciar simultáneamente la sesión original y su copia. La documentación de SQLite local describe la validación y recuperación de backups.
 
-El test de migraciones usa PostgreSQL embebido PGlite sin red, con esquemas mínimos Auth/Storage para probar SQL y RLS. No sustituye Supabase Auth, Realtime, Storage HTTP ni la prueba QR real. `examples/api-database-test.sql` se puede ejecutar en la base local aislada, sin worker, y hace rollback.
+## Cobertura
 
-Historial: se conserva lo entregado por WhatsApp con fecha original; no se promete historial completo ni descarga de archivos históricos. Estados, comunidades, catálogo, llamadas y otros métodos no implementados quedan explicitados en el catálogo.
+El inventario fechado de 182 métodos WHAPI está en `public/whapi-capabilities.json`; los campos y sus evidencias se describen en `docs/whapi-reference-fields.md`. `partial` indica soporte limitado y no equivale a paridad. Las funciones pendientes o no soportadas no deben presentarse como disponibles.
 
-Baileys es una conexión no oficial. Consentimiento, permisos, límites e idempotencia no garantizan que WhatsApp no suspenda la línea.
+El detalle de conversación también ofrece una lectura Baileys bajo demanda del temporizador de mensajes que desaparecen; su alcance y diferencia frente a WHAPI están en [modo de mensajes que desaparecen](disappearing-mode.md).

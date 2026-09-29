@@ -12,6 +12,14 @@ test('scheduled read-only observations wait 15 minutes, rotate, and do not overl
     assert.equal(initial.interval_minutes, 15);
     assert.equal(Date.parse(initial.next_run_at), start + 15 * 60_000);
     assert.equal(queueScheduledReadIfDue(database, { now: start + 15 * 60_000, connected: false }).status, 'disconnected');
+    const waiting=getScheduledReadStatus(database,start+15*60_000);
+    assert.equal(waiting.due,true);
+    assert.equal(waiting.blocked_reason,'connection_required');
+    database.prepare("UPDATE connections SET status='connected',phone='+5491100005679',expected_phone_e164='+5491100005679' WHERE id='wis-5679'").run();
+    assert.equal(getScheduledReadStatus(database,start+15*60_000).blocked_reason,null);
+    database.prepare("INSERT INTO read_commands(id,kind,status,created_at,updated_at) VALUES('active-read','all','running',?,?)").run(new Date(start).toISOString(),new Date(start).toISOString());
+    assert.equal(getScheduledReadStatus(database,start+15*60_000).blocked_reason,'read_in_progress');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id='active-read'").run();
 
     const first = queueScheduledReadIfDue(database, { now: start + 15 * 60_000, connected: true, id: 'scheduled-1' });
     assert.deepEqual({ status: first.status, kind: first.kind }, { status: 'queued', kind: 'all' });
@@ -21,7 +29,17 @@ test('scheduled read-only observations wait 15 minutes, rotate, and do not overl
     database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(first.id);
     const second = queueScheduledReadIfDue(database, { now: start + 30 * 60_000, connected: true, id: 'scheduled-2' });
     assert.deepEqual({ status: second.status, kind: second.kind }, { status: 'queued', kind: 'blocklist' });
-    assert.equal(getScheduledReadStatus(database, start + 30 * 60_000).last_status, 'pending');
+    assert.deepEqual(getScheduledReadStatus(database, start + 30 * 60_000), {
+      enabled: true,
+      interval_minutes: 15,
+      next_run_at: new Date(start + 45 * 60_000).toISOString(),
+      next_kind: 'communities',
+      last_kind: 'blocklist',
+      last_enqueued_at: new Date(start + 30 * 60_000).toISOString(),
+      last_status: 'pending',
+      due: false,
+      blocked_reason: 'not_due',
+    });
     database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(second.id);
     const third = queueScheduledReadIfDue(database, { now: start + 45 * 60_000, connected: true, id: 'scheduled-3' });
     assert.deepEqual({ status: third.status, kind: third.kind }, { status: 'queued', kind: 'communities' });
@@ -37,6 +55,27 @@ test('scheduled read-only observations wait 15 minutes, rotate, and do not overl
     database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(sixth.id);
     const seventh = queueScheduledReadIfDue(database, { now: start + 105 * 60_000, connected: true, id: 'scheduled-7' });
     assert.equal(seventh.kind, 'account_limits');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(seventh.id);
+    const eighth = queueScheduledReadIfDue(database, { now: start + 120 * 60_000, connected: true, id: 'scheduled-8' });
+    assert.equal(eighth.kind, 'account_username');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(eighth.id);
+    const ninth = queueScheduledReadIfDue(database, { now: start + 135 * 60_000, connected: true, id: 'scheduled-9' });
+    assert.equal(ninth.kind, 'contact_profiles');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(ninth.id);
+    const tenth = queueScheduledReadIfDue(database, { now: start + 150 * 60_000, connected: true, id: 'scheduled-10' });
+    assert.equal(tenth.kind, 'group_requests');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(tenth.id);
+    const eleventh = queueScheduledReadIfDue(database, { now: start + 165 * 60_000, connected: true, id: 'scheduled-11' });
+    assert.equal(eleventh.kind, 'avatars');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(eleventh.id);
+    const twelfth = queueScheduledReadIfDue(database, { now: start + 180 * 60_000, connected: true, id: 'scheduled-12' });
+    assert.equal(twelfth.kind, 'bot_list');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(twelfth.id);
+    const thirteenth = queueScheduledReadIfDue(database, { now: start + 195 * 60_000, connected: true, id: 'scheduled-13' });
+    assert.equal(thirteenth.kind, 'disappearing_mode');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(thirteenth.id);
+    const wrapped = queueScheduledReadIfDue(database, { now: start + 210 * 60_000, connected: true, id: 'scheduled-14' });
+    assert.equal(wrapped.kind, 'all');
   } finally {
     database.close();
   }
@@ -84,4 +123,9 @@ test('corrupt persisted schedule state resets to a bounded future run', () => {
   } finally {
     database.close();
   }
+});
+
+test('scheduled read status projects defaults without writing to a read-only database',()=>{
+ const database=openDatabase(':memory:');
+ try{database.exec('PRAGMA query_only=ON');const status=getScheduledReadStatus(database,Date.parse('2026-01-01T00:00:00.000Z'));assert.equal(status.enabled,true);assert.equal(status.interval_minutes,15);assert.equal(status.next_run_at,'2026-01-01T00:15:00.000Z');assert.equal(database.prepare("SELECT 1 FROM settings WHERE key='scheduled_reads'").get(),undefined);}finally{database.close();}
 });

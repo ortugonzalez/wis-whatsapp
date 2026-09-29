@@ -15,6 +15,7 @@ test('capability field search requires authentication and returns bounded metada
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
     assert.equal((await fetch(`${base}/api/v1/capability-fields?q=participants`)).status, 401);
+    assert.equal((await fetch(`${base}/api/v1/capability-field-coverage`)).status, 401);
     const login = await fetch(`${base}/api/login`, { method: 'POST', headers: { Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
     assert.equal(login.status, 200);
     const cookie = login.headers.get('set-cookie').split(';')[0];
@@ -39,6 +40,22 @@ test('capability field search requires authentication and returns bounded metada
     assert.equal((await fetch(`${base}/api/v1/capability-fields?offset=-1`, { headers: { Cookie: cookie } })).status, 400);
     const fractional = await fetch(`${base}/api/v1/capability-fields?q=participants&limit=2.5`, { headers: { Cookie: cookie } });
     assert.ok((await fractional.json()).data.results.length <= 2);
+    const filtered = await fetch(`${base}/api/v1/capability-fields?capability_id=getmessages&direction=response&limit=5`, { headers: { Cookie: cookie } });
+    assert.equal(filtered.status, 200);
+    const filteredBody = await filtered.json();
+    assert.equal(filteredBody.data.capability_id, 'getmessages');
+    assert.equal(filteredBody.data.direction, 'response');
+    assert.ok(filteredBody.data.results.length > 0);
+    assert.ok(filteredBody.data.results.every(row => row.capability_id === 'getmessages' && row.direction === 'response'));
+    assert.equal((await fetch(`${base}/api/v1/capability-fields?direction=send`, { headers: { Cookie: cookie } })).status, 400);
+    assert.equal((await fetch(`${base}/api/v1/capability-fields?capability_id=../private`, { headers: { Cookie: cookie } })).status, 400);
+    const coverage = await fetch(`${base}/api/v1/capability-field-coverage`, { headers: { Cookie: cookie } });
+    assert.equal(coverage.status, 200);
+    const coverageBody = await coverage.json();
+    assert.equal(coverageBody.data.method_count, 182);
+    assert.ok(coverageBody.data.totals.response_fields > 0);
+    assert.ok(coverageBody.data.methods.every(row => Number.isInteger(row.response_fields_without_observation)));
+    assert.equal(JSON.stringify(coverageBody).includes('should-not-leak'), false);
   } finally {
     await new Promise(resolve => server.close(resolve));
     database.close();

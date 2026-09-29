@@ -5,11 +5,17 @@ import {readFileSync,mkdtempSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {resolve} from 'node:path';
 import {EventEmitter} from 'node:events';
-import {checkedGroupInvite,expireGroupInvites,runWorker} from './worker.mjs';
+import {checkedGroupInvite,checkedCommunityInviteCode,expireGroupInvites,runWorker} from './worker.mjs';
 test('invite IQ is GET only and rejects missing or conflicting provider evidence',async()=>{
  const target='12345@g.us',code='Abc123TestInvite',reply={tag:'iq',attrs:{type:'result'},content:[{tag:'invite',attrs:{code}}]};
  assert.equal(await checkedGroupInvite({query:async(node,timeout)=>{assert.deepEqual(node,{tag:'iq',attrs:{to:target,type:'get',xmlns:'w:g2'},content:[{tag:'invite',attrs:{}}]});assert.equal(timeout,10000);return reply;}},target),code);
  for(const value of [undefined,{...reply,content:[]},{...reply,content:[...reply.content,{tag:'error',attrs:{code:'403'}}]},{...reply,content:[{tag:'invite',attrs:{code:'https://secret'}}]}])await assert.rejects(checkedGroupInvite({query:async()=>value},target));
+});
+test('community invite read uses the dedicated Baileys getter and validates known community scope',async()=>{
+ const target='12345-67890@g.us',code='Abc123CommunityInvite';let calls=0;
+ assert.equal(await checkedCommunityInviteCode({communityInviteCode:async jid=>{calls++;assert.equal(jid,target);return code;}},target),code);assert.equal(calls,1);
+ for(const value of [undefined,null,'https://chat.whatsapp.com/private-code','bad code'])await assert.rejects(checkedCommunityInviteCode({communityInviteCode:async()=>value},target));
+ await assert.rejects(checkedCommunityInviteCode({communityInviteCode:async()=>code},'unknown@g.us'),/invalid_target/);
 });
 test('known group manual invite expires and failure clears credential without event disclosure',async()=>{
  const db=new DatabaseSync(':memory:');db.exec(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));const now=new Date().toISOString(),target='12345@g.us',code='Abc123TestInvite';
@@ -26,7 +32,18 @@ test('known group manual invite expires and failure clears credential without ev
  await command('success',target);assert.equal(get().code,code);assert.equal(get().available,true);
  expireGroupInvites(db,new Date(Date.now()+301000).toISOString());assert.equal(get().code,null);assert.equal(get().available,false);
  await command('again',target);fail=true;await command('failure',target);assert.equal(get().code,null);assert.equal(get().expires_at,null);assert.equal(get().available,false);
+ db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('community_invite','12345-67890@g.us',JSON.stringify({code,expires_at:new Date(Date.now()-1000).toISOString(),available:true}),'2026-01-01T00:00:00.000Z');expireGroupInvites(db);assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='community_invite'").get().payload).code,null);
  assert.equal(JSON.stringify(db.prepare('SELECT * FROM events').all()).includes(code),false);
+ }finally{await worker.stop();db.close();}
+});
+test('manual community invite reads only a previously observed community and expires the credential',async()=>{
+ const db=new DatabaseSync(':memory:');db.exec(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));const now=new Date().toISOString(),target='12345-67890@g.us',code='Abc123CommunityInvite';
+ db.prepare('INSERT INTO connections(id,command,updated_at) VALUES(?,?,?)').run('wis-5679','connect',now);db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('community',target,'{}',now);
+ const ev=new EventEmitter();let calls=0;const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},communityInviteCode:async jid=>{calls++;assert.equal(jid,target);return code;}};
+ const fake={default:()=>socket,useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(mkdtempSync(resolve(tmpdir(),'wis-community-invite-')),'auth'),readIntervalMs:0});
+ try{ev.emit('connection.update',{connection:'open'});db.prepare('DELETE FROM read_commands').run();const command=async(id,jid)=>{db.prepare('INSERT INTO read_commands(id,kind,target,status,created_at,updated_at) VALUES(?,?,?,?,?,?)').run(id,'community_invite',jid,'pending',now,now);await worker.drainReads();};
+  await command('unknown','unknown@g.us');assert.equal(calls,0);await command('known',target);assert.equal(calls,1);const row=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='community_invite' AND resource_id=?").get(target).payload);assert.equal(row.code,code);assert.equal(row.available,true);assert.equal(JSON.stringify(db.prepare('SELECT * FROM events').all()).includes(code),false);expireGroupInvites(db,new Date(Date.now()+301000).toISOString());assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='community_invite' AND resource_id=?").get(target).payload).code,null);
  }finally{await worker.stop();db.close();}
 });
 

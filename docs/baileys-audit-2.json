@@ -22,8 +22,8 @@
       }
     ],
     "support": "candidate",
-    "reason": "El socket emite connection.update.qr; no entrega una imagen QR.",
-    "next_step": "Renderizar el payload en imagen temporal protegida y comprobar vencimiento."
+    "reason": "Baileys emite el payload en connection.update.qr; WIS ya lo convierte en SVG temporal protegido, aunque ese método no entrega por sí mismo una imagen ni reproduce el endpoint de login de WHAPI.",
+    "next_step": "Conservar la regresión de autorización, SVG protegido y vencimiento; no anunciar equivalencia del contrato HTTP con WHAPI."
   },
   {
     "id": "logoutuser",

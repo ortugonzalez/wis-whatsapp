@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { LOCAL_LIMITS } from './limits.mjs';
-import { createPublicCatalogReader } from './catalog-http.mjs';
+import { createPublicCatalogReader, PublicCatalogError } from './catalog-http.mjs';
 import { createWebhookDispatcher } from './webhooks.mjs';
 import { cacheAvatar } from './avatars.mjs';
 import { groupMetadataByInviteCode, validGroupInviteCode } from './group-invite-info.mjs';
 import { newsletterByInviteMetadata, validNewsletterInviteCode } from './newsletter-invite-info.mjs';
+import { normalizeDisappearingModeReply, isKnownChatJid } from './disappearing-mode.mjs';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -21,6 +22,12 @@ export function timestamp(value) {
 export function identityMatches(phone, expected) {
   return Boolean(/^\+[1-9]\d{7,14}$/.test(expected || '') && String(phone || '').replace(/\D/g, '') === expected.slice(1));
 }
+export function reconnectDecision({attempts=0,lastOpenedAt=0,now=Date.now(),maxAttempts=5,stableMs=60000}={}) {
+  const prior=lastOpenedAt>0&&now-lastOpenedAt>=stableMs?0:attempts;
+  const nextAttempts=prior+1;
+  return {attempts:nextAttempts,retry:nextAttempts<=maxAttempts,delay_ms:Math.min(60000,2000*2**(nextAttempts-1))};
+}
+const connectionCloseReasons=Object.freeze({401:'logged_out',403:'forbidden',408:'timed_out',411:'multidevice_mismatch',428:'connection_closed',440:'connection_replaced',500:'bad_session',503:'unavailable_service',515:'restart_required'});
 export function acquireLease(db, owner, now = Date.now()) {
   return db.prepare(`UPDATE connections SET lease_owner=?,lease_expires_at=? WHERE id='wis-5679' AND (lease_owner=? OR lease_expires_at IS NULL OR lease_expires_at<=?)`)
     .run(owner, new Date(now + 30000).toISOString(), owner, new Date(now).toISOString()).changes === 1;
@@ -49,7 +56,9 @@ export function safeFields(value, keys) {
 }
 const contactKeys = ['id','lid','phoneNumber','name','notify','verifiedName','username','status'];
 export function safeGroup(group) {
-  const value = safeFields(group, ['id','subject','owner','ownerPn','ownerUsername','subjectOwner','subjectTime','creation','desc','descOwner','descTime','linkedParent','restrict','announce','memberAddMode','joinApprovalMode','isCommunity','isCommunityAnnounce','size','ephemeralDuration','addressingMode']);
+  // Keep provider-supported group metadata that Baileys exposes, while excluding
+  // inviteCode: it is an access link and must never enter persisted snapshots.
+  const value = safeFields(group, ['id','notify','subject','owner','ownerPn','ownerUsername','owner_country_code','subjectOwner','subjectOwnerPn','subjectOwnerUsername','subjectTime','creation','desc','descOwner','descOwnerPn','descOwnerUsername','descId','descTime','linkedParent','restrict','announce','memberAddMode','joinApprovalMode','isCommunity','isCommunityAnnounce','size','ephemeralDuration','addressingMode','author','authorPn','authorUsername']);
   if (Array.isArray(group?.participants)) value.participants = group.participants.slice(0,4096).map(p=>safeFields(p,[...contactKeys,'admin','isAdmin','isSuperAdmin']));
   return value;
 }
@@ -79,7 +88,7 @@ export function callSnapshot(value,prior={},now=new Date().toISOString()) {
 }
 export function classifyReadError(error) {
   // Never expose provider messages/data: they can contain request material.
-  const local={read_timeout:'read_timeout',previous_read_unresolved:'read_pending',connection_unavailable:'disconnected',connection_changed:'disconnected',capability_unavailable:'method_missing',account_identity_unavailable:'identity_unavailable',invalid_target:'invalid_target',unknown_community:'unknown_target',unknown_newsletter:'unknown_target',unsupported_read_command:'method_missing',newsletter_unavailable:'not_found',invalid_newsletter_metadata_response:'invalid_response',order_message_unavailable:'order_message_unavailable',order_credential_unavailable:'order_credential_unavailable'};
+  const local={read_timeout:'read_timeout',public_catalog_http_timeout:'read_timeout',previous_read_unresolved:'read_pending',connection_unavailable:'disconnected',connection_changed:'disconnected',capability_unavailable:'method_missing',account_identity_unavailable:'identity_unavailable',invalid_target:'invalid_target',unknown_community:'unknown_target',unknown_newsletter:'unknown_target',unsupported_read_command:'method_missing',newsletter_unavailable:'not_found',invalid_newsletter_metadata_response:'invalid_response',invalid_newsletter_count_response:'invalid_response',no_exact_disappearing_mode_reply:'response_unmatched',disappearing_mode_not_returned:'not_found',order_message_unavailable:'order_message_unavailable',order_credential_unavailable:'order_credential_unavailable'};
   const marker=typeof error?.message==='string'?error.message:'';
   const candidate=error?.output?.statusCode ?? error?.statusCode ?? error?.status ?? error?.status_code;
   const status_code=Number.isInteger(candidate) && candidate>=100 && candidate<=599?candidate:null;
@@ -90,14 +99,23 @@ export function classifyReadError(error) {
   if(!code)code=status_code===401 || status_code===403?'access_denied':status_code===404?'not_found':status_code===429?'rate_limited':status_code===408 || status_code===504?'read_timeout':status_code && status_code>=500?'provider_error':'read_failed';
   return {code,status_code,...(Number.isSafeInteger(error?.provider_code)?{provider_code:error.provider_code}:{})};
 }
+function canFallbackPublicCatalog(error) {
+  return error?.code==='public_catalog_unavailable' || error instanceof PublicCatalogError && ['public_catalog_http_timeout','read_timeout','transport_failed'].includes(error.code);
+}
 export function readBudgetMs(method, override) {
   if(override!==undefined) {
-    if(!Number.isFinite(override) || override<=0 || override>75000)throw new Error('invalid_read_timeout');
+    if(!Number.isFinite(override) || override<=0 || override>120000)throw new Error('invalid_read_timeout');
     return override;
   }
-  // Baileys can swallow a query timeout and return undefined. The checked
-  // Business adapter uses an explicit 30s provider timeout, with a 5s outer margin.
-  return ['getCatalog','getCollections'].includes(method)?35000:12000;
+  // The provider IQ has its own timeout; keep the outer budget longer so it
+  // can settle before the worker reports a timeout and retains its read lock.
+  if(method==='getCatalog')return 100000;
+  return method==='getCollections'?35000:12000;
+}
+export function readCallBudgetMs(method, override) {
+  // A public catalog call may spend up to ~120 s discovering current web
+  // config, then 30 s on one page; leave room for its own abort/fallback path.
+  return ['publicCatalog','publicCollections'].includes(method)&&override===undefined?210000:readBudgetMs(method,override);
 }
 export async function checkedGroupInvite(socket,target) {
   if(!/^\d+(?:-\d+)?@g\.us$/.test(target||''))throw Error('invalid_target');
@@ -109,11 +127,19 @@ export async function checkedGroupInvite(socket,target) {
   if(reply.tag!=='iq'||reply.attrs?.type!=='result'||invites.length!==1||typeof invites[0].attrs?.code!=='string'||!/^[A-Za-z0-9]{10,128}$/.test(invites[0].attrs.code))throw Error('invalid_response');
   return invites[0].attrs.code;
 }
+export async function checkedCommunityInviteCode(socket,target) {
+  if(!/^\d+(?:-\d+)?@g\.us$/.test(target||''))throw Error('invalid_target');
+  if(typeof socket?.communityInviteCode!=='function')throw Error('capability_unavailable');
+  const code=await socket.communityInviteCode(target);
+  if(typeof code!=='string'||!/^[A-Za-z0-9_-]{10,128}$/.test(code))throw Error('invalid_response');
+  return code;
+}
 export function expireGroupInvites(db,now=new Date().toISOString()) {
-  db.prepare("UPDATE snapshots SET payload=json_set(payload,'$.code',NULL,'$.expires_at',NULL,'$.available',json('false'),'$.expired',json('true'),'$.stale',json('false')),updated_at=? WHERE kind='group_invite' AND (json_extract(payload,'$.expires_at') IS NULL OR json_extract(payload,'$.expires_at')<=?) AND json_extract(payload,'$.code') IS NOT NULL").run(now,now);
+  db.prepare("UPDATE snapshots SET payload=json_set(payload,'$.code',NULL,'$.expires_at',NULL,'$.available',json('false'),'$.expired',json('true'),'$.stale',json('false')),updated_at=? WHERE kind IN('group_invite','community_invite') AND (json_extract(payload,'$.expires_at') IS NULL OR json_extract(payload,'$.expires_at')<=?) AND json_extract(payload,'$.code') IS NOT NULL").run(now,now);
 }
 export async function checkedGroupRead(socket,method,target) {
   if(!['community_subgroups','group_requests'].includes(method)||!/^\d+(?:-\d+)?@g\.us$/.test(target||''))throw Error('invalid_target');
+  if(typeof socket?.query!=='function')throw Error('capability_unavailable');
   const tag=method==='community_subgroups'?'sub_groups':'membership_approval_requests',child=method==='community_subgroups'?'group':'membership_approval_request';
   const reply=await socket.query({tag:'iq',attrs:{to:target,type:'get',xmlns:'w:g2'},content:[{tag,attrs:{}}]},10000);
   if(!reply)throw Error('read_timeout');
@@ -211,7 +237,7 @@ export async function checkedBusinessRead(socket,method,args) {
   const {jid,limit=100,cursor}=catalog?args[0]:{jid:args[0],limit:args[1] || 100};
   const param=(tag,value)=>({tag,attrs:{},content:Buffer.from(String(value))});
   const child=catalog?{tag:'product_catalog',attrs:{jid,allow_shop_source:'true'},content:[param('limit',limit),param('width',100),param('height',100),...(cursor?[{tag:'after',attrs:{},content:cursor}]:[])]}:{tag:'collections',attrs:{biz_jid:jid},content:[param('collection_limit',limit),param('item_limit',limit),param('width',100),param('height',100)]};
-  const node=await socket.query({tag:'iq',attrs:{to:'s.whatsapp.net',type:'get',xmlns:'w:biz:catalog',...(!catalog?{smax_id:'35'}:{})},content:[child]},30000);
+  const node=await socket.query({tag:'iq',attrs:{to:'s.whatsapp.net',type:'get',xmlns:'w:biz:catalog',...(!catalog?{smax_id:'35'}:{})},content:[child]},catalog?60000:30000);
   if(node==null)throw new Error('read_timeout');
   const children=Array.isArray(node.content)?node.content:[];
   const providerError=children.find(x=>x?.tag==='error');
@@ -253,11 +279,11 @@ export async function checkedListRead(socket,method) {
   if(items.some(x=>x?.tag!==itemTag))throw new Error('invalid_list_response');
   if(block)return items.filter(x=>x.tag==='item').map(x=>x.attrs?.jid);
   const useCommunity=container.tag==='communities';
-  const module=await import(pathToFileURL(resolve(dirname(requireWorker.resolve('baileys')),useCommunity?'Socket/communities.js':'Socket/groups.js')).href);
+  const baileysModule=await import(pathToFileURL(resolve(dirname(requireWorker.resolve('baileys')),useCommunity?'Socket/communities.js':'Socket/groups.js')).href);
   const output={};
   for(const item of items.filter(x=>x.tag===(useCommunity?'community':'group'))) {
     if(!item.attrs?.id)throw new Error('invalid_list_response');
-    const parsed=(useCommunity?module.extractCommunityMetadata:module.extractGroupMetadata)({tag:'result',attrs:{},content:[item]});
+    const parsed=(useCommunity?baileysModule.extractCommunityMetadata:baileysModule.extractGroupMetadata)({tag:'result',attrs:{},content:[item]});
     // Servers normally return <groups>; group parser's explicit <parent> flag
     // identifies communities without assuming every group is a community.
     if(!community || parsed.isCommunity)output[parsed.id]=parsed;
@@ -330,7 +356,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   mkdirSync(mediaDir, {recursive:true, mode:0o700});
   const owner = randomUUID();
   let sock = null, starting = false, stopping = false, desired = false;
-  let deadline = 0, attempts = 0, nextConnect = 0, processing = false;
+  let deadline = 0, attempts = 0, nextConnect = 0, lastOpenedAt = 0, processing = false;
   let queue = Promise.resolve();
   let credentialsSaved = Promise.resolve();
   const cache = new Map();
@@ -342,11 +368,30 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     if (!owns() || !resource) return;
     const prior = db.prepare('SELECT payload FROM snapshots WHERE kind=? AND resource_id=?').get(kind,resource);
     let old = {};try { old = JSON.parse(prior?.payload || '{}'); } catch { /* corrupt old snapshot is replaced */ }
+    if(kind==='presence'){
+      const presences={...(old.presences||{})};let sequence=Math.max(0,...Object.values(presences).map(value=>Number.isSafeInteger(value?.observed_seq)?value.observed_seq:0));
+      for(const [jid,value] of Object.entries(payload.presences||{})){delete presences[jid];sequence=Math.max(sequence+1,Date.now()*1000);presences[jid]={...value,observed_seq:sequence};}
+      const ordered=Object.entries(presences).sort((a,b)=>(Number(b[1]?.observed_seq)||0)-(Number(a[1]?.observed_seq)||0)||(Date.parse(b[1]?.observed_at)||0)-(Date.parse(a[1]?.observed_at)||0)).slice(0,512);
+      payload={...payload,presences:Object.fromEntries(ordered)};
+    }
     const now=new Date().toISOString();
     const fresh=payload.available===true?{stale:false,status_code:null,last_attempt_at:now,last_success_at:now}:{};
     const serialized = JSON.stringify({...old,...payload,...fresh});
     if (serialized.length>2*1024*1024) throw new Error('snapshot_too_large');
     db.prepare('INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(kind,resource_id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at').run(kind,resource,serialized,new Date().toISOString());
+  }
+  function knownAvatarCandidates(current) {
+    const ownJids=new Set([current?.user?.id,current?.user?.lid,current?.user?.phoneNumber].filter(value=>typeof value==='string').map(value=>value.replace(/:\d+(?=@)/,'')));
+    const rows=db.prepare("SELECT c.wa_jid,a.payload AS avatar_payload FROM contacts c LEFT JOIN snapshots a ON a.kind='avatar' AND a.resource_id=c.wa_jid WHERE c.wa_jid LIKE '%@s.whatsapp.net' OR c.wa_jid LIKE '%@lid' ORDER BY coalesce(a.updated_at,''),c.created_at,c.id LIMIT 10001").all();
+    const truncated=rows.length>10000;
+    const eligible=rows.slice(0,10000).filter(row=>!ownJids.has(row.wa_jid?.replace(/:\d+(?=@)/,'')) && /^\d+@(s\.whatsapp\.net|lid)$/.test(row.wa_jid||''));
+    return {eligible,truncated};
+  }
+  function updateAvatarCoverage(current,{checkedCount=0,lastReadError=null}={}) {
+    const {eligible,truncated}=knownAvatarCandidates(current);let unattempted=0,available=0,failures=0;
+    for(const row of eligible){let value={};try{value=JSON.parse(row.avatar_payload||'{}');}catch{}if(!value.last_attempt_at)unattempted++;else if(value.available===true)available++;else failures++;}
+    const partial=unattempted>0||failures>0||truncated;
+    snapshot('avatars','wis-5679',{available:true,response_verified:true,scope:'known_contacts',known_contact_count:eligible.length,checked_count:checkedCount,unattempted_count:unattempted,available_count:available,failure_count:failures,partial,complete:!partial,candidate_scan_truncated:truncated,last_read_error:lastReadError,error:null,last_attempt_at:new Date().toISOString()});
   }
   function event(kind, resource, payload) {
     if(!owns())return;
@@ -409,11 +454,13 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     const business=['getCatalog','getCollections'].includes(name);
     const publicRead=['publicCatalog','publicCollections'].includes(name);
     const groupRead=['community_subgroups','group_requests','group_invite'].includes(name);
+    const communityInviteRead=name==='community_invite';
     const limitsRead=['account_quota','account_timelock'].includes(name);
     const newsletterRead=name==='newsletter_messages';
     const botRead=name==='bot_list';
     const list=['fetchBlocklist','groupFetchAllParticipating','communityFetchAllParticipating'].includes(name);
-    if(!publicRead && typeof current[business||list||groupRead||limitsRead||newsletterRead||botRead?'query':name]!=='function')throw new Error('capability_unavailable');
+    if(!publicRead&&!communityInviteRead&&typeof current[business||list||groupRead||limitsRead||newsletterRead||botRead?'query':name]!=='function')throw new Error('capability_unavailable');
+    if(communityInviteRead&&typeof current.communityInviteCode!=='function')throw new Error('capability_unavailable');
     let timer,timedOut=false;
     const diagnostic=activeReadCommand?{command_id:activeReadCommand.id,kind:activeReadCommand.kind,method:name}:null;
     const diagnosticResource=activeReadCommand?.target || 'wis-5679';
@@ -421,7 +468,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       const pending={socket:current};unresolvedRead=pending;
       // Local timeout does not cancel Baileys' IQ request. Block further reads until
       // that request settles (or a different socket takes over), avoiding fan-out.
-      const request=Promise.resolve().then(()=>name==='group_invite'?checkedGroupInvite(current,args[0]):botRead?checkedBotList(current):newsletterRead?checkedNewsletterMessages(current,args[0]):limitsRead?checkedAccountLimits(current,name==='account_quota'?'quota':'timelock'):groupRead?checkedGroupRead(current,name,args[0]):publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
+      const request=Promise.resolve().then(()=>name==='group_invite'?checkedGroupInvite(current,args[0]):communityInviteRead?checkedCommunityInviteCode(current,args[0]):botRead?checkedBotList(current):newsletterRead?checkedNewsletterMessages(current,args[0]):limitsRead?checkedAccountLimits(current,name==='account_quota'?'quota':'timelock'):groupRead?checkedGroupRead(current,name,args[0]):publicRead?publicReader[name==='publicCatalog'?'catalog':'collections'](args[0]):business?checkedBusinessRead(current,name,args):list?checkedListRead(current,name):current[name](...args)).then(value=>{
         if(timedOut && diagnostic && owns() && sock===current)event('read.late_completed',diagnosticResource,{...diagnostic,result:'response_received_after_timeout'});
         return value;
       },error=>{
@@ -431,7 +478,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         throw error;
       }).finally(()=>{if(unresolvedRead===pending)unresolvedRead=null;});
       pending.request=request;
-      const value=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('read_timeout'));},publicRead && readTimeoutMs===undefined?150000:readBudgetMs(name,readTimeoutMs));})]);
+       const value=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('read_timeout'));},readCallBudgetMs(name,readTimeoutMs));})]);
       if(!owns() || sock!==current)throw new Error('connection_changed');
       return value;
     } finally {clearTimeout(timer);}
@@ -456,15 +503,56 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     }
     return results;
   }
+  async function readOwnUsername(current) {
+    const jid=current.user?.id?.replace(/:\d+(?=@)/,'');
+    if(!jid)throw new Error('account_identity_unavailable');
+    const previous=db.prepare("SELECT payload FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get();
+    const preservePrevious=()=>{try{const data=previous?JSON.parse(previous.payload):null;return typeof data?.username==='string'?{username:data.username,stale:true}:{};}catch{return {};}};
+    try {
+      if(typeof baileys.USyncQuery!=='function'||typeof baileys.USyncUser!=='function'||typeof current.executeUSyncQuery!=='function')throw new Error('capability_unavailable');
+      const query=new baileys.USyncQuery().withUser(new baileys.USyncUser().withId(jid)).withUsernameProtocol();
+      const result=await readCall(current,'executeUSyncQuery',[query]);
+      const matches=Array.isArray(result?.list)?result.list.filter(value=>value&&typeof value.id==='string'&&value.id.replace(/:\d+(?=@)/,'')===jid):[];
+      const username=matches.length===1&&typeof matches[0].username==='string'&&matches[0].username.length>0&&matches[0].username.length<=128?matches[0].username:null;
+      snapshot('account_username','wis-5679',username?{available:true,response_verified:true,username,source:'usync_username_protocol',error:null}:{available:false,response_verified:false,...preservePrevious(),source:'usync_username_protocol',error:'no_exact_username_reply'});
+      return {available:Boolean(username)};
+    } catch(error) {
+      if(!owns()||sock!==current)throw new Error('connection_changed');
+      const failure=classifyReadError(error);
+      snapshot('account_username','wis-5679',{available:false,response_verified:false,...preservePrevious(),source:'usync_username_protocol',error:failure.code,status_code:failure.status_code??null});
+      throw error;
+    }
+  }
+  async function readContactProfile(current,target) {
+    const observedAt=new Date().toISOString(),data={profile_read_at:observedAt};let previous={};try{previous=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='contact' AND resource_id=?").get(target)?.payload||'{}');}catch{}
+    let successfulReads=0,verifiedReads=0,firstFailure=null;
+    const failedSection=(key,error)=>{const failure=typeof error==='string'?{code:error}:classifyReadError(error),prior=previous[key];firstFailure??=failure;data[key]=prior?.response_verified===true?{...prior,stale:true,last_attempt_at:observedAt,last_error:failure.code}:{available:false,response_verified:false,stale:false,last_attempt_at:observedAt,error:failure.code,status_code:failure.status_code};};
+    try{
+      const statuses=await readCall(current,'fetchStatus',[target]);successfulReads++;
+      const match=Array.isArray(statuses)?statuses.find(item=>item?.id===target):null;
+      if(match){verifiedReads++;const fields=safeFields(match.status,['status','setAt']);data.status={available:Object.keys(fields).length>0,response_verified:true,stale:false,last_attempt_at:observedAt,last_error:null,available_fields:{status:typeof fields.status==='string',setAt:Object.hasOwn(fields,'setAt')},...fields,...(Object.keys(fields).length?{}:{error:'status_fields_not_returned'})};}
+      else failedSection('status','no_exact_status_reply');
+    }catch(error){failedSection('status',error);}
+    if(target.endsWith('@s.whatsapp.net'))try{
+      const profile=await readCall(current,'getBusinessProfile',[target]);successfulReads++;
+      if(profile&&typeof profile==='object'&&profile.wid===target){verifiedReads++;const business={wid:target},available_fields={wid:true};for(const key of ['address','description','email','category']){const value=profile[key];available_fields[key]=typeof value==='string'&&value.length>0&&value.length<=8192;if(available_fields[key])business[key]=value;}const websites=Array.isArray(profile.website)?profile.website.filter(value=>typeof value==='string'&&value.length>0&&value.length<=2048).slice(0,20):[];available_fields.website=websites.length>0;if(available_fields.website)business.website=websites;const hours=profile.business_hours,config=Array.isArray(hours?.business_config||hours?.config)?(hours.business_config||hours.config).filter(value=>value&&typeof value==='object').slice(0,28).map(value=>safeFields(value,['day_of_week','mode','open_time','close_time'])):[],timezone=typeof hours?.timezone==='string'&&hours.timezone.length<=100?hours.timezone:undefined;available_fields.business_hours=config.length>0||Boolean(timezone);if(available_fields.business_hours)business.business_hours={...(timezone?{timezone}:{}),...(config.length?{config}:{})};data.business_profile={available:true,response_verified:true,stale:false,last_attempt_at:observedAt,last_error:null,available_fields,...business};}
+      else failedSection('business_profile','no_exact_business_profile_reply');
+    }catch(error){failedSection('business_profile',error);}
+    else failedSection('business_profile','business_profile_requires_phone_jid');
+    snapshot('contact',target,data);
+    return {successfulReads,verifiedReads,firstFailure};
+  }
   async function drainReads() {
     if(readBusy || !owns() || !sock || unresolvedRead?.socket===sock || connection().status!=='connected' || Date.now()-lastReadAt<readIntervalMs)return;
     const command=db.prepare("SELECT * FROM read_commands WHERE status='pending' ORDER BY created_at LIMIT 1").get();
     if(!command)return;
     readBusy=true;lastReadAt=Date.now();activeReadCommand=command;
     const current=sock;
+    let attemptScope=null;
     db.prepare("UPDATE read_commands SET status='running',error=NULL,updated_at=? WHERE id=? AND status='pending'").run(new Date().toISOString(),command.id);
     try {
       if(command.kind==='account' || command.kind==='all')await readAccount(current);
+      if(command.kind==='account_username')await readOwnUsername(current);
       if(command.kind==='groups' || command.kind==='all') {
         const groups=await readCall(current,'groupFetchAllParticipating');
         saveGroups(Object.values(groups || {}));
@@ -484,13 +572,20 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         else snapshot('contact_check',contact.id,{available:true,response_verified:false,status:'unknown',exists:null,provider_jid:null,checked_at:checkedAt,error:'no_exact_match_returned'});
       } else if(command.kind==='contact_profile') {
         if(!/^\d+@(s\.whatsapp\.net|lid)$/.test(command.target || '')||!db.prepare('SELECT 1 FROM contacts WHERE wa_jid=?').get(command.target))throw new Error('invalid_target');
-        const observedAt=new Date().toISOString(),data={profile_read_at:observedAt};let successfulReads=0,firstFailure=null;
-        try{const statuses=await readCall(current,'fetchStatus',[command.target]);successfulReads++;const match=Array.isArray(statuses)?statuses.find(item=>item?.id===command.target):null;if(match){const fields=safeFields(match.status,['status','setAt']);data.status={available:Object.keys(fields).length>0,response_verified:true,available_fields:{status:typeof fields.status==='string',setAt:Object.hasOwn(fields,'setAt')},...fields,...(Object.keys(fields).length?{}:{error:'status_fields_not_returned'})};}else data.status={available:false,response_verified:false,error:'no_exact_status_reply'};}
-        catch(error){const failure=classifyReadError(error);firstFailure??=failure;data.status={available:false,response_verified:false,error:failure.code,status_code:failure.status_code};}
-        if(command.target.endsWith('@s.whatsapp.net'))try{const profile=await readCall(current,'getBusinessProfile',[command.target]);successfulReads++;if(profile&&typeof profile==='object'&&profile.wid===command.target){const business={wid:command.target},available_fields={wid:true};for(const key of ['address','description','email','category']){const value=profile[key];available_fields[key]=typeof value==='string'&&value.length>0&&value.length<=8192;if(available_fields[key])business[key]=value;}const websites=Array.isArray(profile.website)?profile.website.filter(value=>typeof value==='string'&&value.length>0&&value.length<=2048).slice(0,20):[];available_fields.website=websites.length>0;if(available_fields.website)business.website=websites;const hours=profile.business_hours,config=Array.isArray(hours?.business_config||hours?.config)?(hours.business_config||hours.config).filter(value=>value&&typeof value==='object').slice(0,28).map(value=>safeFields(value,['day_of_week','mode','open_time','close_time'])):[],timezone=typeof hours?.timezone==='string'&&hours.timezone.length<=100?hours.timezone:undefined;available_fields.business_hours=config.length>0||Boolean(timezone);if(available_fields.business_hours)business.business_hours={...(timezone?{timezone}:{}),...(config.length?{config}:{})};data.business_profile={available:true,response_verified:true,available_fields,...business};}else data.business_profile={available:false,response_verified:false,error:'no_exact_business_profile_reply'};}
-        catch(error){const failure=classifyReadError(error);firstFailure??=failure;data.business_profile={available:false,response_verified:false,error:failure.code,status_code:failure.status_code};}
-        else data.business_profile={available:false,response_verified:false,error:'business_profile_requires_phone_jid'};
-        snapshot('contact',command.target,data);if(!successfulReads&&firstFailure)throw new Error(firstFailure.code);
+        const result=await readContactProfile(current,command.target);if(!result.successfulReads&&result.firstFailure)throw new Error(result.firstFailure.code);
+      } else if(command.kind==='contact_profiles') {
+        if(command.target)throw new Error('invalid_target');
+        const own=current.user?.id?.replace(/:\d+(?=@)/,'');
+        const candidates=db.prepare("SELECT c.wa_jid FROM contacts c LEFT JOIN snapshots s ON s.kind='contact' AND s.resource_id=c.wa_jid WHERE c.wa_jid LIKE '%@s.whatsapp.net' OR c.wa_jid LIKE '%@lid' ORDER BY coalesce(json_extract(s.payload,'$.profile_read_at'),'') ASC,c.created_at ASC,c.id ASC LIMIT 10000").all();
+        const targets=candidates.filter(row=>row.wa_jid!==own&&/^\d+@(s\.whatsapp\.net|lid)$/.test(row.wa_jid||'')).slice(0,3),candidateScanTruncated=candidates.length===10000;
+        let checked=0,verified=0,failures=0,firstFailure=null;
+        for(const row of targets){
+          try{const result=await readContactProfile(current,row.wa_jid);checked++;verified+=result.verifiedReads;if(!result.verifiedReads||result.firstFailure){failures++;firstFailure??=result.firstFailure;}}
+          catch(error){const failure=classifyReadError(error);checked++;failures++;firstFailure??=failure;}
+          if(unresolvedRead?.socket===current)break;
+        }
+         snapshot('contact_profiles','wis-5679',{available:verified>0,response_verified:verified>0,scope:'known_contacts',batch_size:3,checked_count:checked,verified_read_count:verified,failure_count:failures,partial:candidateScanTruncated||failures>0||checked<targets.length,complete:targets.length===0&&!candidateScanTruncated,error:checked>0&&verified===0?firstFailure?.code??'no_exact_profile_reply':null});
+        if(checked>0&&verified===0&&firstFailure)throw new Error(firstFailure.code);
       } else if(command.kind==='history') {
         const chat=db.prepare('SELECT id FROM conversations WHERE wa_chat_id=?').get(command.target);
         if(!chat || !/^\d+(?:-\d+)?@(s\.whatsapp\.net|lid|g\.us)$/.test(command.target || ''))throw new Error('invalid_target');
@@ -512,6 +607,22 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(!/^\d{1,40}@newsletter$/.test(command.target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('unknown_newsletter');
         const result=await readCall(current,'newsletter_messages',[command.target]);
         snapshot('newsletter_messages',command.target,{...result,available:true,response_verified:true,error:null,source:'checked_newsletter_iq'});
+      } else if(command.kind==='disappearing_mode') {
+        let target=command.target;
+        if(!target){
+          const ownJids=new Set([current?.user?.id,current?.user?.lid,current?.user?.phoneNumber].filter(value=>typeof value==='string').map(value=>value.replace(/:\d+(?=@)/,'')));
+          const candidates=db.prepare("SELECT c.wa_chat_id AS target FROM conversations c LEFT JOIN snapshots s ON s.kind='disappearing_mode' AND s.resource_id=c.wa_chat_id WHERE c.wa_chat_id IS NOT NULL ORDER BY coalesce(s.updated_at,''),c.wa_chat_id LIMIT 2000").all();
+          target=candidates.find(row=>isKnownChatJid(row.target)&&!ownJids.has(row.target.replace(/:\d+(?=@)/,'')))?.target;
+          if(!target)throw new Error('no_known_chat');
+          const assigned=db.prepare("UPDATE read_commands SET target=?,updated_at=? WHERE id=? AND status='running' AND target IS NULL").run(target,new Date().toISOString(),command.id);
+          if(assigned.changes!==1)throw new Error('scheduled_target_assignment_failed');
+          command.target=target;
+        }
+        if(!isKnownChatJid(target)||!db.prepare('SELECT 1 FROM conversations WHERE wa_chat_id=? LIMIT 1').get(target))throw new Error('invalid_target');
+        const result=await readCall(current,'fetchDisappearingDuration',[target]);
+        const data=normalizeDisappearingModeReply(result,target,new Date().toISOString());
+        if(!owns()||sock!==current)throw new Error('connection_changed');
+        snapshot('disappearing_mode',target,data);
       } else if(command.kind==='account_limits') {
         const data={};
         for(const kind of ['quota','timelock']){try{data[kind]=await readCall(current,'account_'+kind);}catch(error){const failure=classifyReadError(error);data[kind]={available:false,response_verified:false,error:failure.code,status_code:failure.status_code};}}
@@ -521,6 +632,10 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('invalid_target');
         const code=await readCall(current,'group_invite',[command.target]);
         snapshot('group_invite',command.target,{code,expires_at:new Date(Date.now()+300000).toISOString(),available:true,response_verified:true,expired:false,stale:false,error:null,status_code:null});
+      } else if(command.kind==='community_invite') {
+        if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target||'')||!db.prepare("SELECT 1 FROM snapshots WHERE resource_id=? AND (kind='community' OR (kind='group' AND json_extract(payload,'$.isCommunity')=1)) LIMIT 1").get(command.target))throw Error('invalid_target');
+        const code=await readCall(current,'community_invite',[command.target]);
+        snapshot('community_invite',command.target,{code,expires_at:new Date(Date.now()+300000).toISOString(),available:true,response_verified:true,expired:false,stale:false,error:null,status_code:null});
       } else if(command.kind==='order_details') {
         if(typeof command.target!=='string'||command.target.length>200)throw Error('invalid_order_message');
         const prior=db.prepare("SELECT m.wa_message_id,m.type,m.body,m.conversation_id,c.wa_chat_id FROM messages m LEFT JOIN conversations c ON c.id=m.conversation_id WHERE m.wa_message_id=?").get(command.target),previous=db.prepare("SELECT payload FROM snapshots WHERE kind='message' AND resource_id=?").get(command.target);
@@ -534,12 +649,23 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(!stillKnown||latest.type!=='order'||latest.revoked||latest.edited||latest.deleted)throw Error('order_message_unavailable');
         snapshot('order_details',command.target,{message_id:command.target,...safeOrderDetails(details)});
       } else if(['community_subgroups','group_requests'].includes(command.kind)) {
-        if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('invalid_target');
-        if(command.kind==='community_subgroups'&&!db.prepare("SELECT 1 FROM snapshots WHERE resource_id=? AND (kind='community' OR (kind='group' AND json_extract(payload,'$.isCommunity')=1)) LIMIT 1").get(command.target))throw Error('unknown_community');
-        const result=await readCall(current,command.kind,[command.target]);
-        snapshot(command.kind,command.target,{[command.kind==='group_requests'?'requests':'groups']:result.rows,available:true,response_verified:true,truncated:result.truncated,error:null,source:'checked_baileys_iq'});
-      } else if(command.kind==='avatar') {
-        const target=command.target;
+        let target=command.target;
+        if(command.kind==='group_requests'&&!target){const candidates=db.prepare("SELECT g.resource_id FROM (SELECT wa_chat_id AS resource_id FROM conversations WHERE wa_chat_id LIKE '%@g.us' UNION SELECT resource_id FROM snapshots WHERE kind='group') g LEFT JOIN snapshots r ON r.kind='group_requests' AND r.resource_id=g.resource_id WHERE g.resource_id LIKE '%@g.us' ORDER BY coalesce(r.updated_at,''),g.resource_id LIMIT 100").all();target=candidates.find(row=>/^\d+(?:-\d+)?@g\.us$/.test(row.resource_id||''))?.resource_id;}
+        if(!/^\d+(?:-\d+)?@g\.us$/.test(target || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(target,target))throw Error('invalid_target');
+        if(command.kind==='community_subgroups'&&!db.prepare("SELECT 1 FROM snapshots WHERE resource_id=? AND (kind='community' OR (kind='group' AND json_extract(payload,'$.isCommunity')=1)) LIMIT 1").get(target))throw Error('unknown_community');
+        if(command.target!==target){command.target=target;db.prepare('UPDATE read_commands SET target=?,updated_at=? WHERE id=?').run(target,new Date().toISOString(),command.id);}
+        const result=await readCall(current,command.kind,[target]);
+        snapshot(command.kind,target,{[command.kind==='group_requests'?'requests':'groups']:result.rows,available:true,response_verified:true,truncated:result.truncated,error:null,source:'checked_baileys_iq'});
+      } else if(command.kind==='avatar'||command.kind==='avatars') {
+        let target=command.target;
+        if(command.kind==='avatars') {
+          if(target)throw Error('invalid_target');
+          target=knownAvatarCandidates(current).eligible[0]?.wa_jid;
+          if(target){command.target=target;db.prepare('UPDATE read_commands SET target=?,updated_at=? WHERE id=?').run(target,new Date().toISOString(),command.id);}
+        }
+        if(!target&&command.kind==='avatars')updateAvatarCoverage(current);
+        else if(!target)throw Error('invalid_target');
+        else {
         const own=current.user?.id?.replace(/:\d+(?=@)/,'');
         if(!/^\d+(?:-\d+)?@(s\.whatsapp\.net|lid|g\.us)$/.test(target || '') || (target!==own && !db.prepare("SELECT 1 FROM contacts WHERE wa_jid=? OR replace(phone_e164,'+','')||'@s.whatsapp.net'=? UNION SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='group' AND resource_id=? LIMIT 1").get(target,target,target,target)))throw Error('invalid_target');
         const remote=await readCall(current,'profilePictureUrl',[target,'preview',10000]);
@@ -547,6 +673,8 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         const value=await avatarCache(remote,{directory:avatarDir,authorized:()=>owns()&&sock===current&&!stopping});
         if(!owns()||sock!==current)throw Error('connection_changed');
         snapshot('avatar',target,{...value,available:true,stale:false,error:null,scope:'profile_picture',last_attempt_at:new Date().toISOString()});
+        if(command.kind==='avatars')updateAvatarCoverage(current,{checkedCount:1});
+        }
       } else if(['catalog','collections','contact_catalog'].includes(command.kind)) {
         const contactCatalog=command.kind==='contact_catalog';
         const jid=contactCatalog?command.target:current.user?.id?.replace(/:\d+(?=@)/,'');
@@ -555,13 +683,14 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         const publicScope=!contactCatalog&&Boolean(publicCatalogReaderFactory);
         if(publicScope && (!publicReader || publicReaderJid!==jid)){publicReader=publicCatalogReaderFactory({ownJid:jid});publicReaderJid=jid;}
         let scope=contactCatalog?{scope:'contact_catalog',known_only:true,source:'checked_baileys_iq'}:publicScope?{scope:'public_catalog',known_only:true,source:'public_whatsapp_graphql'}:{};
+        attemptScope=scope;
         if(command.kind!=='collections') {
           const products=new Map();const seenCursors=new Set();let cursor,pages=0,partial=false,usePublicCatalog=publicScope;
           const previousCatalog=db.prepare("SELECT payload FROM snapshots WHERE kind='catalog' AND resource_id=?").get(jid);
           let previousScope='observed_catalog';try{previousScope=JSON.parse(previousCatalog?.payload||'{}').scope||previousScope;}catch{}
           do {
             let page;
-            if(usePublicCatalog){try{page=await readCall(current,'publicCatalog',[{after:cursor || null}]);}catch(error){if(error?.code!=='public_catalog_unavailable')throw error;if(pages){products.clear();seenCursors.clear();cursor=undefined;pages=0;partial=false;}usePublicCatalog=false;scope={scope:'own_account',known_only:false,source:'checked_baileys_iq_fallback'};}}
+            if(usePublicCatalog){try{page=await readCall(current,'publicCatalog',[{after:cursor || null}]);}catch(error){if(!canFallbackPublicCatalog(error))throw error;if(pages){products.clear();seenCursors.clear();cursor=undefined;pages=0;partial=false;}usePublicCatalog=false;scope={scope:'own_account',known_only:false,source:'checked_baileys_iq_fallback'};attemptScope=scope;}}
             if(!page)page=await readCall(current,'getCatalog',[{jid,limit:100,...(cursor?{cursor}:{})}]);
             if(!Array.isArray(page?.products))throw new Error('invalid_catalog_response');
             partial ||= Boolean(page.truncated);
@@ -575,16 +704,35 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           try {
             if(previousScope!==scope.scope || (!cursor && !partial))db.prepare("DELETE FROM snapshots WHERE kind='product' AND resource_id LIKE ?").run(jid+':%');
             for(const [id,value] of products)snapshot('product',jid+':'+id,{...value,owner_jid:jid,scope:scope.scope??'own_account',available:true});
-            snapshot('catalog',jid,{available:true,response_verified:true,product_count:products.size,has_more:Boolean(cursor),truncated:Boolean(cursor)||partial,pages,source:scope.source??'getCatalog',...scope,error:null,provider_code:null,status_code:null});
+            snapshot('catalog',jid,{available:true,response_verified:true,product_count:products.size,has_more:Boolean(cursor),truncated:Boolean(cursor)||partial,pages,source:scope.source??'getCatalog',...scope,last_attempt_scope:scope.scope??'own_account',last_attempt_source:scope.source??'getCatalog',error:null,provider_code:null,status_code:null});
             if(!owns() || sock!==current)throw new Error('connection_changed');
             db.exec('COMMIT');
           } catch(error) {try{db.exec('ROLLBACK');}catch{}throw error;}
         } else {
-          const result=publicScope?await readCall(current,'publicCollections',[{}]):await readCall(current,'getCollections',[jid,100]);
+          const previousCollections=db.prepare("SELECT payload FROM snapshots WHERE kind='collections' AND resource_id=?").get(jid);
+          let previousCollectionScope='observed_collections';try{previousCollectionScope=JSON.parse(previousCollections?.payload||'{}').scope||previousCollectionScope;}catch{}
+          let result;
+          if(publicScope) {
+            try { result=await readCall(current,'publicCollections',[{}]); }
+            catch(error) {
+              if(!canFallbackPublicCatalog(error))throw error;
+              scope={scope:'own_account',known_only:false,source:'checked_baileys_iq_fallback'};
+              attemptScope=scope;
+              result=await readCall(current,'getCollections',[jid,100]);
+            }
+          } else result=await readCall(current,'getCollections',[jid,100]);
           if(!Array.isArray(result?.collections))throw new Error('invalid_collections_response');
-          if(!result.truncated && !result.paging?.after && result.collections.length<100)db.prepare("DELETE FROM snapshots WHERE kind='collection' AND resource_id LIKE ?").run(jid+':%');
-          for(const c of result.collections.slice(0,100))if(c.id!==undefined && c.id!==null)snapshot('collection',jid+':'+c.id,{...safeFields(c,['id','name','products_truncated','products_collected']),owner_jid:jid,status:safeFields(c.status,['status','canAppeal']),products:(c.products || []).slice(0,100).map(safeProduct),available:true});
-          snapshot('collections',jid,{available:true,response_verified:true,collection_count:Math.min(result.collections.length,publicScope?50:100),truncated:Boolean(result.truncated) || Boolean(result.paging?.after) || result.collections.length>(publicScope?50:99),source:'getCollections',...scope,error:null,provider_code:null,status_code:null});
+          const collectionScope=scope.scope??'own_account',publicCollectionScope=collectionScope==='public_catalog',limit=publicCollectionScope?50:100;
+          const truncated=Boolean(result.truncated)||Boolean(result.paging?.after)||result.collections.length>(publicCollectionScope?50:99);
+          const complete=!truncated&&result.collections.length<limit;
+          db.exec('BEGIN IMMEDIATE');
+          try {
+            if(previousCollectionScope!==collectionScope||complete)db.prepare("DELETE FROM snapshots WHERE kind='collection' AND resource_id LIKE ?").run(jid+':%');
+            for(const c of result.collections.slice(0,limit))if(c.id!==undefined && c.id!==null)snapshot('collection',jid+':'+c.id,{...safeFields(c,['id','name','products_truncated','products_collected']),owner_jid:jid,...scope,status:safeFields(c.status,['status','canAppeal']),products:(c.products || []).slice(0,100).map(safeProduct),available:true});
+            snapshot('collections',jid,{available:true,response_verified:true,collection_count:Math.min(result.collections.length,limit),truncated,source:scope.source??'getCollections',...scope,last_attempt_scope:collectionScope,last_attempt_source:scope.source??'getCollections',error:null,provider_code:null,status_code:null});
+            if(!owns() || sock!==current)throw new Error('connection_changed');
+            db.exec('COMMIT');
+          } catch(error) {try{db.exec('ROLLBACK');}catch{}throw error;}
         }
       } else if(command.kind==='blocklist') {
         const values=await readCall(current,'fetchBlocklist');
@@ -609,8 +757,11 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         } else {
           if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw new Error('unknown_community');
           const group=await readCall(current,'communityMetadata',[command.target]);
-          const linked=await readCall(current,'community_subgroups',[group.linkedParent || command.target]);
-          snapshot('community',command.target,{...safeGroup(group),linked_groups:linked.rows,linked_groups_truncated:linked.truncated,response_verified:true,available:true,error:null});
+          if(!group || typeof group!=='object' || Array.isArray(group) || group.id!==command.target)throw new Error('invalid_community_metadata_response');
+          const parent=group?.linkedParent??(group?.isCommunity===true?command.target:null);
+          if(typeof parent!=='string'||!/^[0-9]+(?:-[0-9]+)?@g\.us$/.test(parent))throw new Error('invalid_community_metadata_response');
+          const linked=await readCall(current,'community_subgroups',[parent]);
+          snapshot('community',command.target,{...safeGroup(group),community_jid:parent,...(typeof group.isCommunity==='boolean'?{is_community:group.isCommunity}:{}),linked_groups:linked.rows,linked_groups_truncated:linked.truncated,response_verified:true,available:true,error:null});
           saveGroups([group]);
         }
       } else if(command.kind==='newsletter' || command.kind==='newsletters') {
@@ -623,8 +774,30 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           try{const value=await readCall(current,'newsletterMetadata',['jid',id]);if(!value||typeof value!=='object'||value.id!==id)throw new Error('invalid_newsletter_metadata_response');snapshot('newsletter',id,{...safeNewsletter(value),available:true,response_verified:true,error:null});count++;}
           catch(error){if(!owns()||sock!==current)throw new Error('connection_changed');const failure=classifyReadError(error);firstFailure??=failure;firstError??=error;failures++;const prior=db.prepare("SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=?").get(id);snapshot('newsletter',id,{available:false,response_verified:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});if(command.kind==='newsletter')throw error;if(unresolvedRead?.socket===current)break;}
         }
-        if(command.kind==='newsletters'){const truncated=known.length>20,unattempted=targets.length-attempted,partial=truncated||failures>0||unattempted>0;snapshot('newsletters','wis-5679',{available:count>0||targets.length===0,response_verified:count>0,count,attempted_count:attempted,failure_count:failures,unattempted_count:unattempted,known_only:true,truncated,partial,complete:!partial,error:count===0&&failures>0?firstFailure?.code:null,source:'known_local_channels'});if(count===0&&failures>0)throw firstError||new Error('read_failed');}
-      } else if(!['account','all'].includes(command.kind))throw new Error('unsupported_read_command');
+        if(command.kind==='newsletters'){const truncated=known.length>20,unattempted=targets.length-attempted,partial=targets.length===0||truncated||failures>0||unattempted>0;snapshot('newsletters','wis-5679',{available:count>0||targets.length===0,response_verified:count>0,count,attempted_count:attempted,failure_count:failures,unattempted_count:unattempted,known_only:true,truncated,partial,complete:!partial,error:count===0&&failures>0?firstFailure?.code:null,source:'known_local_channels'});if(count===0&&failures>0)throw firstError||new Error('read_failed');}
+      } else if(command.kind==='newsletter_counts') {
+        const target=command.target;
+        if(!/^\d{1,40}@newsletter$/.test(target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=? LIMIT 1").get(target,target))throw new Error('unknown_newsletter');
+        const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='newsletter_counts' AND resource_id=?").get(target);let previous={};try{previous=JSON.parse(prior?.payload||'{}');}catch{}
+        const fields={...(previous.fields||{})},metrics=[['subscribers','newsletterSubscribers'],['admin_count','newsletterAdminCount']];let successes=0,firstError=null;
+        const staleField=key=>{const old=fields[key];fields[key]={available:false,response_verified:false,stale:Boolean(old?.available||old?.stale),...(Number.isSafeInteger(old?.value)&&old.value>=0?{value:old.value}:{value:null}),error:'read_pending',observed_at:old?.observed_at??null};};
+        for(let index=0;index<metrics.length;index++){
+          const [key,method]=metrics[index];
+          try {
+            const response=await readCall(current,method,[target]);
+            const value=key==='subscribers'?response?.subscribers:response;
+            if(!Number.isSafeInteger(value)||value<0)throw new Error('invalid_newsletter_count_response');
+            fields[key]={available:true,response_verified:true,stale:false,value,observed_at:new Date().toISOString(),error:null};successes++;
+          } catch(error) {
+            if(!owns()||sock!==current)throw new Error('connection_changed');
+            const failure=classifyReadError(error);firstError??=error;
+            const old=fields[key];fields[key]={available:false,response_verified:false,stale:Boolean(old?.available||old?.stale),...(Number.isSafeInteger(old?.value)&&old.value>=0?{value:old.value}:{value:null}),error:failure.code,observed_at:old?.observed_at??null};
+            if(unresolvedRead?.socket===current){for(const [pendingKey] of metrics.slice(index+1))staleField(pendingKey);break;}
+          }
+        }
+        snapshot('newsletter_counts',target,{available:successes>0,response_verified:successes===2,partial:successes!==2,fields,source:'baileys_read_only_aggregate',error:successes===0?classifyReadError(firstError||new Error('read_failed')).code:null});
+        if(successes===0)throw firstError||new Error('read_failed');
+      } else if(!['account','all','account_username'].includes(command.kind))throw new Error('unsupported_read_command');
       if(!owns() || sock!==current)throw new Error('connection_changed');
       db.prepare("UPDATE read_commands SET status='done',updated_at=? WHERE id=?").run(new Date().toISOString(),command.id);
       event('read.completed',command.target || 'wis-5679',{kind:command.kind,command_id:command.id,...(command.kind==='history'?{result:'request_accepted',complete:false}:{})});
@@ -633,22 +806,34 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         const failure=classifyReadError(error);
         db.prepare("UPDATE read_commands SET status='failed',error=?,updated_at=? WHERE id=?").run(failure.code,new Date().toISOString(),command.id);
          if(command.kind==='contact_check')snapshot('contact_check',command.target,{available:false,response_verified:false,status:'unknown',exists:null,provider_jid:null,checked_at:new Date().toISOString(),error:failure.code,status_code:failure.status_code});
-         if(command.kind==='contact_catalog'&&/^[1-9]\d{6,14}@s\.whatsapp\.net$/.test(command.target||'')&&db.prepare('SELECT 1 FROM contacts WHERE wa_jid=? OR phone_e164=? LIMIT 1').get(command.target,'+'+command.target.split('@')[0]))snapshot('catalog',command.target,{available:false,stale:true,scope:'contact_catalog',known_only:true,source:'checked_baileys_iq',error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
+        if(command.kind==='contact_catalog'&&/^[1-9]\d{6,14}@s\.whatsapp\.net$/.test(command.target||'')&&db.prepare('SELECT 1 FROM contacts WHERE wa_jid=? OR phone_e164=? LIMIT 1').get(command.target,'+'+command.target.split('@')[0]))snapshot('catalog',command.target,{available:false,stale:true,scope:'contact_catalog',known_only:true,source:'checked_baileys_iq',error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
+        if(['catalog','collections'].includes(command.kind)) {
+          const ownJid=current.user?.id?.replace(/:\d+(?=@)/,'');
+          if(/^[1-9]\d{7,14}@s\.whatsapp\.net$/.test(ownJid||'')) {
+            const prior=db.prepare('SELECT 1 FROM snapshots WHERE kind=? AND resource_id=?').get(command.kind,ownJid);
+            snapshot(command.kind,ownJid,{available:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
+            const childKind=command.kind==='catalog'?'product':'collection';
+            db.prepare(`UPDATE snapshots SET payload=json_set(payload,'$.stale',json('true')),updated_at=? WHERE kind=? AND json_extract(payload,'$.owner_jid')=?`).run(new Date().toISOString(),childKind,ownJid);
+          }
+        }
         if(command.kind==='bot_list')snapshot('bot_list','wis-5679',{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='newsletter_messages')snapshot('newsletter_messages',command.target,{available:false,stale:true,partial:true,complete:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
+        if(command.kind==='disappearing_mode')snapshot('disappearing_mode',command.target,{available:false,response_verified:false,stale:true,scope:'known_chat',error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='group_invite')snapshot('group_invite',command.target,{code:null,expires_at:null,available:false,response_verified:false,stale:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
+        if(command.kind==='community_invite')snapshot('community_invite',command.target,{code:null,expires_at:null,available:false,response_verified:false,stale:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(['community_subgroups','group_requests'].includes(command.kind))snapshot(command.kind,command.target,{available:false,stale:true,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
-        if(command.kind==='avatar') {
+        if(command.kind==='avatar'||command.kind==='avatars') {
           const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(command.target);
           snapshot('avatar',command.target,{available:false,stale:Boolean(prior),error:failure.code,scope:'profile_picture',last_attempt_at:new Date().toISOString()});
         }
+        if(command.kind==='avatars')updateAvatarCoverage(current,{checkedCount:command.target?1:0,lastReadError:failure.code});
         if(command.kind==='history' && db.prepare("SELECT 1 FROM snapshots WHERE kind='history_request' AND resource_id=?").get(command.id))snapshot('history_request',command.id,{status:'outcome_unknown',error:failure.code,complete:false});
         const summaryKind={catalog:'catalog',collections:'collections',blocklist:'blocklist',communities:'communities',community:'communities',newsletter:'newsletters',newsletters:'newsletters',groups:'groups',all:'groups'}[command.kind];
         const resource=['catalog','collections'].includes(command.kind)?current.user?.id?.replace(/:\d+(?=@)/,''):'wis-5679';
         if(summaryKind && resource) {
           const prior=db.prepare('SELECT payload FROM snapshots WHERE kind=? AND resource_id=?').get(summaryKind,resource);
           let priorData={};try{priorData=JSON.parse(prior?.payload||'{}');}catch{}
-          snapshot(summaryKind,resource,{available:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,provider_code:failure.provider_code ?? null,...(publicCatalogReaderFactory && ['catalog','collections'].includes(command.kind)?{scope:priorData.scope??'public_catalog',known_only:priorData.known_only??true,source:priorData.source??'public_whatsapp_graphql'}:{}),last_attempt_at:new Date().toISOString()});
+          snapshot(summaryKind,resource,{available:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,provider_code:failure.provider_code ?? null,...(prior?{scope:priorData.scope??null,known_only:priorData.known_only??null,source:priorData.source??null}:{}),...(attemptScope?{last_attempt_scope:attemptScope.scope??null,last_attempt_source:attemptScope.source??null}:{}),last_attempt_at:new Date().toISOString()});
         }
         event('read.failed',command.target || 'wis-5679',{kind:command.kind,command_id:command.id,error:failure.code,status_code:failure.status_code});
       }
@@ -827,7 +1012,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       current.ev.on('groups.upsert', guarded(groups=>saveGroups(groups)));
       current.ev.on('groups.update', guarded(groups=>saveGroups(groups)));
       current.ev.on('presence.update', guarded(value=>{
-        const presences={};for(const [jid,p] of Object.entries(value.presences || {}).slice(0,256))presences[jid]=safeFields(p,['lastKnownPresence','lastSeen','groupOnlineCount']);
+        const observedAt=new Date().toISOString(),presences={};for(const [jid,p] of Object.entries(value.presences || {}).slice(0,256))if(/^\d+(?::\d+)?@(s\.whatsapp\.net|lid)$/.test(jid))presences[jid]={...safeFields(p,['lastKnownPresence','lastSeen','groupOnlineCount']),observed_at:observedAt};
         snapshot('presence',value.id,{presences});
         event('presence.update',value.id,{presences});
       }));
@@ -926,7 +1111,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           if(expected && !identityMatches(phone,expected)) {
             desired=false;closeSocket();patch({status:'disconnected',phone,qr_payload:null,qr_expires_at:null,last_error:'identity_mismatch'});return;
           }
-          attempts=0;patch({status:'connected',phone,qr_payload:null,qr_expires_at:null,last_error:expected?null:'identity_unverified'});
+          lastOpenedAt=Date.now();patch({status:'connected',phone,qr_payload:null,qr_expires_at:null,last_error:expected?null:'identity_unverified'});
           snapshot('profile','wis-5679',safeFields(current.user,contactKeys));
           if(!db.prepare("SELECT id FROM read_commands WHERE status IN ('pending','running') AND kind='all'").get()) {
             const now=new Date().toISOString();db.prepare("INSERT INTO read_commands(id,kind,target,status,created_at,updated_at) VALUES(?,'all',NULL,'pending',?,?)").run(randomUUID(),now,now);
@@ -934,11 +1119,12 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         }
         if(update.connection==='close') {
           sock=null;
-          const code=update.lastDisconnect?.error?.output?.statusCode;
+          const rawCode=update.lastDisconnect?.error?.output?.statusCode,code=Number.isInteger(rawCode)&&rawCode>=100&&rawCode<=599?rawCode:null,closedAt=Date.now();
+          snapshot('connection_diagnostics','wis-5679',{last_disconnect_at:new Date(closedAt).toISOString(),status_code:code,reason:connectionCloseReasons[code]||'unknown'});
           if(code===baileys.DisconnectReason.loggedOut) {desired=false;patch({status:'disconnected',qr_payload:null,qr_expires_at:null,last_error:'session_revoked'});return;}
-          attempts++;
-          if(attempts>5) desired=false;
-          nextConnect=Date.now()+Math.min(60000,2000*2**(attempts-1));
+          const decision=reconnectDecision({attempts,lastOpenedAt,now:closedAt});
+          attempts=decision.attempts;lastOpenedAt=0;desired=desired&&decision.retry;
+          nextConnect=closedAt+decision.delay_ms;
           patch({status:desired?'qr_pending':'disconnected',qr_payload:null,qr_expires_at:null,last_error:desired?'reconnecting':'reconnect_exhausted'});
         }
       });
@@ -1029,7 +1215,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           patch({status:'disconnected',phone:null,qr_payload:null,qr_expires_at:null,last_error:null});
         }
         else if(c.command==='disconnect') {desired=false;closeSocket();patch({status:'disconnected',qr_payload:null,qr_expires_at:null,last_error:null});}
-        else if(c.command==='connect' || c.command==='reconnect') {desired=true;attempts=0;nextConnect=0;closeSocket();patch({status:'qr_pending',qr_payload:null,qr_expires_at:null,last_error:null});}
+        else if(c.command==='connect' || c.command==='reconnect') {desired=true;attempts=0;lastOpenedAt=0;nextConnect=0;closeSocket();patch({status:'qr_pending',qr_payload:null,qr_expires_at:null,last_error:null});}
       }
       await connect();
       void drain();

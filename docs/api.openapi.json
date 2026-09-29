@@ -425,10 +425,10 @@
     "/coverage": {
       "get": {
         "summary": "Get observed local data coverage",
-        "description": "Returns aggregate entity counts, persisted top-level and nested snapshot paths, the count of records containing each path, and the latest snapshot write time for a record containing the path. It also groups read commands by kind and status with counts and latest update time, without exposing command IDs, targets, or error fields. Snapshots may merge older fields, so this is not the field value's refresh time. Array indexes are normalized as [] without rewriting quoted literal keys. Paths longer than 100 characters or beyond the first 100 names per snapshot kind are omitted and counted. Field inventory rows stream from SQLite; retained paths are capped at 10,000 per record and snapshot kind, with field_inventory_truncated indicating a cap. Query time still scales with total snapshot data scanned. It never returns message or contact values and never claims complete history.",
+        "description": "Returns aggregate entity counts, persisted top-level and nested snapshot paths, the count of records containing each path, the count of records whose value is non-empty text, and the latest snapshot write time for a record containing the path. It also groups read commands by kind and status with counts and latest update time, without exposing command IDs, targets, or error fields. Snapshots may merge older fields, so this is not the field value's refresh time. Array indexes are normalized as [] without rewriting quoted literal keys. Paths longer than 100 characters or beyond the first 100 names per snapshot kind are omitted and counted. Field inventory rows stream from SQLite; retained paths are capped at 10,000 per record and snapshot kind, with field_inventory_truncated indicating a cap. Query time still scales with total snapshot data scanned. It never returns message or contact values and never claims complete history.",
         "responses": {
           "200": {
-            "description": "Coverage counts, observed top-level and nested field paths with per-path record counts and latest snapshot write times, omitted field counts, cap indicator, message type counts, and command counts grouped by kind/status, plus allowlisted failed-read codes, without targets, command IDs or raw error text"
+            "description": "Coverage counts, observed top-level and nested field paths with per-path record counts, non-empty text record counts, and latest snapshot write times, omitted field counts, cap indicator, message type counts, and command counts grouped by kind/status, plus allowlisted failed-read codes, without targets, command IDs or raw error text"
           },
           "401": {
             "description": "Authentication required"
@@ -536,6 +536,30 @@
           }
         },
         "parameters": [
+          {
+            "name": "capability_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,100}$"
+            },
+            "description": "Optional exact WHAPI capability identifier filter."
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "parameter",
+                "request",
+                "response"
+              ]
+            },
+            "description": "Optional field direction filter."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -1360,41 +1384,65 @@
             "name": "count",
             "in": "query",
             "description": "Alternative to limit; local maximum is 200 rows.",
-            "schema": { "type": "integer", "minimum": 1, "maximum": 200 }
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
           },
           {
             "name": "from_me",
             "in": "query",
-            "schema": { "type": "boolean" }
+            "schema": {
+              "type": "boolean"
+            }
           },
           {
             "name": "time_from",
             "in": "query",
             "description": "Unix timestamp in seconds or milliseconds; filters persisted created_at values.",
-            "schema": { "type": "integer", "minimum": 1 }
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
           },
           {
             "name": "time_to",
             "in": "query",
             "description": "Unix timestamp in seconds or milliseconds; filters persisted created_at values.",
-            "schema": { "type": "integer", "minimum": 1 }
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
           },
           {
             "name": "normal_types",
             "in": "query",
             "description": "When true, excludes rows with an observed messageStubType. Rows without a stored snapshot remain included.",
-            "schema": { "type": "boolean" }
+            "schema": {
+              "type": "boolean"
+            }
           },
           {
             "name": "author",
             "in": "query",
             "description": "Local exact match against direct-chat identifiers or observed group participants. It does not resolve unknown identities.",
-            "schema": { "type": "string", "pattern": "^\\+?[1-9][0-9]{6,14}(@lid|@s\\.whatsapp\\.net)?$" }
+            "schema": {
+              "type": "string",
+              "pattern": "^\\+?[1-9][0-9]{6,14}(@lid|@s\\.whatsapp\\.net)?$"
+            }
           },
           {
             "name": "sort",
             "in": "query",
-            "schema": { "type": "string", "enum": ["asc", "desc"], "default": "desc" }
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
           }
         ],
         "description": "Without id, q searches body across all conversations unless conversation_id narrows it. Filters operate only on persisted local rows; no filter triggers a remote fetch. Timestamp values accept Unix seconds or milliseconds. normal_types=true excludes only messages with a recorded messageStubType. Author matching uses observed direct-chat IDs and participant snapshots and is therefore partial. Pagination is bounded to 200 rows. Message detail never implies complete reaction or history coverage. Received product/order/event rows retain observed metadata in detail; no order lookup, payment action, event creation or product sending is enabled. POST supported send types remain unchanged."
@@ -1854,7 +1902,48 @@
                   "type": "object",
                   "properties": {
                     "data": {
-                      "type": "object"
+                      "type": "object",
+                      "properties": {
+                        "username": {
+                          "type": "object",
+                          "description": "Own-account username lookup; null/unknown means no exact USync reply was verified.",
+                          "properties": {
+                            "data": {
+                              "type": "object",
+                              "properties": {
+                                "available": {
+                                  "type": "boolean"
+                                },
+                                "response_verified": {
+                                  "type": "boolean"
+                                },
+                                "username": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "stale": {
+                                  "type": "boolean"
+                                },
+                                "source": {
+                                  "type": "string"
+                                },
+                                "error": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              }
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -2073,20 +2162,42 @@
                               ],
                               "format": "date-time"
                             },
+                            "next_kind": {
+                              "type": "string",
+                              "enum": [
+                                "all",
+                                "blocklist",
+                                "communities",
+                                "catalog",
+                                "collections",
+                                "newsletters",
+                                "account_limits",
+                                "account_username",
+                                "contact_profiles",
+                                "group_requests",
+                                "avatars",
+                                "bot_list"
+                              ]
+                            },
                             "last_kind": {
                               "type": [
                                 "string",
                                 "null"
                               ],
                               "enum": [
-                            "all",
-                            "blocklist",
-                            "communities",
-                            "catalog",
-                            "collections",
-                            "newsletters",
-                            "account_limits",
-                            null
+                                "all",
+                                "blocklist",
+                                "communities",
+                                "catalog",
+                                "collections",
+                                "newsletters",
+                                "account_limits",
+                                "account_username",
+                                "contact_profiles",
+                                "group_requests",
+                                "avatars",
+                                "bot_list",
+                                null
                               ]
                             },
                             "last_enqueued_at": {
@@ -2108,6 +2219,24 @@
                                 "failed",
                                 null
                               ]
+                            },
+                            "due": {
+                              "type": "boolean",
+                              "description": "Whether the next read is due at the current time."
+                            },
+                            "blocked_reason": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "disabled",
+                                "not_due",
+                                "read_in_progress",
+                                "connection_required",
+                                null
+                              ],
+                              "description": "Why a due scheduled read cannot currently be enqueued; null means it is ready."
                             }
                           }
                         }
@@ -2207,20 +2336,42 @@
                               ],
                               "format": "date-time"
                             },
+                            "next_kind": {
+                              "type": "string",
+                              "enum": [
+                                "all",
+                                "blocklist",
+                                "communities",
+                                "catalog",
+                                "collections",
+                                "newsletters",
+                                "account_limits",
+                                "account_username",
+                                "contact_profiles",
+                                "group_requests",
+                                "avatars",
+                                "bot_list"
+                              ]
+                            },
                             "last_kind": {
                               "type": [
                                 "string",
                                 "null"
                               ],
                               "enum": [
-                            "all",
-                            "blocklist",
-                            "communities",
-                            "catalog",
-                            "collections",
-                            "newsletters",
-                            "account_limits",
-                            null
+                                "all",
+                                "blocklist",
+                                "communities",
+                                "catalog",
+                                "collections",
+                                "newsletters",
+                                "account_limits",
+                                "account_username",
+                                "contact_profiles",
+                                "group_requests",
+                                "avatars",
+                                "bot_list",
+                                null
                               ]
                             },
                             "last_enqueued_at": {
@@ -2323,14 +2474,14 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid command ID"
+          },
           "401": {
             "description": "Authentication required"
           },
           "403": {
             "description": "Insufficient scope"
-          },
-          "400": {
-            "description": "Invalid command ID"
           },
           "404": {
             "description": "Read command not found"
@@ -2369,8 +2520,8 @@
         ]
       },
       "post": {
-        "summary": "Queue read-only account, group or known-contact refresh; no sends or remote mutations",
-        "description": "contact_profile accepts only the exact WhatsApp JID of a contact already stored locally. It reads status and, for PN JIDs, the available Business profile. Field availability and response correlation are preserved; absent values are never inferred.",
+        "summary": "Queue read-only account, group, community or known-contact refresh; no sends or remote mutations",
+        "description": "Queues an administrator-only local read. account_username runs Baileys USyncUsernameProtocol for the own JID only and stores a username only after an exact identity match. community_invite is limited to a previously observed community; its verified code is a temporary credential kept for at most five minutes and is never regenerated or revoked by this read.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2384,6 +2535,7 @@
                       "groups",
                       "group",
                       "contact_profile",
+                      "contact_profiles",
                       "all",
                       "catalog",
                       "collections",
@@ -2398,16 +2550,20 @@
                       "community_subgroups",
                       "account_limits",
                       "newsletter_messages",
+                      "newsletter_counts",
                       "bot_list",
                       "contact_catalog",
                       "group_invite",
+                      "community_invite",
                       "order_details",
-                      "contact_check"
+                      "contact_check",
+                      "account_username",
+                      "disappearing_mode"
                     ]
                   },
                   "target": {
                     "type": "string",
-                    "description": "Existing group/contact JID required for targeted reads"
+                    "description": "Existing conversation JID required for targeted reads, including disappearing_mode."
                   }
                 },
                 "required": [
@@ -2454,8 +2610,7 @@
           "403": {
             "description": "Administrator session and same-origin request required"
           }
-        },
-        "description": "Own-account catalog, collections and blocklist take no target. Community/group/newsletter/contact_profile require a known matching JID. Unknown targets, URLs and unexpected targets are rejected before queueing. Commands are reads only. History requires an existing conversation JID and oldest usable persisted message anchor. Exactly 50 messages are requested; count and other extra properties are rejected. A done read-command means request accepted, not history received or complete. Only a correlated receipt marks the request arrived. Avatar reads require known contact/group or verified own-account JID; accept kind/target only, never an arbitrary remote URL. No automatic avatar refresh is scheduled. group_requests and community_subgroups accept only kind/target and require administrator cookie. Subgroups require observed community evidence. No join, accept, reject, invite or membership change is available. account_limits accepts only kind, with no target or extra properties; reads own account limits without changing any sending gate. newsletter_messages accepts only kind/target for an already observed channel; administrator-only fixed 50-message read. No subscribe or receipt operation. bot_list accepts only kind, with no target or extra fields. Administrator manual read of provider catalog only. contact_catalog accepts only kind/target with exact known contact PN JID; administrator manual read only, no LID inference or arbitrary owner URL. group_invite accepts kind/target only for known group, administrator manual get of existing invite credential; never revokes or joins. Code is temporary private data. order_details accepts kind/target only for an existing order message; administrator-only manual read. The token is used from worker memory, never persisted or logged; response image URLs are discarded. contact_check accepts only the local ID of a stored contact with a valid E.164 phone. It is an administrator-initiated single-number read with a 15-minute local cooldown, no batch or raw arbitrary phone input. Only an exact provider match can report existence; an empty result remains unknown, never not registered."
+        }
       }
     },
     "/reference-fields": {
@@ -2508,6 +2663,7 @@
               "enum": [
                 "contact",
                 "contact_profile",
+                "contact_profiles",
                 "chat",
                 "group",
                 "presence",
@@ -3729,7 +3885,7 @@
     "/account-limits": {
       "get": {
         "summary": "Administrator-only observed provider quota and reachout timelock",
-        "description": "Local snapshot only; unknown fields are null, never invented zero. No safe sending quota, ban-risk score or permission to send is inferred. Does not change operational gates. Refresh requires administrator POST /sync with only kind account_limits.",
+        "description": "Local snapshot only; unknown fields are null, never invented zero. No safe sending quota, ban-risk score or permission to send is inferred. Does not change operational gates. whapi_projection exposes the same response field names where mapped; field_sources identifies provider values, request context, calculations and unmapped fields. Refresh requires administrator POST /sync with only kind account_limits.",
         "responses": {
           "200": {
             "description": "Sanitized latest observation; independent subquery availability",
@@ -3757,8 +3913,178 @@
                             "null"
                           ]
                         },
+                        "stale": {
+                          "type": "boolean",
+                          "description": "True when the stored provider snapshot is marked stale."
+                        },
                         "partial": {
                           "type": "boolean"
+                        },
+                        "whapi_projection": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "getnewchatlimit": {
+                              "type": "object",
+                              "properties": {
+                                "verified": {
+                                  "type": "boolean"
+                                },
+                                "currentness": {
+                                  "type": "string",
+                                  "enum": [
+                                    "partial_cycle_validity_unverified",
+                                    "unavailable_or_stale"
+                                  ],
+                                  "description": "Response verification does not imply the provider quota cycle is current."
+                                },
+                                "fields": {
+                                  "type": "object",
+                                  "properties": {
+                                    "cap_type": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "enum": [
+                                        "individual_new_chat_thread",
+                                        null
+                                      ]
+                                    },
+                                    "is_capped": {
+                                      "type": "null",
+                                      "description": "Unmapped until cycle validity is verified."
+                                    },
+                                    "cap_status": {
+                                      "type": "null",
+                                      "description": "Unmapped until cycle validity is verified; raw provider value remains available."
+                                    },
+                                    "quota_limit": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "minimum": 0
+                                    },
+                                    "quota_used": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "minimum": 0
+                                    },
+                                    "quota_remaining": {
+                                      "type": "null",
+                                      "description": "Unmapped until cycle validity is verified."
+                                    },
+                                    "cycle_start_at": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "minimum": 0,
+                                      "description": "Numeric provider timestamp; unit is not inferred."
+                                    },
+                                    "cycle_end_at": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "minimum": 0,
+                                      "description": "Numeric provider timestamp; unit is not inferred."
+                                    },
+                                    "updated_at": {
+                                      "type": "null",
+                                      "description": "Unmapped until a semantic equivalent is verified."
+                                    },
+                                    "ote_status": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "enum": [
+                                        "not_eligible",
+                                        "eligible",
+                                        "active_in_current_cycle",
+                                        "exhausted",
+                                        null
+                                      ]
+                                    },
+                                    "mv_status": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "enum": [
+                                        "not_eligible",
+                                        "not_active",
+                                        "active",
+                                        "active_upgrade_available",
+                                        null
+                                      ]
+                                    }
+                                  }
+                                },
+                                "field_sources": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  }
+                                },
+                                "unmapped_fields": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            },
+                            "getreachouttimelock": {
+                              "type": "object",
+                              "properties": {
+                                "verified": {
+                                  "type": "boolean"
+                                },
+                                "fields": {
+                                  "type": "object",
+                                  "properties": {
+                                    "is_restricted": {
+                                      "type": [
+                                        "boolean",
+                                        "null"
+                                      ]
+                                    },
+                                    "restricted_until": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "minimum": 0,
+                                      "description": "Numeric provider timestamp; unit is not inferred."
+                                    },
+                                    "restriction_type": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "field_sources": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  }
+                                },
+                                "unmapped_fields": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
                         },
                         "quota": {
                           "type": "object",
@@ -3927,6 +4253,72 @@
           "403": {
             "description": "Administrator cookie required"
           }
+        }
+      }
+    },
+    "/newsletter-counts": {
+      "get": {
+        "summary": "Read aggregate newsletter counts for a known channel",
+        "description": "Administrator and read scope. Reads only persisted local snapshots; it does not contact WhatsApp. A separate manual POST /sync with kind newsletter_counts requests Baileys subscriber and administrator aggregates for a known channel. Values remain unavailable or stale unless a valid response was received. Aggregate counts contain no subscriber identities and do not prove WHAPI equivalence or a complete channel directory.",
+        "parameters": [
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+@newsletter$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized current or stale aggregate observations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "observed": { "type": "boolean" },
+                        "available": { "type": "boolean" },
+                        "response_verified": { "type": "boolean" },
+                        "partial": { "type": "boolean" },
+                        "updated_at": { "type": ["string", "null"], "format": "date-time" },
+                        "subscribers": {
+                          "type": "object",
+                          "properties": {
+                            "available": { "type": "boolean" },
+                            "response_verified": { "type": "boolean" },
+                            "stale": { "type": "boolean" },
+                            "value": { "type": ["integer", "null"], "minimum": 0 },
+                            "observed_at": { "type": ["string", "null"], "format": "date-time" },
+                            "error": { "type": ["string", "null"] }
+                          }
+                        },
+                        "admin_count": {
+                          "type": "object",
+                          "properties": {
+                            "available": { "type": "boolean" },
+                            "response_verified": { "type": "boolean" },
+                            "stale": { "type": "boolean" },
+                            "value": { "type": ["integer", "null"], "minimum": 0 },
+                            "observed_at": { "type": ["string", "null"], "format": "date-time" },
+                            "error": { "type": ["string", "null"] }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Administrator cookie required" },
+          "404": { "description": "Unknown channel" }
         }
       }
     },
@@ -4476,6 +4868,39 @@
         }
       }
     },
+    "/community-invite": {
+      "get": {
+        "summary": "Administrator-only temporary invitation code for a known community",
+        "description": "Credential response is no-store. API returns code only when verified available, last_success_at is not future and expiry is future within five minutes of success. Missing, invalid, expired or failed credentials return null, regardless of worker cleanup. Target must be a previously observed community. No API token access, generic snapshots or events exposure. No link creation, join, revoke or publication.",
+        "parameters": [
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Code or null with sanitized availability/expiry metadata"
+          },
+          "400": {
+            "description": "Invalid community JID"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrator browser session required"
+          },
+          "404": {
+            "description": "Unknown community"
+          }
+        }
+      }
+    },
     "/limits": {
       "get": {
         "summary": "Administrator local implementation limits and read-only gates",
@@ -4523,6 +4948,27 @@
           },
           "404": {
             "description": "Not a known order"
+          }
+        }
+      }
+    },
+    "/capability-field-coverage": {
+      "get": {
+        "summary": "Live aggregate coverage of documented WHAPI response fields",
+        "description": "Compares unique documented response paths per operation with local snapshot and storage field availability. Returns counts and capability ids only; a match is evidence of an observed path, not feature support or protocol parity.",
+        "security": [
+          {
+            "BearerAuth": [
+              "read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current local observation counts and public reference timestamp"
+          },
+          "401": {
+            "description": "Authentication required"
           }
         }
       }
@@ -4695,6 +5141,78 @@
           },
           "403": {
             "description": "Read scope required"
+          }
+        }
+      }
+    },
+    "/disappearing-mode": {
+      "get": {
+        "summary": "Read the latest local observation of a known chat disappearing mode",
+        "description": "Read-only local snapshot and last command state. The value is Baileys data scoped to the JID; it is not asserted equivalent to a WHAPI response.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "JID of an already known conversation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Local observation or null when no reading is stored, plus the latest command state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "snapshot": {
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "command": {
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Unknown conversation"
           }
         }
       }

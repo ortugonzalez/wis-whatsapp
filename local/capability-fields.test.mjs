@@ -37,6 +37,13 @@ test('searches only documented field metadata and applies a result limit', async
     assert.deepEqual(nextSearchPage.results[1].enum_values, ['text', 'image']);
     assert.equal(nextSearchPage.results[1].enum_truncated, false);
     assert.equal((await searchCapabilityFields(root, 'x')).total, 0);
+    const filtered = await listCapabilityFields(root, 100, 0, { capability_id: 'getmessages', direction: 'response' });
+    assert.equal(filtered.total, 2);
+    assert.ok(filtered.results.every(row => row.capability_id === 'getmessages' && row.direction === 'response'));
+    const searched = await searchCapabilityFields(root, 'body', 100, 0, { capability_id: 'getmessages', direction: 'response' });
+    assert.equal(searched.total, 2);
+    assert.ok(searched.results.some(row => row.field_path === 'messages[].body'));
+    assert.ok(searched.results.every(row => row.capability_id === 'getmessages' && row.direction === 'response'));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
