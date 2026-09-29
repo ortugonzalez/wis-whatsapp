@@ -128,7 +128,11 @@ export function makeServer(database=db,options={}){
     const token=randomBytes(32).toString('base64url'),tokenHash=hash(token),createdAt=now(),expiresAt=new Date(current+30*60_000).toISOString();
     database.prepare('INSERT INTO password_reset_tokens(id,token_hash,expires_at,created_at) VALUES(?,?,?,?)').run(randomUUID(),tokenHash,expiresAt,createdAt);
     try{await sendRecoveryEmail({to:recoveryEmail,url:`${origin}/#reset/${token}`});}
-    catch{database.prepare('DELETE FROM password_reset_tokens WHERE token_hash=?').run(tokenHash);database.prepare('DELETE FROM password_reset_attempts WHERE id=?').run(attemptId);fail(503,'recovery_unavailable');}
+    catch(error){
+     // Keep recovery failures actionable without leaking SMTP response text or credentials.
+     console.error('password_recovery_delivery_failed',JSON.stringify({code:typeof error?.code==='string'?error.code.slice(0,40):null,responseCode:Number.isInteger(error?.responseCode)?error.responseCode:null,command:typeof error?.command==='string'?error.command.slice(0,40):null}));
+     database.prepare('DELETE FROM password_reset_tokens WHERE token_hash=?').run(tokenHash);database.prepare('DELETE FROM password_reset_attempts WHERE id=?').run(attemptId);fail(503,'recovery_unavailable');
+    }
     audit('password_recovery.requested','public');return send({accepted:true},202);
    }
    if(path==='/api/reset-password'&&method==='POST'){
