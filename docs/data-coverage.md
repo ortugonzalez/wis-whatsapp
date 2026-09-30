@@ -432,3 +432,7 @@ El turno `catalog` se encoló a las 23:14:20 UTC y terminó con el código sanit
 ### Lectura programada de Colecciones, 2026-09-30 23:30 UTC
 
 El turno `collections` se encoló a las 23:29:21 UTC y posteriormente figuró como `done`. La cobertura recalculada a las 23:30 UTC sigue en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas, 44.471 sin observar); las funciones `Get collection` y `Get collections` permanecen en 0/15 y 0/19 rutas observadas. No se añadió evidencia WHAPI. La siguiente ruta programada es `newsletters` (Canales en el panel), prevista para las 23:44 UTC. Esta nota no incluye nombres de colecciones ni de productos.
+
+### Lectura programada de Newsletters/Canales, 2026-09-30 23:45 UTC
+
+El turno `newsletters` se encoló a las 23:44:21 UTC y posteriormente figuró como `done`. La cobertura global sigue en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); `Get newsletters` muestra 1/666 rutas. No hubo aumento global atribuible a este turno. Próxima ruta: `account_limits`, prevista para las 23:59 UTC. Esta nota no incluye nombres ni identificadores de canales.
