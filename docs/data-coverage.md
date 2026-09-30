@@ -364,3 +364,7 @@ La agenda omitió `community_subgroups` a las 18:59:15 UTC con `known_community_
 ### Lectura de Cuenta y grupos, 2026-09-30 19:15 UTC
 
 El turno `all` terminó `done` a las 19:14:15 UTC. Chrome confirma que la conexión y la identidad siguen verificadas; los envíos permanecen pausados, con cero operaciones de mensajería pendientes o fallidas. La cobertura recalculada a las 19:15 UTC se mantiene en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar); los snapshots actualizados no añadieron rutas WHAPI observadas. Próxima ruta: `blocklist`, 19:29 UTC.
+
+### Lectura de Lista de bloqueos, 2026-09-30 19:30 UTC
+
+El turno `blocklist` se encoló a las 19:29:16 UTC y terminó `done`. La conexión e identidad siguen verificadas, con envíos pausados y cero operaciones de mensajería pendientes/fallidas. El recálculo a las 19:30 UTC mantiene 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar), sin incremento por este snapshot. Próxima ruta: `communities`, 19:44 UTC. Esta nota no incluye identificadores ni contenido de la lista.
