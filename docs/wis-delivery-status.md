@@ -1,6 +1,6 @@
 # Estado de entrega WIS WhatsApp
 
-Actualizado: **2026-09-30 11:21 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+Actualizado: **2026-09-30 11:38 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
 
 ## Verificado en producción
 
@@ -11,6 +11,7 @@ Actualizado: **2026-09-30 11:21 (Buenos Aires)**. Estado integral: **PARCIAL**. 
 - A las 11:12 se verificó la ejecución programada `account_limits` con estado `done`; la siguiente lectura quedó programada como `account_username` para las 11:27. El panel mostró el último evento a las 11:12 y una actualización de snapshot a las 11:11. Esto confirma la ejecución del ciclo automático, no cobertura equivalente a WHAPI ni recepción reciente de mensajes.
 - En la vista general, a las 11:13, el panel seguía mostrando la sesión conectada con identidad verificada, 932 eventos, 0 operaciones pendientes y 0 fallidas; el perfil se actualizó a las 11:12. La lectura siguiente figura como `account_username` a las 11:27.
 - La matriz de producción calculada a las 11:17 mostró 154 rutas de respuesta con observación de 44.628 documentadas (14 exactas y 140 equivalencias revisadas). Solo 23 de 177 funciones con respuesta tienen alguna ruta observada; 4 aparecen completas. El explorador también lista las definiciones de parámetros y solicitudes. Los campos no observados permanecen como desconocidos, no como valores vacíos.
+- Después del despliegue `fix: recognize observed business hours fields`, la página volvió a responder y conservó la sesión vinculada e identidad verificada. A las 11:37 el auditor mostró 155/44.628 rutas de respuesta observadas (14 exactas y 141 equivalencias revisadas); `Get business profile` pasó a 8/12. La vista general mostró 868 contactos, 567 conversaciones, 1.512 mensajes, 18 grupos y 938 eventos, con cero operaciones pendientes o fallidas. No se usó el último evento como prueba de recepción de mensajes entrantes recientes.
 - La actualización manual de lecturas de solo lectura completó 5 de 6 pasos: cuenta/grupos, lista de bloqueos, comunidades, colecciones y canales respondieron; la consulta del catálogo devolvió `read_timeout`. El total subió a 31 lecturas fallidas históricas. No se repitió la consulta fallida. La respuesta vacía de comunidades solo describe lo devuelto a esa sesión en ese momento.
 - La actualización de grupos aparece aplicada a las 10:51 y conserva 18 grupos observados. No se reportan aquí nombres, participantes ni identificadores.
 - La lectura manual más reciente del catálogo, a las 11:02, terminó con `read_timeout`. La pantalla de productos muestra alcance, origen y resultado del último intento. El timeout de la alternativa Baileys no demuestra que el catálogo privado esté vacío; no se insistió con otra consulta.
