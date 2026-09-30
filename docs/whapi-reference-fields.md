@@ -34,3 +34,7 @@ Revalidación local, 2026-09-29 09:26 UTC: el cálculo de cobertura contra SQLit
 ### Recaptura del catálogo público, 2026-09-30 17:04 UTC
 
 `rtk proxy node scripts/snapshot-whapi.mjs` volvió a leer `https://whapi.readme.io/llms.txt`: 182 IDs, sin altas ni bajas; la matriz conservó sus estados auditados. `rtk proxy node scripts/whapi-fields.mjs` consultó las 182 páginas oficiales, extrajo 182/182 (181 operaciones HTTP) sin errores y guardó la captura `2026-09-30T17:04:07.870Z`. La comparación estructural de operaciones, parámetros y campos de solicitud/respuesta con la captura de 15:55 UTC no encontró cambios en ningún método. No hubo cambio de contrato que explique la brecha; la cobertura local requiere observar más respuestas de Baileys y mantener equivalencias semánticas revisadas. El catálogo publicado en el dashboard necesitará el artefacto actualizado para reflejar esta fecha; esto no acredita más funciones ni paridad.
+
+### Recaptura del índice y esquemas, 2026-09-30 18:18 UTC
+
+La fuente pública se volvió a extraer a las 18:18:22–18:18:43 UTC: `snapshot-whapi.mjs` conservó 182 métodos sin altas ni bajas; `whapi-fields.mjs` procesó 182/182 esquemas (181 operaciones HTTP) y reportó cero fallos. El diff contra los artefactos previos contiene únicamente las dos fechas `captured_at`; las definiciones de métodos, parámetros y campos permanecen sin cambios desde las 17:04 UTC. Esta recaptura no altera los estados de auditoría ni reduce la brecha de cobertura observada.
