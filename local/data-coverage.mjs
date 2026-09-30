@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { projectAccountLimits } from './account-limits-projection.mjs';
+import { classifyWhatsAppChatType } from './wa-chat-type.mjs';
 
 const SECRET_FIELD = /(token|secret|password|cookie|qr|credential|authorization|private.?key)/i;
 const SAFE_READ_ERROR_CODES = ['read_timeout','read_pending','disconnected','method_missing','identity_unavailable','invalid_target','unknown_target','not_found','order_message_unavailable','order_credential_unavailable','public_catalog_unavailable','graphql_error','access_denied','rate_limited','transport_failed','public_catalog_config_unavailable','provider_error','read_failed','worker_interrupted','read_unavailable_or_disconnected','invalid_response','avatar_unavailable','avatar_destination_rejected','avatar_download_failed','avatar_timeout','avatar_too_large','invalid_avatar_media'];
@@ -67,6 +68,18 @@ export function buildDataCoverage(db, now = Date.now()) {
     else entry.fieldInventoryTruncated = true;
   }
   flushFields();
+  const chatKind = byKind.get('chat');
+  if (chatKind) {
+    let recognizedChatTypes = 0;
+    for (const row of db.prepare("SELECT resource_id FROM snapshots WHERE kind='chat'").iterate()) {
+      if (classifyWhatsAppChatType(row.resource_id)) recognizedChatTypes++;
+    }
+    if (recognizedChatTypes > 0) chatKind.fields.set('$.whapi_derived.chat_type_from_jid', {
+      records: recognizedChatTypes,
+      non_empty_text_records: recognizedChatTypes,
+      snapshot_updated_at: null,
+    });
+  }
   const accountLimitsKind = byKind.get('account_limits');
   if (accountLimitsKind) {
     for (const row of db.prepare("SELECT payload,updated_at FROM snapshots WHERE kind='account_limits'").all()) {

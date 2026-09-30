@@ -50,6 +50,9 @@ test('community methods accept only community-scoped evidence, never arbitrary g
 
 test('conversation and message aliases use stable local identifiers',()=>{
   assert.equal(aliases.getchat.fields.id[0].field,'id');
+  assert.equal(aliases.getchat.fields.type[0].field,'whapi_derived.chat_type_from_jid');
+  assert.equal(aliases.getchats.fields['chats[].type'][0].field,'whapi_derived.chat_type_from_jid');
+  assert.match(aliases.getchat.fields.type[0].note,/derivado.*no es un campo leído/i);
   assert.equal(aliases.getmessage.fields.id[0].field,'wa_message_id');
   assert.equal(aliases.getmessages.fields['messages[].id'][0].field,'wa_message_id');
 });

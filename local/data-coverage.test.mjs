@@ -25,6 +25,13 @@ test('coverage counts non-empty text per field without revealing the text',()=>{
  try{const coverage=buildDataCoverage(db),field=coverage.snapshot_kinds.find(row=>row.kind==='contact').field_counts.find(row=>row.field==='$.status.status');assert.deepEqual(field,{field:'$.status.status',records:2,non_empty_text_records:1,snapshot_updated_at:'2026-01-02T00:00:00.000Z'});assert.equal(JSON.stringify(coverage).includes('private about text'),false);}finally{db.close();}
 });
 
+test('coverage derives chat type from recognized JID namespaces without exposing identities or claiming snapshot freshness',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const insert=db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)');
+ for(const jid of ['private-group@g.us','private-person@s.whatsapp.net','private-lid@lid','private-channel@newsletter','unknown@unrecognized'])insert.run('chat',jid,'{}','2026-01-02T00:00:00.000Z');
+ try{const coverage=buildDataCoverage(db),kind=coverage.snapshot_kinds.find(row=>row.kind==='chat'),field=kind.field_counts.find(row=>row.field==='$.whapi_derived.chat_type_from_jid');assert.deepEqual(field,{field:'$.whapi_derived.chat_type_from_jid',records:4,non_empty_text_records:4,snapshot_updated_at:null});for(const secret of ['private-group','private-person','private-lid','private-channel','unrecognized'])assert.equal(JSON.stringify(coverage).includes(secret),false);}finally{db.close();}
+});
+
 test('coverage normalizes WhatsApp identities used as dynamic presence map keys',()=>{
  const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
  db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('presence','private-resource',JSON.stringify({presences:{'5491112345679@s.whatsapp.net':{lastKnownPresence:'available'},'private-lid@lid':{lastKnownPresence:'composing'}}}),'2026-01-01T00:00:00.000Z');

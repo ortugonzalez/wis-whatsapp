@@ -85,6 +85,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     fields: Object.freeze({
       id: Object.freeze([{ kind: 'chat', field: 'id', note: 'identificador de chat conservado' }]),
       name: Object.freeze([{ kind: 'chat', field: 'name', note: 'nombre de chat conservado' }]),
+      type: Object.freeze([{ kind: 'chat', field: 'whapi_derived.chat_type_from_jid', note: 'tipo derivado solo de sufijos JID reconocidos; no es un campo leído de WhatsApp y no se muestra el identificador' }]),
       pin: Object.freeze([{ kind: 'chat', field: 'pinned', note: 'estado de fijado' }]),
       archive: Object.freeze([{ kind: 'chat', field: 'archived', note: 'estado de archivado' }]),
       unread: Object.freeze([{ kind: 'chat', field: 'unreadCount', note: 'conteo local de no leídos' }]),
@@ -107,6 +108,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     fields: Object.freeze({
       'chats[].id': Object.freeze([{ kind: 'chat', field: 'id', note: 'identificador de chat conservado' }]),
       'chats[].name': Object.freeze([{ kind: 'chat', field: 'name', note: 'nombre de chat conservado' }]),
+      'chats[].type': Object.freeze([{ kind: 'chat', field: 'whapi_derived.chat_type_from_jid', note: 'tipo derivado solo de sufijos JID reconocidos; no es un campo leído de WhatsApp y no se muestra el identificador' }]),
       'chats[].pin': Object.freeze([{ kind: 'chat', field: 'pinned', note: 'estado de fijado' }]),
       'chats[].archive': Object.freeze([{ kind: 'chat', field: 'archived', note: 'estado de archivado' }]),
       'chats[].unread': Object.freeze([{ kind: 'chat', field: 'unreadCount', note: 'conteo local de no leídos' }]),
