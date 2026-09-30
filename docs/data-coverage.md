@@ -384,3 +384,7 @@ El turno `newsletters` terminó `done` a las 20:14:17 UTC, sin nuevas rutas WHAP
 ### Lectura programada de límites de cuenta, 2026-09-30 20:30 UTC
 
 El turno `account_limits` terminó `done` a las 20:29:17 UTC. El recálculo en el panel a las 20:29 UTC mantiene 157/44.628 rutas de respuesta observadas/revisadas (14 exactas, 143 equivalencias, 44.471 sin observar); no hubo incremento atribuible a este turno. Próxima ruta: `account_username`, prevista para las 20:44 UTC. Los límites locales de WIS no se interpretan como cuotas del proveedor ni como un volumen seguro de envío.
+
+### Lectura programada de Username, 2026-09-30 20:45 UTC
+
+El turno `account_username` terminó `done` a las 20:44:18 UTC. La función `getusername` permanece en 0/3 rutas observadas y la cobertura total sigue en 157/44.628 (14 exactas, 143 equivalencias, 44.471 sin observar); no aumentó la cobertura. Esta nota no incluye valores del perfil y 0/3 no demuestra ausencia de username. Próximo turno: `contact_profiles` a las 20:59 UTC.
