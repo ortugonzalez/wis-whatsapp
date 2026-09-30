@@ -340,3 +340,7 @@ El turno `account_username` terminó a las 17:29 UTC sin aportar rutas observada
 ### Lectura acotada de perfiles, 2026-09-30 17:45 UTC
 
 El turno `contact_profiles` terminó a las 17:44 UTC tras consultar el lote programado de contactos conocidos. La matriz total permanece en 157/44.628 rutas; los detalles de perfil muestran las mismas coincidencias estructurales (Get profile 3/6, Get contact 5/10 y Get contacts 5/14), sin incremento global ni nombres o valores de contactos en este registro. El worker sigue activo. Próxima ruta: `group_requests`, 17:59 UTC.
+
+### Lectura programada de solicitudes de grupos, 2026-09-30 18:00 UTC
+
+El turno `group_requests` se encoló a las 17:59:13 UTC para un grupo conocido y terminó con `provider_error`; el estado de la agenda conserva `last_status=failed` y `last_skip_reason=null`, por lo que esta ejecución no fue la omisión `approval_not_enabled`. La conexión de WhatsApp seguía verificada y el worker activo; la próxima ruta es `avatars` a las 18:14 UTC. Un fallo de lectura no demuestra que no haya solicitudes pendientes y no se aprobaron ni rechazaron solicitudes. Esta nota no incluye identificadores de grupos ni contenido de solicitudes. La vista de capacidades recalculada a las 18:01 UTC conserva 157/44.628 rutas (14 exactas, 143 por equivalencia revisada, 44.471 sin observar; 23/177 métodos con alguna ruta y 4 completos), sin incremento atribuible a este turno. El catálogo sigue incompleto y esta ejecución no acredita una lista vacía verificada.
