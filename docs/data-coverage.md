@@ -388,3 +388,7 @@ El turno `account_limits` terminó `done` a las 20:29:17 UTC. El recálculo en e
 ### Lectura programada de Username, 2026-09-30 20:45 UTC
 
 El turno `account_username` terminó `done` a las 20:44:18 UTC. La función `getusername` permanece en 0/3 rutas observadas y la cobertura total sigue en 157/44.628 (14 exactas, 143 equivalencias, 44.471 sin observar); no aumentó la cobertura. Esta nota no incluye valores del perfil y 0/3 no demuestra ausencia de username. Próximo turno: `contact_profiles` a las 20:59 UTC.
+
+### Lectura programada de perfiles de contactos, 2026-09-30 21:00 UTC
+
+El turno `contact_profiles` terminó `done` a las 20:59:18 UTC para el lote acotado de contactos conocidos. La cobertura total sigue en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar); las coincidencias por función permanecen en `getprofile` 3/6, `getcontact` 5/10 y `getcontacts` 5/14. Esta nota no incluye nombres ni valores de contacto. Próxima ruta: `group_requests` a las 21:14 UTC.
