@@ -2163,7 +2163,7 @@
                               "format": "date-time"
                             },
                             "next_kind": {
-                              "type": "string",
+                              "type": ["string", "null"],
                               "enum": [
                                 "all",
                                 "blocklist",
@@ -2176,7 +2176,10 @@
                                 "contact_profiles",
                                 "group_requests",
                                 "avatars",
-                                "bot_list"
+                                  "bot_list",
+                                  "disappearing_mode",
+                                  "community_subgroups",
+                                  null
                               ]
                             },
                             "last_kind": {
@@ -2197,6 +2200,8 @@
                                 "group_requests",
                                 "avatars",
                                 "bot_list",
+                                "disappearing_mode",
+                                "community_subgroups",
                                 null
                               ]
                             },
@@ -2205,6 +2210,22 @@
                                 "string",
                                 "null"
                               ],
+                              "format": "date-time"
+                            },
+                            "last_skipped_kinds": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": ["all", "blocklist", "communities", "catalog", "collections", "newsletters", "account_limits", "account_username", "contact_profiles", "group_requests", "avatars", "bot_list", "disappearing_mode", "community_subgroups"]
+                              },
+                              "description": "Read routes skipped for a recent timeout or missing known community."
+                            },
+                            "last_skip_reason": {
+                              "type": ["string", "null"],
+                              "enum": ["recent_read_timeout", "known_community_required", "recent_read_timeout_and_known_community_required", null]
+                            },
+                            "last_skip_at": {
+                              "type": ["string", "null"],
                               "format": "date-time"
                             },
                             "last_status": {
@@ -2240,6 +2261,7 @@
                                 "connection_required",
                                 "worker_unavailable",
                                 "known_community_required",
+                                "all_routes_cooling_down",
                                 null
                               ],
                               "description": "Why a due scheduled read cannot currently be enqueued; null means it is ready."
@@ -2343,7 +2365,7 @@
                               "format": "date-time"
                             },
                             "next_kind": {
-                              "type": "string",
+                              "type": ["string", "null"],
                               "enum": [
                                 "all",
                                 "blocklist",
@@ -2356,7 +2378,10 @@
                                 "contact_profiles",
                                 "group_requests",
                                 "avatars",
-                                "bot_list"
+                                  "bot_list",
+                                  "disappearing_mode",
+                                  "community_subgroups",
+                                  null
                               ]
                             },
                             "last_kind": {
@@ -2377,6 +2402,8 @@
                                 "group_requests",
                                 "avatars",
                                 "bot_list",
+                                "disappearing_mode",
+                                "community_subgroups",
                                 null
                               ]
                             },
@@ -2385,6 +2412,22 @@
                                 "string",
                                 "null"
                               ],
+                              "format": "date-time"
+                            },
+                            "last_skipped_kinds": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": ["all", "blocklist", "communities", "catalog", "collections", "newsletters", "account_limits", "account_username", "contact_profiles", "group_requests", "avatars", "bot_list", "disappearing_mode", "community_subgroups"]
+                              },
+                              "description": "Read routes skipped for a recent timeout or missing known community."
+                            },
+                            "last_skip_reason": {
+                              "type": ["string", "null"],
+                              "enum": ["recent_read_timeout", "known_community_required", "recent_read_timeout_and_known_community_required", null]
+                            },
+                            "last_skip_at": {
+                              "type": ["string", "null"],
                               "format": "date-time"
                             },
                             "last_status": {
@@ -2420,6 +2463,7 @@
                                 "connection_required",
                                 "worker_unavailable",
                                 "known_community_required",
+                                "all_routes_cooling_down",
                                 null
                               ]
                             }

@@ -41,6 +41,9 @@ test('scheduled read-only observations wait 15 minutes, rotate, and do not overl
       last_kind: 'blocklist',
       last_enqueued_at: new Date(start + 30 * 60_000).toISOString(),
       last_status: 'pending',
+      last_skipped_kinds: [],
+      last_skip_reason: null,
+      last_skip_at: null,
       due: false,
       worker_lease_current: true,
       blocked_reason: 'not_due',
@@ -100,6 +103,72 @@ test('scheduled read-only observations wait 15 minutes, rotate, and do not overl
     leaseUntil(start+225*60_000);
     const restarted = queueScheduledReadIfDue(database, { now: start + 225 * 60_000, connected: true, id: 'scheduled-15' });
     assert.equal(restarted.kind,'all');
+  } finally {
+    database.close();
+  }
+});
+
+test('scheduled reads route around a recent resource timeout and expose the skipped kind', () => {
+  const database = openDatabase(':memory:');
+  try {
+    const dueAt = Date.parse('2026-01-01T06:00:00.000Z');
+    database.prepare("UPDATE connections SET status='connected',phone='+5491100005679',expected_phone_e164='+5491100005679',lease_expires_at=? WHERE id='wis-5679'").run(new Date(dueAt + 30_000).toISOString());
+    database.prepare("INSERT INTO settings(key,value) VALUES('scheduled_reads',?)").run(JSON.stringify({ enabled: true, interval_minutes: 15, cursor: SCHEDULED_READ_KINDS.indexOf('catalog'), next_run_at: new Date(dueAt).toISOString(), last_kind: null, last_command_id: null, last_enqueued_at: null }));
+    database.prepare("INSERT INTO read_commands(id,kind,status,error,created_at,updated_at) VALUES('catalog-timeout','catalog','failed','read_timeout',?,?)").run(new Date(dueAt - 60_000).toISOString(), new Date(dueAt - 60_000).toISOString());
+
+    const status = getScheduledReadStatus(database, dueAt);
+    assert.equal(status.next_kind, 'collections');
+    assert.equal(status.blocked_reason, null);
+    const result = queueScheduledReadIfDue(database, { now: dueAt, connected: true, id: 'scheduled-collections' });
+    assert.deepEqual({ status: result.status, kind: result.kind }, { status: 'queued', kind: 'collections' });
+    const after = getScheduledReadStatus(database, dueAt);
+    assert.equal(after.last_kind, 'collections');
+    assert.deepEqual(after.last_skipped_kinds, ['catalog']);
+    assert.equal(after.last_skip_reason, 'recent_read_timeout');
+    assert.equal(after.last_skip_at, new Date(dueAt).toISOString());
+    assert.equal(after.next_kind, 'newsletters');
+  } finally {
+    database.close();
+  }
+});
+
+test('all timed-out routes yield a nullable next kind and bounded recovery status', () => {
+  const database = openDatabase(':memory:');
+  try {
+    const now = Date.parse('2026-01-01T06:00:00.000Z');
+    const schedule = getScheduledReadSettings(database, now - 15 * 60_000);
+    database.prepare("UPDATE settings SET value=? WHERE key='scheduled_reads'").run(JSON.stringify({ ...schedule, next_run_at: new Date(now).toISOString() }));
+    database.prepare("UPDATE connections SET status='connected',phone='+5491100005679',expected_phone_e164='+5491100005679',lease_expires_at=? WHERE id='wis-5679'").run(new Date(now + 30_000).toISOString());
+    for (const kind of SCHEDULED_READ_KINDS) {
+      database.prepare("INSERT INTO read_commands(id,kind,status,error,created_at,updated_at) VALUES(?,?,'failed','read_timeout',?,?)").run(`failed-${kind}`, kind, new Date(now - 1_000).toISOString(), new Date(now - 1_000).toISOString());
+    }
+    const waiting = getScheduledReadStatus(database, now);
+    assert.equal(waiting.next_kind, null);
+    assert.equal(waiting.blocked_reason, 'all_routes_cooling_down');
+    assert.deepEqual(queueScheduledReadIfDue(database, { now, connected: true }), {
+      status: 'all_routes_cooling_down',
+      next_run_at: new Date(now + 15 * 60_000).toISOString(),
+    });
+    const status = getScheduledReadStatus(database, now);
+    assert.equal(status.next_kind, null);
+    assert.equal(status.blocked_reason, 'not_due');
+    assert.deepEqual(status.last_skipped_kinds, SCHEDULED_READ_KINDS);
+  } finally {
+    database.close();
+  }
+});
+
+test('timeout cooldown expires and a successful manual read clears it', () => {
+  const database = openDatabase(':memory:');
+  try {
+    const now = Date.parse('2026-01-01T00:00:00.000Z');
+    const cursor = SCHEDULED_READ_KINDS.indexOf('catalog');
+    database.prepare("INSERT INTO settings(key,value) VALUES('scheduled_reads',?)").run(JSON.stringify({ enabled: true, interval_minutes: 15, cursor, next_run_at: new Date(now).toISOString(), last_kind: null, last_command_id: null, last_enqueued_at: null }));
+    database.prepare("INSERT INTO read_commands(id,kind,status,error,created_at,updated_at) VALUES('recent-timeout','catalog','failed','read_timeout',?,?)").run(new Date(now - 60 * 60_000).toISOString(), new Date(now - 60 * 60_000).toISOString());
+    assert.equal(getScheduledReadStatus(database, now).next_kind, 'collections');
+    assert.equal(getScheduledReadStatus(database, now + 6 * 60 * 60_000 + 1).next_kind, 'catalog');
+    database.prepare("INSERT INTO read_commands(id,kind,status,error,created_at,updated_at) VALUES('manual-success','catalog','done',NULL,?,?)").run(new Date(now + 30_000).toISOString(), new Date(now + 30_000).toISOString());
+    assert.equal(getScheduledReadStatus(database, now + 60_000).next_kind, 'catalog');
   } finally {
     database.close();
   }

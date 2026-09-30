@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes, scryptSync } from 'node:crypto';
+import { SCHEDULED_READ_KINDS, getScheduledReadStatus } from './scheduled-reads.mjs';
 
 process.env.WIS_DB_PATH = ':memory:';
 const { openDatabase } = await import('./db.mjs');
@@ -23,6 +24,7 @@ test('administrator can inspect, pause and configure bounded scheduled read-only
     const initial = await (await fetch(`${base}/api/v1/settings`, { headers })).json();
     assert.equal(initial.data.scheduled_reads.enabled, true);
     assert.equal(initial.data.scheduled_reads.interval_minutes, 15);
+    assert.deepEqual(initial.data.scheduled_reads.last_skipped_kinds, []);
     const paused = await fetch(`${base}/api/v1/settings`, { method: 'PATCH', headers, body: JSON.stringify({ scheduled_reads_enabled: false, scheduled_reads_interval_minutes: 30 }) });
     assert.equal(paused.status, 200);
     const pausedData = (await paused.json()).data.scheduled_reads;
@@ -31,6 +33,28 @@ test('administrator can inspect, pause and configure bounded scheduled read-only
     const invalid = await fetch(`${base}/api/v1/settings`, { method: 'PATCH', headers, body: JSON.stringify({ scheduled_reads_enabled: true, scheduled_reads_interval_minutes: 5 }) });
     assert.equal(invalid.status, 400);
     assert.equal(database.prepare('SELECT count(*) AS n FROM read_commands').get().n, 0);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    database.close();
+  }
+});
+
+test('local scheduler substitutes a recent timeout route with the next read-only route', async () => {
+  const database = openDatabase(':memory:');
+  const dueAt = Date.now();
+  database.prepare("UPDATE connections SET status='connected',phone='+5491100005679',expected_phone_e164='+5491100005679',lease_expires_at=? WHERE id='wis-5679'").run(new Date(dueAt + 30_000).toISOString());
+  database.prepare("INSERT INTO settings(key,value) VALUES('scheduled_reads',?)").run(JSON.stringify({ enabled: true, interval_minutes: 15, cursor: SCHEDULED_READ_KINDS.indexOf('catalog'), next_run_at: new Date(dueAt - 60_000).toISOString(), last_kind: null, last_command_id: null, last_enqueued_at: null }));
+  database.prepare("INSERT INTO read_commands(id,kind,status,error,created_at,updated_at) VALUES('catalog-timeout','catalog','failed','read_timeout',?,?)").run(new Date(dueAt - 60_000).toISOString(), new Date(dueAt - 60_000).toISOString());
+  const server = makeServer(database, { scheduledReadIntervalMs: 5 });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const deadline = Date.now() + 500;
+    while (!database.prepare("SELECT 1 FROM read_commands WHERE kind='collections' AND status='pending'").get() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5));
+    const command = database.prepare("SELECT kind FROM read_commands WHERE kind='collections' AND status='pending'").get();
+    assert.equal(command.kind, 'collections');
+    const schedule = getScheduledReadStatus(database, Date.now());
+    assert.deepEqual(schedule.last_skipped_kinds, ['catalog']);
+    assert.equal(schedule.last_skip_reason, 'recent_read_timeout');
   } finally {
     await new Promise(resolve => server.close(resolve));
     database.close();

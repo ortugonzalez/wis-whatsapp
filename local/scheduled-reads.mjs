@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 export const SCHEDULED_READ_KINDS = Object.freeze(['all', 'blocklist', 'communities', 'catalog', 'collections', 'newsletters', 'account_limits', 'account_username', 'contact_profiles', 'group_requests', 'avatars', 'bot_list', 'disappearing_mode', 'community_subgroups']);
 export const SCHEDULED_READ_INTERVALS = Object.freeze([15, 30, 60, 120]);
 const SETTING_KEY = 'scheduled_reads';
+const RECENT_TIMEOUT_COOLDOWN_MS = 6 * 60 * 60_000;
 
 function initialSchedule(now) {
   return {
@@ -13,6 +14,9 @@ function initialSchedule(now) {
     last_kind: null,
     last_command_id: null,
     last_enqueued_at: null,
+    last_skipped_kinds: [],
+    last_skip_reason: null,
+    last_skip_at: null,
   };
 }
 
@@ -40,6 +44,27 @@ function nextKnownCommunity(database) {
     WHERE c.kind='community' AND c.resource_id LIKE '%@g.us' AND json_extract(c.payload,'$.isCommunity')=1
     ORDER BY coalesce(r.updated_at,''),c.resource_id
     LIMIT 1`).get()?.resource_id || null;
+}
+
+function isRecentlyTimedOut(database, kind, now) {
+  const command = database.prepare("SELECT status,error,updated_at FROM read_commands WHERE kind=? ORDER BY created_at DESC,id DESC LIMIT 1").get(kind);
+  const failedAt = Date.parse(command?.updated_at || '');
+  return command?.status === 'failed' && command.error === 'read_timeout' && Number.isFinite(failedAt) && failedAt <= now && now - failedAt < RECENT_TIMEOUT_COOLDOWN_MS;
+}
+
+function findNextRoute(database, startCursor, now) {
+  const skipped = [];
+  let cursor = startCursor;
+  for (let checked = 0; checked < SCHEDULED_READ_KINDS.length; checked += 1) {
+    const kind = SCHEDULED_READ_KINDS[cursor];
+    if (isRecentlyTimedOut(database, kind, now)) {
+      skipped.push(kind);
+      cursor = (cursor + 1) % SCHEDULED_READ_KINDS.length;
+      continue;
+    }
+    return { kind, target: kind === 'community_subgroups' ? nextKnownCommunity(database) : null, cursor: (cursor + 1) % SCHEDULED_READ_KINDS.length, skipped };
+  }
+  return { kind: null, target: null, cursor, skipped };
 }
 
 export function getScheduledReadSettings(database, now = Date.now()) {
@@ -86,15 +111,31 @@ export function queueScheduledReadIfDue(database, { now = Date.now(), connected 
       database.exec('COMMIT');
       return { status: 'read_in_progress' };
     }
-    const kind = SCHEDULED_READ_KINDS[schedule.cursor % SCHEDULED_READ_KINDS.length];
-    const target = kind === 'community_subgroups' ? nextKnownCommunity(database) : null;
+    const route = findNextRoute(database, schedule.cursor, now);
+    const kind = route.kind;
+    const target = route.target;
+    if (!kind) {
+      writeStored(database, {
+        ...schedule,
+        cursor: route.cursor,
+        next_run_at: new Date(now + schedule.interval_minutes * 60_000).toISOString(),
+        last_skipped_kinds: route.skipped,
+        last_skip_reason: 'recent_read_timeout',
+        last_skip_at: new Date(now).toISOString(),
+      });
+      database.exec('COMMIT');
+      return { status: 'all_routes_cooling_down', next_run_at: new Date(now + schedule.interval_minutes * 60_000).toISOString() };
+    }
     if (kind === 'community_subgroups' && !target) {
       // Skip this turn so the communities read can still run and discover a
       // known target; the route naturally returns on the next rotation.
       writeStored(database, {
         ...schedule,
-        cursor: (schedule.cursor + 1) % SCHEDULED_READ_KINDS.length,
+        cursor: route.cursor,
         next_run_at: new Date(now + schedule.interval_minutes * 60_000).toISOString(),
+        last_skipped_kinds: [...route.skipped, kind],
+        last_skip_reason: route.skipped.length ? 'recent_read_timeout_and_known_community_required' : 'known_community_required',
+        last_skip_at: new Date(now).toISOString(),
       });
       database.exec('COMMIT');
       return { status: 'known_community_required' };
@@ -103,11 +144,14 @@ export function queueScheduledReadIfDue(database, { now = Date.now(), connected 
     database.prepare('INSERT INTO read_commands(id,kind,target,status,created_at,updated_at) VALUES(?,?,?,\'pending\',?,?)').run(id, kind, target, createdAt, createdAt);
     const updated = {
       ...schedule,
-      cursor: (schedule.cursor + 1) % SCHEDULED_READ_KINDS.length,
+      cursor: route.cursor,
       last_kind: kind,
       last_command_id: id,
       last_enqueued_at: createdAt,
       next_run_at: new Date(now + schedule.interval_minutes * 60_000).toISOString(),
+      last_skipped_kinds: route.skipped,
+      last_skip_reason: route.skipped.length ? 'recent_read_timeout' : null,
+      last_skip_at: route.skipped.length ? createdAt : null,
     };
     writeStored(database, updated);
     database.exec('COMMIT');
@@ -129,8 +173,9 @@ export function getScheduledReadStatus(database, now = Date.now()) {
   const workerLeaseCurrent=Boolean(connection?.lease_expires_at&&Number.isFinite(Date.parse(connection.lease_expires_at))&&Date.parse(connection.lease_expires_at)>now);
   const due=Boolean(schedule.enabled&&schedule.next_run_at&&Date.parse(schedule.next_run_at)<=now);
   const active=Boolean(database.prepare("SELECT 1 AS active FROM read_commands WHERE status IN('pending','running') LIMIT 1").get());
-  const nextKind=SCHEDULED_READ_KINDS[schedule.cursor % SCHEDULED_READ_KINDS.length];
-  const blockedReason=!schedule.enabled?'disabled':!due?'not_due':connection?.status!=='connected'||!identityVerified?'connection_required':!workerLeaseCurrent?'worker_unavailable':active?'read_in_progress':nextKind==='community_subgroups'&&!nextKnownCommunity(database)?'known_community_required':null;
+  const nextRoute=findNextRoute(database,schedule.cursor,now);
+  const nextKind=nextRoute.kind;
+  const blockedReason=!schedule.enabled?'disabled':!due?'not_due':connection?.status!=='connected'||!identityVerified?'connection_required':!workerLeaseCurrent?'worker_unavailable':active?'read_in_progress':!nextKind?'all_routes_cooling_down':nextKind==='community_subgroups'&&!nextRoute.target?'known_community_required':null;
   return {
     enabled: schedule.enabled,
     interval_minutes: schedule.interval_minutes,
@@ -139,6 +184,9 @@ export function getScheduledReadStatus(database, now = Date.now()) {
     last_kind: schedule.last_kind,
     last_enqueued_at: schedule.last_enqueued_at,
     last_status: lastStatus,
+    last_skipped_kinds: Array.isArray(schedule.last_skipped_kinds) ? schedule.last_skipped_kinds.filter(kind => SCHEDULED_READ_KINDS.includes(kind)) : [],
+    last_skip_reason: typeof schedule.last_skip_reason === 'string' ? schedule.last_skip_reason : null,
+    last_skip_at: typeof schedule.last_skip_at === 'string' ? schedule.last_skip_at : null,
     due,
     worker_lease_current: workerLeaseCurrent,
     blocked_reason: blockedReason,
