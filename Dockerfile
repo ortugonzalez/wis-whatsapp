@@ -4,6 +4,7 @@ ENV NODE_ENV=production \
     PORT=3010 \
     WIS_LOCAL_PORT=3010 \
     WIS_LOCAL_HOST=0.0.0.0 \
+    WIS_DEPLOYMENT_KIND=production \
     WIS_WORKER_DISABLED=true \
     WIS_TRUST_PROXY=true \
     WIS_OUTBOUND_ENABLED=false \

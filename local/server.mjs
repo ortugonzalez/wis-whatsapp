@@ -109,6 +109,7 @@ export function makeServer(database=db,options={}){
    const auth=(scope='read',admin=false)=>{if(!actor)fail(401,'authentication_required');if(admin&&!actor.admin||scope&&!actor.scopes.includes(scope))fail(403,'insufficient_scope');};
    if(['/api/session','/api/me'].includes(path)&&method==='GET')return send({authenticated:Boolean(actor),admin:Boolean(actor?.admin)});
    if(path==='/api/login-config'&&method==='GET')return send({username:adminUsername,password_recovery_available:passwordRecoveryAvailable});
+   if(path==='/api/runtime-info'&&method==='GET')return send({environment:process.env.WIS_DEPLOYMENT_KIND==='production'?'production':'local',storage:'sqlite'});
    if(path==='/api/local-status'&&method==='GET'){
     const connection=database.prepare("SELECT status,last_error FROM connections WHERE id='wis-5679'").get();
     const status=['connected','qr_pending','disconnected'].includes(connection?.status)?connection.status:'disconnected';

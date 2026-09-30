@@ -14,6 +14,11 @@ test('local HTTP authorization, consent, queue transaction, replay and private Q
  const call=async(path,method='GET',body,token,headers={})=>{const response=await fetch(base+path,{method,headers:{...(cookie?{Cookie:cookie}:{}),Origin:base,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...headers},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,json:await response.json(),headers:response.headers};};
  const original=process.env.WIS_OUTBOUND_ENABLED;
  try{
+  const originalDeploymentKind=process.env.WIS_DEPLOYMENT_KIND;
+  try{
+   process.env.WIS_DEPLOYMENT_KIND='production';assert.deepEqual((await call('/api/runtime-info')).json.data,{environment:'production',storage:'sqlite'});
+   delete process.env.WIS_DEPLOYMENT_KIND;assert.deepEqual((await call('/api/runtime-info')).json.data,{environment:'local',storage:'sqlite'});
+  }finally{if(originalDeploymentKind===undefined)delete process.env.WIS_DEPLOYMENT_KIND;else process.env.WIS_DEPLOYMENT_KIND=originalDeploymentKind;}
   const publicLocalStatus=await call('/api/local-status');assert.equal(publicLocalStatus.status,200);assert.deepEqual(publicLocalStatus.json.data,{status:'disconnected',error:null,last_disconnect:null});assert.equal(JSON.stringify(publicLocalStatus.json.data).includes('auth_state_updated_at'),false);
   assert.equal((await call('/api/whatsapp/recover','POST',{})).status,401);
   assert.deepEqual((await call('/api/login-config')).json.data,{username:'ortu',password_recovery_available:false});assert.equal((await call('/api/v1/contacts')).status,401);
