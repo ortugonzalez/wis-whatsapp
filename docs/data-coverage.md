@@ -392,3 +392,7 @@ El turno `account_username` terminó `done` a las 20:44:18 UTC. La función `get
 ### Lectura programada de perfiles de contactos, 2026-09-30 21:00 UTC
 
 El turno `contact_profiles` terminó `done` a las 20:59:18 UTC para el lote acotado de contactos conocidos. La cobertura total sigue en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar); las coincidencias por función permanecen en `getprofile` 3/6, `getcontact` 5/10 y `getcontacts` 5/14. Esta nota no incluye nombres ni valores de contacto. Próxima ruta: `group_requests` a las 21:14 UTC.
+
+### Lectura programada de solicitudes de grupos, 2026-09-30 21:15 UTC
+
+El turno `group_requests` terminó `done` a las 21:14:18 UTC. El catálogo recalculado a las 21:14 UTC mantiene la función `Get list of join requests to the group` en 0/7 rutas y la cobertura global en 157/44.628 (14 exactas, 143 equivalencias revisadas, 44.471 aún sin observar); esta lectura no aumentó evidencia WHAPI. Un turno completado sin rutas nuevas no basta para afirmar que no existan solicitudes pendientes. La próxima ruta programada es `avatars`, a las 21:29 UTC. Esta nota no incluye identificadores de grupos ni contenido de solicitudes.
