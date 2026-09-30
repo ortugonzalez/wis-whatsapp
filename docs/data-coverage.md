@@ -356,3 +356,7 @@ La ruta `bot_list` se encoló a las 18:29:14 UTC y falló con `provider_error`; 
 ### Lectura de temporizador en producción, 2026-09-30 18:45 UTC
 
 El turno `disappearing_mode` se encoló a las 18:44:15 UTC, terminó `done` para una conversación conocida y guardó una observación local; esta nota no incluye su identificador ni el valor del temporizador. La conexión aparece verificada, con envíos pausados y cero operaciones de mensajería pendientes/fallidas. La vista de capacidades recalculada a las 18:45 UTC permanece en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar), sin evidencia WHAPI nueva: `patchchat.ephemeral` sigue sin equivalencia demostrada. Próxima ruta: `community_subgroups`, 18:59 UTC.
+
+### Omisión del turno de subgrupos, 2026-09-30 19:00 UTC
+
+La agenda omitió `community_subgroups` a las 18:59:15 UTC con `known_community_required`: no había una comunidad conocida para consultar. No se envió una lectura remota y la omisión no acredita que no existan comunidades en WhatsApp. La siguiente ruta es `all`, prevista para las 19:14 UTC. Sin consulta, no se añadieron campos a la cobertura WHAPI.
