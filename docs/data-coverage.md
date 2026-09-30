@@ -380,3 +380,7 @@ El turno `collections` terminó `done` a las 19:59:17 UTC; el mismo ciclo omiti�
 ### Lectura programada de Newsletters, 2026-09-30 20:15 UTC
 
 El turno `newsletters` terminó `done` a las 20:14:17 UTC, sin nuevas rutas WHAPI observadas. La matriz permanece en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar); la próxima ruta es `account_limits` a las 20:29 UTC. Esta nota no incluye nombres ni identificadores de newsletters.
+
+### Lectura programada de límites de cuenta, 2026-09-30 20:30 UTC
+
+El turno `account_limits` terminó `done` a las 20:29:17 UTC. El recálculo en el panel a las 20:29 UTC mantiene 157/44.628 rutas de respuesta observadas/revisadas (14 exactas, 143 equivalencias, 44.471 sin observar); no hubo incremento atribuible a este turno. Próxima ruta: `account_username`, prevista para las 20:44 UTC. Los límites locales de WIS no se interpretan como cuotas del proveedor ni como un volumen seguro de envío.
