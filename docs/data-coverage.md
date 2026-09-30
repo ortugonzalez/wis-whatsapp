@@ -336,3 +336,7 @@ El commit `384c1cd` se publicó en la rama conectada a EasyPanel y la compilaci�
 ### Lectura de Username en producción, 2026-09-30 17:30 UTC
 
 El turno `account_username` terminó a las 17:29 UTC sin aportar rutas observadas; `getusername` continúa en 0/3. La vista de cuenta marca el campo no disponible y no muestra un valor. La evidencia no distingue entre falta de username en la cuenta y una respuesta no verificable de WhatsApp. La cobertura agregada sigue en 157/44.628 (14 exactas, 143 semánticas); no se sumó evidencia. La rotación avanzó a `contact_profiles` para las 17:44 UTC. La cuenta sigue conectada con worker activo; el registro no copia ni publica identificadores ni valores del perfil.
+
+### Lectura acotada de perfiles, 2026-09-30 17:45 UTC
+
+El turno `contact_profiles` terminó a las 17:44 UTC tras consultar el lote programado de contactos conocidos. La matriz total permanece en 157/44.628 rutas; los detalles de perfil muestran las mismas coincidencias estructurales (Get profile 3/6, Get contact 5/10 y Get contacts 5/14), sin incremento global ni nombres o valores de contactos en este registro. El worker sigue activo. Próxima ruta: `group_requests`, 17:59 UTC.
