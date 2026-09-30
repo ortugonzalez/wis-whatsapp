@@ -267,7 +267,15 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       description: Object.freeze([{ kind: 'business', field: 'description', note: 'descripción del perfil de negocio observada' }]),
       email: Object.freeze([{ kind: 'business', field: 'email', note: 'email del perfil de negocio cuando Baileys lo devuelve', requires_non_empty_text: true }]),
       'websites': Object.freeze([{ kind: 'business', field: 'website[]', note: 'URL del perfil; Baileys conserva los sitios como una lista de cadenas', requires_non_empty_text: true }]),
+      hours: Object.freeze([
+        { kind: 'business', field: 'business_hours', note: 'objeto de horarios del perfil propio observado por Baileys' },
+        { kind: 'contact', field: 'business_profile.business_hours', note: 'objeto de horarios del perfil de un contacto correlacionado por Baileys' },
+      ]),
       'hours.timeZone': Object.freeze([{ kind: 'business', field: 'business_hours.timezone', note: 'zona horaria de horarios; nombre de campo distinto, semántica equivalente' }]),
+      'hours.config': Object.freeze([
+        { kind: 'business', field: 'business_hours.config[]', note: 'lista del perfil propio normalizada desde business_config o config de Baileys' },
+        { kind: 'contact', field: 'business_profile.business_hours.config[]', note: 'lista del perfil del contacto normalizada desde business_config o config de Baileys' },
+      ]),
       'hours.config[].day': Object.freeze([{ kind: 'business', field: 'business_hours.config[].day_of_week', note: 'día semanal de horario; conserva la enumeración informada por Baileys' }]),
       'hours.config[].mode': Object.freeze([{ kind: 'business', field: 'business_hours.config[].mode', note: 'modo del horario observado' }]),
       'hours.config[].openTime': Object.freeze([{ kind: 'business', field: 'business_hours.config[].open_time', note: 'hora de apertura observada; se conserva el formato de Baileys' }]),

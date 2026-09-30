@@ -82,8 +82,12 @@ test('business profile aliases map only observed business fields',()=>{
   assert.equal(aliases.getbusinessprofile.fields.email[0].field,'email');
   assert.equal(aliases.getbusinessprofile.fields.websites[0].field,'website[]');
   assert.equal(aliases.getbusinessprofile.fields['hours.timeZone'][0].field,'business_hours.timezone');
-  assert.equal(aliases.getbusinessprofile.fields.hours,undefined);
-  assert.equal(aliases.getbusinessprofile.fields['hours.config'],undefined);
+  assert.deepEqual(Array.from(aliases.getbusinessprofile.fields.hours,mapping=>[mapping.kind,mapping.field]),[
+    ['business','business_hours'],['contact','business_profile.business_hours'],
+  ]);
+  assert.deepEqual(Array.from(aliases.getbusinessprofile.fields['hours.config'],mapping=>[mapping.kind,mapping.field]),[
+    ['business','business_hours.config[]'],['contact','business_profile.business_hours.config[]'],
+  ]);
 });
 
 test('newsletter and application aliases stay scoped to their own snapshots',()=>{

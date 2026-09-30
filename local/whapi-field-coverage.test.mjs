@@ -31,6 +31,34 @@ test('field audit requires positive and meaningful evidence and excludes local p
   assert.equal(report.method_coverage.methods_without_observed_response,1);
 });
 
+test('business profile observes WHAPI hours containers only when Baileys persisted them',()=>{
+  const reference={methods:[{id:'getbusinessprofile',operations:[{response_fields:{200:[{path:'hours'},{path:'hours.config'}]}}]}]};
+  const aliases={getbusinessprofile:{source_kinds:['business','contact'],fields:{
+    hours:[
+      {kind:'business',field:'business_hours',note:'own profile hours object'},
+      {kind:'contact',field:'business_profile.business_hours',note:'contact profile hours object'},
+    ],
+    'hours.config':[
+      {kind:'business',field:'business_hours.config[]',note:'own profile hours list'},
+      {kind:'contact',field:'business_profile.business_hours.config[]',note:'contact profile hours list'},
+    ],
+  }}};
+  const noHours={snapshot_kinds:[{kind:'business',field_counts:[]}],storage_kinds:[],contextual_kinds:[]};
+  assert.equal(summarizeCapabilityFieldCoverage(reference,noHours,aliases).totals.response_fields_without_observation,2);
+  const observed={snapshot_kinds:[{kind:'business',field_counts:[
+    {field:'$.business_hours',records:1},
+    {field:'$.business_hours.config[0]',records:1},
+  ]}],storage_kinds:[],contextual_kinds:[]};
+  const report=summarizeCapabilityFieldCoverage(reference,observed,aliases);
+  assert.equal(report.totals.semantic_response_fields_observed,2);
+  assert.equal(report.totals.response_fields_without_observation,0);
+  const contactObserved={snapshot_kinds:[{kind:'contact',field_counts:[
+    {field:'$.business_profile.business_hours',records:1},
+    {field:'$.business_profile.business_hours.config[0]',records:1},
+  ]}],storage_kinds:[],contextual_kinds:[]};
+  assert.equal(summarizeCapabilityFieldCoverage(reference,contactObserved,aliases).totals.semantic_response_fields_observed,2);
+});
+
 test('field audit gives a reviewed same-path alias the same semantic classification as the detail view',()=>{
   const reference={methods:[{id:'getchat',operations:[{response_fields:{200:[{path:'messages[].body'}]}}]}]};
   const coverage={snapshot_kinds:[{kind:'chat',field_counts:[{field:'messages[0].body',records:2,non_empty_text_records:2}]}],storage_kinds:[],contextual_kinds:[]};
