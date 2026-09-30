@@ -9,6 +9,7 @@ Actualizado: **2026-09-30**. Estado integral: **PARCIAL**. El panel está desple
 - Conteos visibles en el resumen tras la nueva implementación: 864 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos. La interfaz excluye contenido de conversaciones y datos personales de ese resumen. Los mensajes pasaron de 1.462 a 1.512 durante la observación; no se infiere su dirección por ese conteo.
 - El snapshot más reciente se escribió el 30/9/2026 a las 10:15; el panel muestra 378 campos, 27 tipos de datos y 28 lecturas fallidas registradas. El recolector indica que está dentro del intervalo y su próxima ruta es Catálogo comercial.
 - Una consulta manual de solo lectura al catálogo terminó con `read_timeout` (408). La respuesta guardada continúa identificada como catálogo público; el timeout de la alternativa Baileys no demuestra que el catálogo privado esté vacío. La pantalla de productos ahora debe mostrar por separado alcance, origen y resultado del último intento.
+- La lectura productiva de metadatos de canales terminó el 30/9/2026 a las 10:45 (Buenos Aires) con una respuesta vacía para los canales conocidos por la sesión. El panel la identifica como observación parcial y aclara que no representa el directorio completo; no se interpreta como que la cuenta no tenga canales.
 - La recepción entrante más reciente que muestra el panel es del 28/9/2026 a las 16:32. No se usa ese evento anterior para afirmar que hubo un mensaje después de la reconexión del 30/9.
 - El historial completo anterior a la vinculación no está garantizado. El panel distingue hora de escritura de snapshot de hora de observación de cada campo.
 - Envíos salientes y dispatcher de webhooks siguen desactivados en la imagen Docker. La vinculación y las lecturas no envían mensajes.
@@ -26,7 +27,7 @@ Actualizado: **2026-09-30**. Estado integral: **PARCIAL**. El panel está desple
 ## Próximos pasos
 
 1. Mantener el servicio actual y verificar recepción cuando llegue actividad normal, sin enviar mensajes de prueba.
-2. Priorizar el catálogo por lecturas seguras que Baileys exponga con correlación verificable; registrar estado, datos disponibles, límites y pruebas por método.
+2. Continuar la auditoría de lecturas de solo lectura con evidencia de respuestas correlacionadas; los metadatos de canales conocidos devolvieron una respuesta vacía y no habilitan lecturas por identificadores que no se observaron.
 3. Cerrar primero lectura de capacidades para administración y APIs. Mantener bloqueadas las funciones de escritura hasta revisión y aprobación específica.
 4. Revisar y corregir cualquier error de lectura persistente en el panel antes de habilitar nuevas consultas de cuenta.
 5. Validar los ejemplos de Python y n8n en entornos de prueba y documentar credenciales y permisos sin almacenarlos en Git.
