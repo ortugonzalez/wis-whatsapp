@@ -368,3 +368,7 @@ El turno `all` terminó `done` a las 19:14:15 UTC. Chrome confirma que la conexi
 ### Lectura de Lista de bloqueos, 2026-09-30 19:30 UTC
 
 El turno `blocklist` se encoló a las 19:29:16 UTC y terminó `done`. La conexión e identidad siguen verificadas, con envíos pausados y cero operaciones de mensajería pendientes/fallidas. El recálculo a las 19:30 UTC mantiene 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar), sin incremento por este snapshot. Próxima ruta: `communities`, 19:44 UTC. Esta nota no incluye identificadores ni contenido de la lista.
+
+### Lectura de Comunidades, 2026-09-30 19:45 UTC
+
+El turno `communities` terminó `done` a las 19:44:17 UTC; el panel dejó `collections` para las 19:59 UTC. La cobertura recalculada a las 19:45 UTC sigue en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar), sin nuevas rutas WHAPI atribuibles a esta ejecución. Esta nota no incluye nombres ni identificadores de comunidades.
