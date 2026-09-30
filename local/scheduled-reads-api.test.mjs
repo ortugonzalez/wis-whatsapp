@@ -37,9 +37,9 @@ test('administrator can inspect, pause and configure bounded scheduled read-only
   }
 });
 
-test('local server timer enqueues one due route only while the existing connection is active', async () => {
+test('local server timer enqueues one due route only while the connected worker lease is live', async () => {
   const database = openDatabase(':memory:');
-  database.prepare("UPDATE connections SET status='connected',phone='+5491100005679',expected_phone_e164='+5491100005679' WHERE id='wis-5679'").run();
+  database.prepare("UPDATE connections SET status='connected',phone='+5491100005679',expected_phone_e164='+5491100005679',lease_expires_at=? WHERE id='wis-5679'").run(new Date(Date.now()+30_000).toISOString());
   database.prepare("INSERT INTO settings(key,value) VALUES('scheduled_reads',?)").run(JSON.stringify({ enabled: true, interval_minutes: 15, cursor: 0, next_run_at: new Date(Date.now() - 60_000).toISOString(), last_kind: null, last_command_id: null, last_enqueued_at: null }));
   const server = makeServer(database, { scheduledReadIntervalMs: 5 });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));

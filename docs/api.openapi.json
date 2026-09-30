@@ -2220,6 +2220,10 @@
                                 null
                               ]
                             },
+                            "worker_lease_current": {
+                              "type": "boolean",
+                              "description": "Whether the worker renewed the connection lease within the last 30 seconds."
+                            },
                             "due": {
                               "type": "boolean",
                               "description": "Whether the next read is due at the current time."
@@ -2234,6 +2238,7 @@
                                 "not_due",
                                 "read_in_progress",
                                 "connection_required",
+                                "worker_unavailable",
                                 null
                               ],
                               "description": "Why a due scheduled read cannot currently be enqueued; null means it is ready."
@@ -2391,6 +2396,28 @@
                                 "running",
                                 "done",
                                 "failed",
+                                null
+                              ]
+                            },
+                            "worker_lease_current": {
+                              "type": "boolean",
+                              "description": "Whether the worker renewed the connection lease within the last 30 seconds."
+                            },
+                            "due": {
+                              "type": "boolean",
+                              "description": "Whether the next read is due at the current time."
+                            },
+                            "blocked_reason": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "disabled",
+                                "not_due",
+                                "read_in_progress",
+                                "connection_required",
+                                "worker_unavailable",
                                 null
                               ]
                             }

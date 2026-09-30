@@ -67,6 +67,11 @@ export function queueScheduledReadIfDue(database, { now = Date.now(), connected 
       database.exec('COMMIT');
       return { status: schedule.enabled ? 'not_due' : 'disabled' };
     }
+    const lease = database.prepare("SELECT lease_expires_at FROM connections WHERE id='wis-5679'").get();
+    if (!lease?.lease_expires_at || !Number.isFinite(Date.parse(lease.lease_expires_at)) || Date.parse(lease.lease_expires_at) <= now) {
+      database.exec('COMMIT');
+      return { status: 'worker_unavailable' };
+    }
     const active = database.prepare("SELECT id FROM read_commands WHERE status IN('pending','running') LIMIT 1").get();
     if (active) {
       database.exec('COMMIT');
@@ -98,11 +103,12 @@ export function getScheduledReadStatus(database, now = Date.now()) {
   const schedule = readStored(database) || initialSchedule(now);
   const command = schedule.last_command_id ? database.prepare('SELECT status FROM read_commands WHERE id=?').get(schedule.last_command_id) : null;
   const lastStatus = ['pending', 'running', 'done', 'failed'].includes(command?.status) ? command.status : null;
-  const connection=database.prepare("SELECT status,phone,expected_phone_e164 FROM connections WHERE id='wis-5679'").get();
+  const connection=database.prepare("SELECT status,phone,expected_phone_e164,lease_expires_at FROM connections WHERE id='wis-5679'").get();
   const identityVerified=Boolean(connection?.phone&&connection.expected_phone_e164&&connection.phone.replace(/\D/g,'')===connection.expected_phone_e164.replace(/\D/g,''));
+  const workerLeaseCurrent=Boolean(connection?.lease_expires_at&&Number.isFinite(Date.parse(connection.lease_expires_at))&&Date.parse(connection.lease_expires_at)>now);
   const due=Boolean(schedule.enabled&&schedule.next_run_at&&Date.parse(schedule.next_run_at)<=now);
   const active=Boolean(database.prepare("SELECT 1 AS active FROM read_commands WHERE status IN('pending','running') LIMIT 1").get());
-  const blockedReason=!schedule.enabled?'disabled':!due?'not_due':active?'read_in_progress':connection?.status!=='connected'||!identityVerified?'connection_required':null;
+  const blockedReason=!schedule.enabled?'disabled':!due?'not_due':connection?.status!=='connected'||!identityVerified?'connection_required':!workerLeaseCurrent?'worker_unavailable':active?'read_in_progress':null;
   return {
     enabled: schedule.enabled,
     interval_minutes: schedule.interval_minutes,
@@ -112,6 +118,7 @@ export function getScheduledReadStatus(database, now = Date.now()) {
     last_enqueued_at: schedule.last_enqueued_at,
     last_status: lastStatus,
     due,
+    worker_lease_current: workerLeaseCurrent,
     blocked_reason: blockedReason,
   };
 }
