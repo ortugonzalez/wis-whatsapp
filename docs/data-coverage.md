@@ -404,3 +404,7 @@ El turno `avatars` falló a las 21:29:18 UTC con el código sanitizado `provider
 ### Lectura programada de bots, 2026-09-30 21:45 UTC
 
 El turno `bot_list` falló a las 21:44:18 UTC con el código sanitizado `provider_error`. La función `Get bots` permanece en 0/4 rutas observadas; la matriz global sigue en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar). No se verificó una lista vacía ni se añadió evidencia. Próxima ruta: `disappearing_mode`, prevista para las 21:59 UTC. Esta nota no contiene valores de la cuenta.
+
+### Lectura programada de temporizador, 2026-09-30 22:00 UTC
+
+El turno `disappearing_mode` terminó `done` a las 21:59:19 UTC para una conversación conocida. La cobertura global recalculada a las 21:59 UTC permanece en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); no añadió evidencia a `patchchat`. La consulta no demuestra cobertura de otras conversaciones. Próxima ruta: `community_subgroups`, prevista para las 22:14 UTC. Esta nota no incluye IDs ni valores de temporizador.
