@@ -352,3 +352,7 @@ La agenda ejecutó `avatars` a las 18:14:14 UTC para un contacto conocido y guar
 ### Lectura programada de Bots, 2026-09-30 18:30 UTC
 
 La ruta `bot_list` se encoló a las 18:29:14 UTC y falló con `provider_error`; no se verificó una lista vacía. La sesión seguía conectada/verificada, el lease del worker estaba vigente y los envíos permanecían pausados. La cobertura recalculada a las 18:30 UTC sigue en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar); no hubo incremento. La siguiente ruta es `disappearing_mode` a las 18:44 UTC. El fallo no demuestra que la cuenta carezca de bots.
+
+### Lectura de temporizador en producción, 2026-09-30 18:45 UTC
+
+El turno `disappearing_mode` se encoló a las 18:44:15 UTC, terminó `done` para una conversación conocida y guardó una observación local; esta nota no incluye su identificador ni el valor del temporizador. La conexión aparece verificada, con envíos pausados y cero operaciones de mensajería pendientes/fallidas. La vista de capacidades recalculada a las 18:45 UTC permanece en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar), sin evidencia WHAPI nueva: `patchchat.ephemeral` sigue sin equivalencia demostrada. Próxima ruta: `community_subgroups`, 18:59 UTC.
