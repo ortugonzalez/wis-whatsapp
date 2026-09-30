@@ -1219,7 +1219,13 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         else if(c.command==='recover') {
           desired=false;closeSocket();
           try {
-            if(connection().status!=='disconnected'||connection().last_error!=='session_revoked')throw new Error('session_recovery_not_available');
+            let timeout;
+            try {
+              await Promise.race([credentialsSaved,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('session_save_drain_timeout')),10000);timeout.unref?.();})]);
+            } finally {clearTimeout(timeout);}
+            if(!owns())throw new Error('session_recovery_lease_lost');
+            const latest=connection();
+            if(latest.status!=='disconnected'||latest.last_error!=='session_revoked')throw new Error('session_recovery_not_available');
             archiveRejectedAuthDirectory(authDir);
             attempts=0;lastOpenedAt=0;nextConnect=0;desired=true;
             patch({status:'qr_pending',phone:null,qr_payload:null,qr_expires_at:null,last_error:null});

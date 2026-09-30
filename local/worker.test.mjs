@@ -330,6 +330,32 @@ test('revoked WhatsApp session recovery archives old auth and prepares a fresh Q
   assert.equal(db.prepare("SELECT last_error FROM connections WHERE id='wis-5679'").get().last_error,null);
  }finally{await worker.stop();db.close();}
 });
+test('revoked session recovery drains delayed credential writes before rotating the auth directory',async()=>{
+ const db=database(),dir=mkdtempSync(resolve(tmpdir(),'wis-worker-delayed-recovery-')),authDir=resolve(dir,'baileys-auth');
+ mkdirSync(authDir,{recursive:true,mode:0o700});writeFileSync(resolve(authDir,'creds.json'),'private-revoked-session');
+ db.prepare("UPDATE connections SET command='connect',status='disconnected',last_error=NULL WHERE id='wis-5679'").run();
+ const ev=new EventEmitter(),socket={ev,user:{id:'5491111115679:1@s.whatsapp.net'},end(){}};
+ let releaseSave,saveStarted=false,authLoads=0;
+ const fake={default:()=>socket,useMultiFileAuthState:async path=>{authLoads++;if(authLoads>1)assert.deepEqual(readdirSync(path),[],'fresh Baileys auth must not receive a late write from the rejected session');return {state:{creds:{},keys:{}},saveCreds:async()=>{saveStarted=true;await new Promise(resolve=>{releaseSave=resolve;});writeFileSync(resolve(authDir,'late-creds.json'),'late-private-write');}};},makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir,mediaDir:resolve(dir,'media')});
+ try{
+  ev.emit('creds.update');
+  for(let i=0;i<50&&!saveStarted;i++)await new Promise(resolve=>setTimeout(resolve,10));
+  assert.equal(saveStarted,true,'credential save should be in flight');
+  db.prepare("UPDATE connections SET command='recover',status='disconnected',last_error='session_revoked' WHERE id='wis-5679'").run();
+  await new Promise(resolve=>setTimeout(resolve,2200));
+  assert.equal(existsSync(resolve(dir,'baileys-auth-revoked')),false,'auth rotation must wait for the in-flight save');
+  assert.equal(authLoads,1,'new connection must not start while credential save is unresolved');
+  releaseSave();
+  for(let i=0;i<100&&authLoads<2;i++)await new Promise(resolve=>setTimeout(resolve,20));
+  assert.equal(authLoads,2,'recovery should start a fresh Baileys session after the save drains');
+  const archives=readdirSync(resolve(dir,'baileys-auth-revoked'));assert.equal(archives.length,1);
+  const archived=resolve(dir,'baileys-auth-revoked',archives[0]);
+  assert.equal(readFileSync(resolve(archived,'late-creds.json'),'utf8'),'late-private-write','the delayed rejected-session write must remain in the archive');
+  assert.deepEqual(readdirSync(authDir),[],'the fresh auth directory must remain clean');
+  assert.equal(db.prepare("SELECT status FROM connections WHERE id='wis-5679'").get().status,'qr_pending');
+ }finally{releaseSave?.();await worker.stop();db.close();}
+});
 test('connection close diagnostic persists only a bounded code and allowlisted reason',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();const ev=new EventEmitter(),dir=mkdtempSync(resolve(tmpdir(),'wis-worker-close-diagnostic-'));
  const socket={ev,user:{id:'5491111115679:1@s.whatsapp.net'},end(){}};
