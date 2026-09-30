@@ -424,3 +424,7 @@ El turno `blocklist` se encoló a las 22:44:20 UTC y figuró `done`. La matriz d
 ### Lectura programada de Comunidades, 2026-09-30 23:00 UTC
 
 El turno `communities` se encoló a las 22:59:20 UTC y posteriormente figuró como `done`. La matriz recalculada a las 23:00 UTC se mantiene en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar), sin rutas WHAPI nuevas atribuibles a este snapshot. Próxima ruta: `catalog`, prevista para las 23:14 UTC. Esta nota no incluye nombres ni identificadores de comunidades.
+
+### Lectura programada de Catálogo comercial, 2026-09-30 23:15 UTC
+
+El turno `catalog` se encoló a las 23:14:20 UTC y terminó con el código sanitizado `read_timeout`. El recálculo de capacidades a las 23:15 UTC sigue en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); esta ejecución no agregó evidencia de catálogo. El timeout no demuestra que no haya productos. Próxima ruta: `collections`, prevista para las 23:29 UTC. Esta nota no incluye nombres, descripciones ni precios de productos.
