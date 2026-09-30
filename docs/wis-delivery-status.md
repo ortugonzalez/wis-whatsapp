@@ -6,8 +6,8 @@ Actualizado: **2026-09-30**. Estado integral: **PARCIAL**. El panel está desple
 
 - URL: `https://wis-whatsapp-wis.xbgh9n.easypanel.host/`.
 - El panel reportó `Conectado · identidad verificada`; el estado local de autenticación se actualizó el 30/9/2026 a las 09:57 (hora de Buenos Aires). No se guardan el teléfono completo, QR ni credenciales en este informe.
-- Conteos visibles en el resumen: 864 contactos, 567 conversaciones, 1.462 mensajes y 18 grupos. La interfaz excluye contenido de conversaciones y datos personales de ese resumen.
-- Hay 365 campos listados en la cobertura y 26 tipos de datos observados. El recolector indica que está dentro del intervalo; la próxima ruta es Comunidades.
+- Conteos visibles en el resumen tras la nueva implementación: 864 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos. La interfaz excluye contenido de conversaciones y datos personales de ese resumen. Los mensajes pasaron de 1.462 a 1.512 durante la observación; no se infiere su dirección por ese conteo.
+- El snapshot más reciente se escribió el 30/9/2026 a las 10:08 y agregó observaciones; el panel muestra 378 campos, 27 tipos de datos y 27 lecturas fallidas registradas. El recolector indica que está dentro del intervalo; la próxima ruta es Comunidades.
 - La recepción entrante más reciente que muestra el panel es del 28/9/2026 a las 16:32. No se usa ese evento anterior para afirmar que hubo un mensaje después de la reconexión del 30/9.
 - El historial completo anterior a la vinculación no está garantizado. El panel distingue hora de escritura de snapshot de hora de observación de cada campo.
 - Envíos salientes y dispatcher de webhooks siguen desactivados en la imagen Docker. La vinculación y las lecturas no envían mensajes.
