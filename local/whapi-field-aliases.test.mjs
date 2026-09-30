@@ -29,6 +29,9 @@ test('group aliases use known group metadata and leave unsupported message prove
   assert.ok(aliases.getgroup.source_kinds.includes('group'));
   assert.ok(aliases.getgroup.source_kinds.includes('group_invite'));
   assert.equal(aliases.getgroup.fields.name[0].field,'subject');
+  assert.equal(aliases.getgroup.fields.created_by[0].field,'owner');
+  assert.equal(aliases.getgroups.fields['groups[].created_by'][0].field,'owner');
+  assert.match(aliases.getgroup.fields.created_by[0].note,/group\.attrs\.creator/);
   assert.equal(aliases.getgroup.fields.invite_code[0].field,'code');
   assert.equal(aliases.getgroup.fields.invite_code[0].requires_non_empty_text,true);
   assert.match(aliases.getgroup.fields.invite_code[0].note,/TTL/);

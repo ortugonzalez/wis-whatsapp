@@ -56,6 +56,23 @@ test('group invite coverage requires a current non-empty ephemeral code',()=>{
   assert.equal(verified.totals.response_fields_without_observation,0);
 });
 
+test('group creator evidence comes only from Baileys owner metadata in group scope',()=>{
+  const reference={methods:[
+    {id:'getgroup',operations:[{response_fields:{200:[{path:'created_by'}]}}]},
+    {id:'getgroups',operations:[{response_fields:{200:[{path:'groups[].created_by'}]}}]},
+  ]};
+  const aliases={
+    getgroup:{source_kinds:['group'],fields:{created_by:[{kind:'group',field:'owner',note:'group creator JID'}]}},
+    getgroups:{source_kinds:['group'],fields:{'groups[].created_by':[{kind:'group',field:'owner',note:'group creator JID'}]}},
+  };
+  const unrelated={snapshot_kinds:[{kind:'contact',field_counts:[{field:'owner',records:18,non_empty_text_records:18}]}],storage_kinds:[],contextual_kinds:[]};
+  assert.equal(summarizeCapabilityFieldCoverage(reference,unrelated,aliases).totals.semantic_response_fields_observed,0);
+  const groups={...unrelated,snapshot_kinds:[...unrelated.snapshot_kinds,{kind:'group',field_counts:[{field:'owner',records:18,non_empty_text_records:18}]}]};
+  const report=summarizeCapabilityFieldCoverage(reference,groups,aliases);
+  assert.equal(report.totals.semantic_response_fields_observed,2);
+  assert.equal(report.totals.response_fields_without_observation,0);
+});
+
 test('community invite coverage maps only current non-empty community-scoped code',()=>{
   const reference={methods:[{id:'getcommunity',operations:[{response_fields:{200:[{path:'invite_code'}]}}]}]};
   const aliases={getcommunity:{source_kinds:['community','community_invite'],fields:{invite_code:[{kind:'community_invite',field:'code',note:'known community code with TTL',requires_non_empty_text:true}]}}};
