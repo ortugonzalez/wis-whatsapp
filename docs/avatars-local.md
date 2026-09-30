@@ -1,6 +1,6 @@
 # Fotos de perfil · lectura y caché privada
 
-Las fotos se consultan manualmente para la cuenta vinculada o identificadores de contactos y grupos ya conocidos por la instalación. No se exploran números arbitrarios ni se ejecutan barridos automáticos de la agenda. La consulta respeta lo que WhatsApp expone a la sesión.
+Las fotos pueden consultarse manualmente para la cuenta vinculada o identificadores de contactos y grupos ya conocidos por la instalación. La agenda de solo lectura ejecuta una ruta por intervalo configurable (15 minutos en la configuración actual) y rota entre recursos. Cuando `avatars` llega a su turno, consulta como máximo un contacto ya guardado (hasta 10.000 candidatos elegibles), excluye la identidad propia y prioriza los que llevan más tiempo sin actualizar. No consulta el lote completo en un turno ni acepta números arbitrarios; un error no prueba que el contacto carezca de foto. La consulta respeta lo que WhatsApp expone a la sesión.
 
 El worker utiliza `profilePictureUrl` de la versión fijada de Baileys. Esa función consulta `w:profile:picture` y conserva el tratamiento de privacidad propio de Baileys; no se sustituyen sus tokens de privacidad. Una URL ausente o un timeout no prueban que una persona carezca de foto.
 
@@ -17,3 +17,5 @@ Consultar una foto no modifica el perfil, no marca mensajes como leídos y no en
 El 27/09/2026 se solicitó desde Chrome únicamente la foto de la cuenta vinculada. El worker obtuvo la imagen y el navegador confirmó un archivo local cargado de 96 × 96 píxeles mediante la ruta autenticada. No se guardó una captura ni se incluyó la URL temporal en informes. Las consultas de fotos de terceros y grupos se validaron con transportes simulados, sin barrido real.
 
 La suite local y QA completó 40 pruebas aprobadas; la revisión independiente cubrió destinos parecidos, mezcla de DNS público/privado, pérdida de autorización, permisos, formato y rutas. El reinicio conservó la sesión y el contador de operaciones salientes permaneció en cero.
+
+Seguimiento de agenda de producción, 2026-09-30 18:14 UTC: el turno `avatars` para un contacto conocido terminó con `provider_error` mientras la conexión y el worker seguían activos. La cobertura documentada de respuestas WHAPI se mantuvo sin cambios; el panel programó `bot_list` para las 18:29 UTC. El error no indica ausencia de foto ni justifica exponer datos del contacto.
