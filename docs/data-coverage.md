@@ -360,3 +360,7 @@ El turno `disappearing_mode` se encoló a las 18:44:15 UTC, terminó `done` para
 ### Omisión del turno de subgrupos, 2026-09-30 19:00 UTC
 
 La agenda omitió `community_subgroups` a las 18:59:15 UTC con `known_community_required`: no había una comunidad conocida para consultar. No se envió una lectura remota y la omisión no acredita que no existan comunidades en WhatsApp. La siguiente ruta es `all`, prevista para las 19:14 UTC. Sin consulta, no se añadieron campos a la cobertura WHAPI.
+
+### Lectura de Cuenta y grupos, 2026-09-30 19:15 UTC
+
+El turno `all` terminó `done` a las 19:14:15 UTC. Chrome confirma que la conexión y la identidad siguen verificadas; los envíos permanecen pausados, con cero operaciones de mensajería pendientes o fallidas. La cobertura recalculada a las 19:15 UTC se mantiene en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar); los snapshots actualizados no añadieron rutas WHAPI observadas. Próxima ruta: `blocklist`, 19:29 UTC.
