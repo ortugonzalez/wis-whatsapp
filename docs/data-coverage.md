@@ -328,3 +328,11 @@ La comparación de producción permanece en 182 funciones y 44.628 rutas de resp
 ### Verificación del turno de Límites, 2026-09-30 17:14 UTC
 
 El turno automático `account_limits` terminó a las 17:13 UTC y el panel dejó `account_username` para las 17:28 UTC. Producción sigue conectada, con identidad verificada y worker activo. La vista de capacidades mantiene 157 de 44.628 rutas con observación/equivalencia revisada (14 exactas, 143 semánticas) y 44.471 sin evidencia; la lectura no añadió rutas documentales observadas. Envíos y webhooks siguen deshabilitados. Próximo frente: comprobar el turno de username y verificar el efecto del despliegue del artefacto público WHAPI actualizado; no guardar valores privados del perfil en este registro.
+
+### Publicación de la referencia recapturada, 2026-09-30 17:19 UTC
+
+El commit `384c1cd` se publicó en la rama conectada a EasyPanel y la compilación del contenedor terminó correctamente. En producción, el catálogo muestra la captura del 30/9/26 17:04 UTC: 182 funciones, 182 esquemas y 60.006 definiciones direccionales. La matriz de cobertura continúa en 157 rutas de respuesta observadas/revisadas de 44.628 (14 exactas, 143 semánticas), con 44.471 sin evidencia; actualizar la fecha de la fuente no añadió paridad. Tras el reinicio, Chrome confirmó sesión segura, worker activo y agenda intacta: `account_username` a las 17:28 UTC. No se enviaron mensajes ni se activaron webhooks.
+
+### Lectura de Username en producción, 2026-09-30 17:30 UTC
+
+El turno `account_username` terminó a las 17:29 UTC sin aportar rutas observadas; `getusername` continúa en 0/3. La vista de cuenta marca el campo no disponible y no muestra un valor. La evidencia no distingue entre falta de username en la cuenta y una respuesta no verificable de WhatsApp. La cobertura agregada sigue en 157/44.628 (14 exactas, 143 semánticas); no se sumó evidencia. La rotación avanzó a `contact_profiles` para las 17:44 UTC. La cuenta sigue conectada con worker activo; el registro no copia ni publica identificadores ni valores del perfil.
