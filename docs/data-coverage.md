@@ -348,3 +348,7 @@ El turno `group_requests` se encoló a las 17:59:13 UTC para un grupo conocido y
 ### Turno de Fotos de perfil en producción, 2026-09-30 18:15 UTC
 
 La agenda ejecutó `avatars` a las 18:14:14 UTC para un contacto conocido y guardó `provider_error`; la conexión siguió verificada y el worker activo. La recalculación en el catálogo a las 18:14 UTC mantiene 157/44.628 rutas observadas/revisadas (14 exactas, 143 equivalencias, 44.471 sin observar); este turno no agregó cobertura WHAPI. La próxima ruta es `bot_list`, prevista para las 18:29 UTC. El error no permite concluir que la cuenta no tenga foto ni que el perfil consultado carezca de ella.
+
+### Lectura programada de Bots, 2026-09-30 18:30 UTC
+
+La ruta `bot_list` se encoló a las 18:29:14 UTC y falló con `provider_error`; no se verificó una lista vacía. La sesión seguía conectada/verificada, el lease del worker estaba vigente y los envíos permanecían pausados. La cobertura recalculada a las 18:30 UTC sigue en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar); no hubo incremento. La siguiente ruta es `disappearing_mode` a las 18:44 UTC. El fallo no demuestra que la cuenta carezca de bots.
