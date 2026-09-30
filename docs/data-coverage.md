@@ -420,3 +420,7 @@ El turno `all` se encoló a las 22:29:19 UTC y posteriormente figuró como `done
 ### Lectura programada de Lista de bloqueos, 2026-09-30 22:45 UTC
 
 El turno `blocklist` se encoló a las 22:44:20 UTC y figuró `done`. La matriz de capacidades recalculada a las 22:45 UTC continúa en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); esta lectura no agregó rutas WHAPI observadas. Próxima ruta: `communities`, prevista para las 22:59 UTC. Esta nota no incluye contenido ni identificadores de la lista.
+
+### Lectura programada de Comunidades, 2026-09-30 23:00 UTC
+
+El turno `communities` se encoló a las 22:59:20 UTC y posteriormente figuró como `done`. La matriz recalculada a las 23:00 UTC se mantiene en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar), sin rutas WHAPI nuevas atribuibles a este snapshot. Próxima ruta: `catalog`, prevista para las 23:14 UTC. Esta nota no incluye nombres ni identificadores de comunidades.
