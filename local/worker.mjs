@@ -3,6 +3,7 @@ import { LOCAL_LIMITS } from './limits.mjs';
 import { createPublicCatalogReader, PublicCatalogError } from './catalog-http.mjs';
 import { createWebhookDispatcher } from './webhooks.mjs';
 import { cacheAvatar } from './avatars.mjs';
+import { archiveRejectedAuthDirectory } from './auth-recovery.mjs';
 import { groupMetadataByInviteCode, validGroupInviteCode } from './group-invite-info.mjs';
 import { newsletterByInviteMetadata, validNewsletterInviteCode } from './newsletter-invite-info.mjs';
 import { normalizeDisappearingModeReply, isKnownChatJid } from './disappearing-mode.mjs';
@@ -1215,6 +1216,19 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           patch({status:'disconnected',phone:null,qr_payload:null,qr_expires_at:null,last_error:null});
         }
         else if(c.command==='disconnect') {desired=false;closeSocket();patch({status:'disconnected',qr_payload:null,qr_expires_at:null,last_error:null});}
+        else if(c.command==='recover') {
+          desired=false;closeSocket();
+          try {
+            if(connection().status!=='disconnected'||connection().last_error!=='session_revoked')throw new Error('session_recovery_not_available');
+            archiveRejectedAuthDirectory(authDir);
+            attempts=0;lastOpenedAt=0;nextConnect=0;desired=true;
+            patch({status:'qr_pending',phone:null,qr_payload:null,qr_expires_at:null,last_error:null});
+            console.log('session_auth_archived_for_recovery');
+          } catch {
+            desired=false;patch({status:'disconnected',qr_payload:null,qr_expires_at:null,last_error:'session_recovery_failed'});
+            console.error('session_auth_recovery_failed');
+          }
+        }
         else if(c.command==='connect' || c.command==='reconnect') {desired=true;attempts=0;lastOpenedAt=0;nextConnect=0;closeSocket();patch({status:'qr_pending',qr_payload:null,qr_expires_at:null,last_error:null});}
       }
       await connect();

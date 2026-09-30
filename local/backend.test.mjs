@@ -15,6 +15,7 @@ test('local HTTP authorization, consent, queue transaction, replay and private Q
  const original=process.env.WIS_OUTBOUND_ENABLED;
  try{
   const publicLocalStatus=await call('/api/local-status');assert.equal(publicLocalStatus.status,200);assert.deepEqual(publicLocalStatus.json.data,{status:'disconnected',error:null,last_disconnect:null});assert.equal(JSON.stringify(publicLocalStatus.json.data).includes('auth_state_updated_at'),false);
+  assert.equal((await call('/api/whatsapp/recover','POST',{})).status,401);
   assert.deepEqual((await call('/api/login-config')).json.data,{username:'ortu',password_recovery_available:false});assert.equal((await call('/api/v1/contacts')).status,401);
   assert.equal((await call('/api/whatsapp/qr')).status,401);
   assert.equal((await call('/api/login','POST',{password},null,{Origin:'https://other.example'})).status,403);
@@ -23,6 +24,12 @@ test('local HTTP authorization, consent, queue transaction, replay and private Q
   const qr=await fetch(base+'/api/whatsapp/qr',{headers:{Cookie:cookie,Origin:base}});assert.equal(qr.status,200);assert.equal(qr.headers.get('content-type'),'image/svg+xml');assert.equal(qr.headers.get('cache-control'),'no-store');const svg=await qr.text();assert.match(svg,/<svg\b/);assert.equal(svg.includes('private-qr'),false);
   const readToken=(await call('/api/v1/tokens','POST',{name:'read only',scopes:['read']})).json.data.token;const readerQr=await fetch(base+'/api/whatsapp/qr',{headers:{Authorization:'Bearer '+readToken,Origin:base}});assert.equal(readerQr.status,403);
   database.prepare("UPDATE connections SET qr_expires_at=?").run(new Date(Date.now()-1000).toISOString());const expiredQr=await fetch(base+'/api/whatsapp/qr',{headers:{Cookie:cookie,Origin:base}});assert.equal(expiredQr.status,404);assert.equal((await expiredQr.json()).error,'qr_unavailable');
+  database.prepare("UPDATE connections SET status='disconnected',last_error='session_revoked',command=NULL,qr_payload=NULL,qr_expires_at=NULL WHERE id='wis-5679'").run();
+  assert.equal((await call('/api/whatsapp/recover','POST',{})).status,202);
+  assert.equal(database.prepare("SELECT command FROM connections WHERE id='wis-5679'").get().command,'recover');
+  assert.equal((await call('/api/whatsapp/recover','POST',{})).json.error,'connection_command_pending');
+  database.prepare("UPDATE connections SET status='connected',last_error=NULL,command=NULL WHERE id='wis-5679'").run();
+  assert.equal((await call('/api/whatsapp/recover','POST',{})).json.error,'session_recovery_not_available');
   const created=await call('/api/v1/tokens','POST',{name:'send only',scopes:['send']});assert.equal(created.status,201);const token=created.json.data.token;
   assert.equal((await call('/api/v1/contacts','GET',null,token)).status,403);
   const contact=(await call('/api/v1/contacts','POST',{phone_e164:'+12025555679',display_name:'Local test',consent_at:new Date().toISOString(),consent_source:'test',consent_scope:'test'})).json.data;

@@ -112,7 +112,7 @@ export function makeServer(database=db,options={}){
    if(path==='/api/local-status'&&method==='GET'){
     const connection=database.prepare("SELECT status,last_error FROM connections WHERE id='wis-5679'").get();
     const status=['connected','qr_pending','disconnected'].includes(connection?.status)?connection.status:'disconnected';
-    const error=['reconnecting','reconnect_exhausted','session_revoked','identity_mismatch','identity_unverified'].includes(connection?.last_error)?connection.last_error:null;
+    const error=['reconnecting','reconnect_exhausted','session_revoked','session_recovery_failed','identity_mismatch','identity_unverified'].includes(connection?.last_error)?connection.last_error:null;
     return send({status,error,last_disconnect:connectionDiagnostic(database)});
    }
    if(path==='/api/forgot-password'&&method==='POST'){
@@ -162,6 +162,12 @@ export function makeServer(database=db,options={}){
     auth('read',true);const connection=database.prepare("SELECT * FROM connections WHERE id='wis-5679'").get();
     if(path==='/api/whatsapp/connection'&&method==='GET')return send({...cleanConnection(connection),last_disconnect:connectionDiagnostic(database),auth_state_updated_at:authStateUpdatedAt(directory)});
     if(path==='/api/whatsapp/qr'&&method==='GET'){if(!connection.qr_payload||!connection.qr_expires_at||connection.qr_expires_at<=now())fail(404,'qr_unavailable');const QR=await import('qrcode');const svg=await QR.toString(connection.qr_payload,{type:'svg',margin:2});res.writeHead(200,{'Content-Type':'image/svg+xml','Cache-Control':'no-store'});return res.end(svg);}
+    if(path==='/api/whatsapp/recover'&&method==='POST'){
+     if(connection.status!=='disconnected'||connection.last_error!=='session_revoked')fail(409,'session_recovery_not_available');
+     if(connection.command)fail(409,'connection_command_pending');
+     database.prepare("UPDATE connections SET command='recover',updated_at=? WHERE id='wis-5679'").run(now());
+     audit('connection.recover',actor.id);return send({command:'recover'},202);
+    }
     if(method==='POST'&&['connect','disconnect','logout'].includes(path.split('/').pop())){const command=path.split('/').pop();database.prepare("UPDATE connections SET command=?,updated_at=? WHERE id='wis-5679'").run(command,now());audit('connection.'+command,actor.id);return send({command},202);}
     if(path==='/api/whatsapp/identity'&&method==='POST'){const b=await jsonBody(req);if(!phone(b.phone_e164)||!b.phone_e164.endsWith('5679'))fail(400,'expected_line_5679_required');if(connection.status==='connected'&&connection.phone?.replace(/\D/g,'')!==b.phone_e164.replace(/\D/g,''))fail(409,'connected_identity_mismatch');database.prepare("UPDATE connections SET expected_phone_e164=?,updated_at=? WHERE id='wis-5679'").run(b.phone_e164,now());audit('connection.identity',actor.id);return send({expected_phone_e164:b.phone_e164});}
     fail(404,'not_found');

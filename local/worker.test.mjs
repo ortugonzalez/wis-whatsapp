@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {readFileSync,mkdtempSync} from 'node:fs';
+import {existsSync,mkdirSync,readdirSync,readFileSync,mkdtempSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {resolve} from 'node:path';
 import {EventEmitter} from 'node:events';
@@ -313,6 +313,22 @@ test('mock socket QR, persistent incoming history, no sends and graceful lease r
  assert.equal(db.prepare('SELECT last_message_preview FROM conversations').get().last_message_preview,'new');
  assert.equal(sends,0);await worker.stop();assert.equal(ended,1);
  assert.equal(db.prepare('SELECT lease_owner FROM connections').get().lease_owner,null);db.close();
+});
+test('revoked WhatsApp session recovery archives old auth and prepares a fresh QR without logging out',async()=>{
+ const db=database(),dir=mkdtempSync(resolve(tmpdir(),'wis-worker-recovery-')),authDir=resolve(dir,'baileys-auth');
+ mkdirSync(authDir,{recursive:true,mode:0o700});writeFileSync(resolve(authDir,'creds.json'),'private-revoked-session');
+ db.prepare("UPDATE connections SET command='recover',status='disconnected',last_error='session_revoked' WHERE id='wis-5679'").run();
+ const ev=new EventEmitter(),socket={ev,user:{id:'5491111115679:1@s.whatsapp.net'},end(){}};
+ const fake={default:()=>socket,useMultiFileAuthState:async path=>{assert.equal(readdirSync(path).length,0,'Baileys must receive a clean auth folder');return {state:{creds:{},keys:{}},saveCreds:async()=>{}};},makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir,mediaDir:resolve(dir,'media')});
+ try{
+  const archives=readdirSync(resolve(dir,'baileys-auth-revoked'));assert.equal(archives.length,1);
+  assert.equal(readFileSync(resolve(dir,'baileys-auth-revoked',archives[0],'creds.json'),'utf8'),'private-revoked-session');
+  assert.equal(db.prepare("SELECT status,last_error,command FROM connections WHERE id='wis-5679'").get().status,'qr_pending');
+  ev.emit('connection.update',{qr:'fresh-test-qr'});
+  assert.equal(db.prepare("SELECT qr_payload FROM connections WHERE id='wis-5679'").get().qr_payload,'fresh-test-qr');
+  assert.equal(db.prepare("SELECT last_error FROM connections WHERE id='wis-5679'").get().last_error,null);
+ }finally{await worker.stop();db.close();}
 });
 test('connection close diagnostic persists only a bounded code and allowlisted reason',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();const ev=new EventEmitter(),dir=mkdtempSync(resolve(tmpdir(),'wis-worker-close-diagnostic-'));
