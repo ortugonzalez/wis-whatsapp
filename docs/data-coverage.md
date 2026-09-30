@@ -372,3 +372,7 @@ El turno `blocklist` se encoló a las 19:29:16 UTC y terminó `done`. La conexi�
 ### Lectura de Comunidades, 2026-09-30 19:45 UTC
 
 El turno `communities` terminó `done` a las 19:44:17 UTC; el panel dejó `collections` para las 19:59 UTC. La cobertura recalculada a las 19:45 UTC sigue en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar), sin nuevas rutas WHAPI atribuibles a esta ejecución. Esta nota no incluye nombres ni identificadores de comunidades.
+
+### Lectura programada de Colecciones, 2026-09-30 20:00 UTC
+
+El turno `collections` terminó `done` a las 19:59:17 UTC; el mismo ciclo omitió `catalog` por `recent_read_timeout`, ya que la consulta anterior agotó el tiempo. La próxima ruta es `newsletters` a las 20:14 UTC. La cobertura recalculada a las 19:59 UTC permanece en 157/44.628 rutas (14 exactas, 143 equivalencias, 44.471 sin observar); el resultado no añadió evidencia WHAPI. La nota no incluye nombres ni identificadores de colecciones.
