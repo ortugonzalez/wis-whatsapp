@@ -400,3 +400,7 @@ El turno `group_requests` terminó `done` a las 21:14:18 UTC. El catálogo recal
 ### Lectura programada de fotos de perfil, 2026-09-30 21:30 UTC
 
 El turno `avatars` falló a las 21:29:18 UTC con el código sanitizado `provider_error`. El catálogo recalculado a las 21:30 UTC permanece en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas, 44.471 sin observar); no se agregó evidencia. Este fallo no demuestra que falten fotos de perfil. La próxima ruta es `bot_list`, prevista para las 21:44 UTC. Esta nota no incluye identificadores de contactos ni URL de fotos.
+
+### Lectura programada de bots, 2026-09-30 21:45 UTC
+
+El turno `bot_list` falló a las 21:44:18 UTC con el código sanitizado `provider_error`. La función `Get bots` permanece en 0/4 rutas observadas; la matriz global sigue en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar). No se verificó una lista vacía ni se añadió evidencia. Próxima ruta: `disappearing_mode`, prevista para las 21:59 UTC. Esta nota no contiene valores de la cuenta.
