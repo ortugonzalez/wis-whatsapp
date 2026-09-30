@@ -416,3 +416,7 @@ El programador omitió `community_subgroups` a las 22:14:19 UTC con `known_commu
 ### Lectura programada de Cuenta y grupos, 2026-09-30 22:30 UTC
 
 El turno `all` se encoló a las 22:29:19 UTC y posteriormente figuró como `done`. La matriz de capacidades recalculada a las 22:29 UTC permanece en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); los snapshots actualizados no añadieron rutas WHAPI observadas. Próxima ruta: `blocklist`, prevista para las 22:44 UTC.
+
+### Lectura programada de Lista de bloqueos, 2026-09-30 22:45 UTC
+
+El turno `blocklist` se encoló a las 22:44:20 UTC y figuró `done`. La matriz de capacidades recalculada a las 22:45 UTC continúa en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); esta lectura no agregó rutas WHAPI observadas. Próxima ruta: `communities`, prevista para las 22:59 UTC. Esta nota no incluye contenido ni identificadores de la lista.
