@@ -7,7 +7,8 @@ Actualizado: **2026-09-30**. Estado integral: **PARCIAL**. El panel está desple
 - URL: `https://wis-whatsapp-wis.xbgh9n.easypanel.host/`.
 - El panel reportó `Conectado · identidad verificada`; el estado local de autenticación se actualizó el 30/9/2026 a las 09:57 (hora de Buenos Aires). No se guardan el teléfono completo, QR ni credenciales en este informe.
 - Conteos visibles en el resumen tras la nueva implementación: 864 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos. La interfaz excluye contenido de conversaciones y datos personales de ese resumen. Los mensajes pasaron de 1.462 a 1.512 durante la observación; no se infiere su dirección por ese conteo.
-- El snapshot más reciente se escribió el 30/9/2026 a las 10:08 y agregó observaciones; el panel muestra 378 campos, 27 tipos de datos y 27 lecturas fallidas registradas. El recolector indica que está dentro del intervalo; la próxima ruta es Comunidades.
+- El snapshot más reciente se escribió el 30/9/2026 a las 10:15; el panel muestra 378 campos, 27 tipos de datos y 28 lecturas fallidas registradas. El recolector indica que está dentro del intervalo y su próxima ruta es Catálogo comercial.
+- Una consulta manual de solo lectura al catálogo terminó con `read_timeout` (408). La respuesta guardada continúa identificada como catálogo público; el timeout de la alternativa Baileys no demuestra que el catálogo privado esté vacío. La pantalla de productos ahora debe mostrar por separado alcance, origen y resultado del último intento.
 - La recepción entrante más reciente que muestra el panel es del 28/9/2026 a las 16:32. No se usa ese evento anterior para afirmar que hubo un mensaje después de la reconexión del 30/9.
 - El historial completo anterior a la vinculación no está garantizado. El panel distingue hora de escritura de snapshot de hora de observación de cada campo.
 - Envíos salientes y dispatcher de webhooks siguen desactivados en la imagen Docker. La vinculación y las lecturas no envían mensajes.
@@ -18,6 +19,7 @@ Actualizado: **2026-09-30**. Estado integral: **PARCIAL**. El panel está desple
 - El inventario público de WHAPI contiene 182 métodos. La matriz WIS registra 61 parciales, 120 pendientes y 1 no soportado; ninguno está certificado como equivalente completo. Esto es una brecha funcional explícita, no una métrica de disponibilidad de la cuenta.
 - No hay evidencia suficiente para prometer cobertura de llamadas, recuperación total de historial, estados históricos, administración de catálogo, todas las funciones Business, ni contrato intercambiable con WHAPI.
 - El estado conectado solo confirma sesión e identidad. La ausencia de un mensaje posterior a la reconexión no se toma como prueba de recepción en vivo.
+- La lectura privada del catálogo sigue sin respuesta verificable por timeout; no se infiere que falten productos ni que no exista un catálogo Business.
 - La prueba productiva de recepción requiere que llegue un mensaje legítimo a la línea; los envíos de prueba continúan deshabilitados.
 - Python y n8n tienen contratos HTTP documentados, pero aún necesitan integración y aceptación en las instancias reales del usuario. Sus workflows de ejemplo no están activados.
 
