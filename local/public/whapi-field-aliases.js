@@ -183,6 +183,8 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     source_kinds: Object.freeze(['profile', 'status', 'privacy', 'business', 'connection', 'account_username']),
     fields: Object.freeze({
       name: Object.freeze([{ kind: 'profile', field: 'name', note: 'nombre observado en el perfil propio de Baileys' }]),
+      push_name: Object.freeze([{ kind: 'profile', field: 'notify', note: 'nombre push de la cuenta propia informado por el objeto user de Baileys' }]),
+      verified_name: Object.freeze([{ kind: 'profile', field: 'verifiedName', note: 'nombre Business verificado de la cuenta propia; solo cuenta cuando WhatsApp lo informa', requires_non_empty_text: true }]),
       about: Object.freeze([{ kind: 'status', field: 'items[].status.status', note: 'texto About de la cuenta propia obtenido por Baileys fetchStatus', requires_non_empty_text: true }]),
     }),
   }),

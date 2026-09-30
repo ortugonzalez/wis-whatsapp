@@ -95,6 +95,28 @@ test('contact profile and own username never borrow exact fields from the other 
   assert.equal(verified.totals.response_fields_without_observation,0);
 });
 
+test('own profile push and verified names use only the own profile snapshot',()=>{
+  const reference={methods:[{id:'getuserprofile',operations:[{response_fields:{200:[
+    {path:'push_name'},{path:'verified_name'},
+  ]}}]}]};
+  const aliases={getuserprofile:{source_kinds:['profile'],fields:{
+    push_name:[{kind:'profile',field:'notify'}],
+    verified_name:[{kind:'profile',field:'verifiedName',requires_non_empty_text:true}],
+  }}};
+  const contactsOnly={snapshot_kinds:[{kind:'contact',field_counts:[
+    {field:'notify',records:1,non_empty_text_records:1},
+    {field:'verifiedName',records:1,non_empty_text_records:1},
+  ]}],storage_kinds:[],contextual_kinds:[]};
+  assert.equal(summarizeCapabilityFieldCoverage(reference,contactsOnly,aliases).totals.semantic_response_fields_observed,0);
+  const profile={...contactsOnly,snapshot_kinds:[...contactsOnly.snapshot_kinds,{kind:'profile',field_counts:[
+    {field:'notify',records:1,non_empty_text_records:1},
+    {field:'verifiedName',records:1,non_empty_text_records:0},
+  ]}]};
+  const report=summarizeCapabilityFieldCoverage(reference,profile,aliases);
+  assert.equal(report.totals.semantic_response_fields_observed,1);
+  assert.equal(report.totals.response_fields_without_observation,1);
+});
+
 test('newsletter-message coverage excludes ordinary WhatsApp messages and accepts only channel-scoped snapshots',()=>{
   const reference={methods:[{id:'getmessagesnewsletter',operations:[{response_fields:{200:[
     {path:'messages[].id'},{path:'messages[].type'},{path:'messages[].timestamp'},{path:'messages[].text.body'},

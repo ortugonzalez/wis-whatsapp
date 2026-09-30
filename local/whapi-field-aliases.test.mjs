@@ -58,6 +58,11 @@ test('contact aliases distinguish WhatsApp name fields and observed status',()=>
 
 test('profile aliases preserve separately observed business and public identity fields',()=>{
   assert.equal(aliases.getcontactprofile.fields.verified_name[0].field,'verifiedName');
+  assert.equal(aliases.getuserprofile.fields.push_name[0].kind,'profile');
+  assert.equal(aliases.getuserprofile.fields.push_name[0].field,'notify');
+  assert.equal(aliases.getuserprofile.fields.verified_name[0].kind,'profile');
+  assert.equal(aliases.getuserprofile.fields.verified_name[0].field,'verifiedName');
+  assert.equal(aliases.getuserprofile.fields.verified_name[0].requires_non_empty_text,true);
   assert.equal(aliases.getuserprofile.fields.about[0].field,'items[].status.status');
   assert.ok(aliases.getusername.source_kinds.includes('account_username'));
   assert.deepEqual(Array.from(aliases.getcontactprofile.source_kinds),['contact']);
