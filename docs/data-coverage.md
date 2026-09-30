@@ -412,3 +412,7 @@ El turno `disappearing_mode` terminó `done` a las 21:59:19 UTC para una convers
 ### Omisión del turno de subgrupos, 2026-09-30 22:15 UTC
 
 El programador omitió `community_subgroups` a las 22:14:19 UTC con `known_community_required`: no tenía una comunidad conocida para consultar, así que no inició una lectura remota. Esto no demuestra que la cuenta carezca de comunidades. La cobertura global recalculada a las 22:15 UTC sigue en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); no se agregó evidencia en este turno. La rotación avanzó a `all`, prevista para las 22:29 UTC. Esta nota no incluye nombres ni identificadores de comunidades.
+
+### Lectura programada de Cuenta y grupos, 2026-09-30 22:30 UTC
+
+El turno `all` se encoló a las 22:29:19 UTC y posteriormente figuró como `done`. La matriz de capacidades recalculada a las 22:29 UTC permanece en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); los snapshots actualizados no añadieron rutas WHAPI observadas. Próxima ruta: `blocklist`, prevista para las 22:44 UTC.
