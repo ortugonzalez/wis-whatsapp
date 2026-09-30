@@ -151,7 +151,23 @@ export function buildDataCoverage(db, now = Date.now()) {
   const kindCount = kind => byKind.get(kind)?.records || 0;
   const errorPlaceholders = SAFE_READ_ERROR_CODES.map(() => '?').join(',');
   const readErrorRows = db.prepare(`SELECT kind,CASE WHEN error IN (${errorPlaceholders}) THEN error ELSE 'read_failed' END AS code,count(*) AS count,max(updated_at) AS last_updated_at FROM read_commands WHERE status='failed' GROUP BY kind,code ORDER BY kind,code LIMIT 101`).all(...SAFE_READ_ERROR_CODES);
-  const readErrors = readErrorRows.slice(0,100).map(row => ({ kind: row.kind, code: row.code, count: row.count, last_updated_at: typeof row.last_updated_at === 'string' && Number.isFinite(Date.parse(row.last_updated_at)) ? new Date(row.last_updated_at).toISOString() : null }));
+  const latestReadByKind = new Map();
+  for (const row of db.prepare('SELECT kind,status,updated_at FROM read_commands ORDER BY updated_at DESC,id DESC').iterate()) {
+    if (!latestReadByKind.has(row.kind)) latestReadByKind.set(row.kind, row);
+  }
+  const readErrors = readErrorRows.slice(0,100).map(row => {
+    const latest = latestReadByKind.get(row.kind);
+    const latestStatusAt = typeof latest?.updated_at === 'string' && Number.isFinite(Date.parse(latest.updated_at)) ? new Date(latest.updated_at).toISOString() : null;
+    const latestStatus = ['pending','running','done','failed'].includes(latest?.status) ? latest.status : null;
+    return {
+      kind: row.kind,
+      code: row.code,
+      count: row.count,
+      last_updated_at: typeof row.last_updated_at === 'string' && Number.isFinite(Date.parse(row.last_updated_at)) ? new Date(row.last_updated_at).toISOString() : null,
+      latest_status: latestStatus,
+      latest_status_at: latestStatusAt,
+    };
+  });
   const rawMessageSources = db.prepare("SELECT source,direction,count(*) AS count,MAX(CASE WHEN datetime(created_at) IS NOT NULL THEN created_at END) AS latest_at FROM messages GROUP BY source,direction").all();
   const messageSources = new Map();
   for (const row of rawMessageSources) {
