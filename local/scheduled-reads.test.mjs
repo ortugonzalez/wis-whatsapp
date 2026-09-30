@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openDatabase } from './db.mjs';
-import { getScheduledReadSettings, getScheduledReadStatus, queueScheduledReadIfDue, updateScheduledReadSettings } from './scheduled-reads.mjs';
+import { SCHEDULED_READ_KINDS, getScheduledReadSettings, getScheduledReadStatus, queueScheduledReadIfDue, updateScheduledReadSettings } from './scheduled-reads.mjs';
 
 test('scheduled read-only observations wait 15 minutes, rotate, and do not overlap queued reads', () => {
   const database = openDatabase(':memory:');
@@ -91,11 +91,59 @@ test('scheduled read-only observations wait 15 minutes, rotate, and do not overl
     assert.equal(thirteenth.kind, 'disappearing_mode');
     database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(thirteenth.id);
     leaseUntil(start+210*60_000);
+    database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('community','100@g.us',?,?)").run(JSON.stringify({isCommunity:true}),new Date(start).toISOString());
     const wrapped = queueScheduledReadIfDue(database, { now: start + 210 * 60_000, connected: true, id: 'scheduled-14' });
-    assert.equal(wrapped.kind, 'all');
+    assert.equal(wrapped.kind, 'community_subgroups');
+    assert.equal(database.prepare('SELECT target FROM read_commands WHERE id=?').get(wrapped.id).target,'100@g.us');
+    database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(wrapped.id);
+    database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('community_subgroups','100@g.us','{}',?)").run(new Date(start+210*60_000).toISOString());
+    leaseUntil(start+225*60_000);
+    const restarted = queueScheduledReadIfDue(database, { now: start + 225 * 60_000, connected: true, id: 'scheduled-15' });
+    assert.equal(restarted.kind,'all');
   } finally {
     database.close();
   }
+});
+
+test('community subgroup reads skip an unavailable target without stalling the cycle and rotate known communities',()=>{
+ const database=openDatabase(':memory:');
+ try{
+  const now=Date.parse('2026-01-01T00:00:00.000Z');
+  const dueAt=now+15*60_000;
+  database.prepare("UPDATE connections SET status='connected',phone='+5491100005679',expected_phone_e164='+5491100005679',lease_expires_at=? WHERE id='wis-5679'").run(new Date(dueAt+30_000).toISOString());
+  const subgroupCursor=SCHEDULED_READ_KINDS.indexOf('community_subgroups');
+  database.prepare("INSERT INTO settings(key,value) VALUES('scheduled_reads',?)").run(JSON.stringify({enabled:true,interval_minutes:15,cursor:subgroupCursor,next_run_at:new Date(dueAt).toISOString(),last_kind:null,last_command_id:null,last_enqueued_at:null}));
+  assert.equal(getScheduledReadStatus(database,dueAt).blocked_reason,'known_community_required');
+  assert.deepEqual(queueScheduledReadIfDue(database,{now:dueAt,connected:true,id:'blocked'}),{status:'known_community_required'});
+  assert.equal(getScheduledReadStatus(database,dueAt).blocked_reason,'not_due');
+  assert.equal(getScheduledReadSettings(database,dueAt).cursor,0);
+  assert.equal(getScheduledReadSettings(database,dueAt).next_run_at,new Date(dueAt+15*60_000).toISOString());
+  const stale=new Date(dueAt-60_000).toISOString();
+  database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('community','100@g.us',?,?),('community','200@g.us',?,?)").run(JSON.stringify({isCommunity:true}),stale,JSON.stringify({isCommunity:true}),stale);
+  const cycleAt=dueAt+15*60_000;
+  database.prepare("UPDATE connections SET lease_expires_at=? WHERE id='wis-5679'").run(new Date(cycleAt+30_000).toISOString());
+  const nextRoute=queueScheduledReadIfDue(database,{now:cycleAt,connected:true,id:'cycle-resumed'});
+  assert.equal(nextRoute.kind,'all');
+  database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(nextRoute.id);
+  const firstAt=cycleAt+15*60_000;
+  const scheduled=JSON.parse(database.prepare("SELECT value FROM settings WHERE key='scheduled_reads'").get().value);
+  database.prepare("UPDATE settings SET value=? WHERE key='scheduled_reads'").run(JSON.stringify({...scheduled,cursor:subgroupCursor,next_run_at:new Date(firstAt).toISOString()}));
+  database.prepare("UPDATE connections SET lease_expires_at=? WHERE id='wis-5679'").run(new Date(firstAt+30_000).toISOString());
+  const first=queueScheduledReadIfDue(database,{now:firstAt,connected:true,id:'first-community'});
+  assert.equal(first.status,'queued');
+  assert.equal(first.kind,'community_subgroups');
+  assert.equal(Object.hasOwn(first,'target'),false);
+  assert.equal(database.prepare('SELECT target FROM read_commands WHERE id=?').get(first.id).target,'100@g.us');
+  database.prepare("UPDATE read_commands SET status='done' WHERE id=?").run(first.id);
+  database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('community_subgroups','100@g.us','{}',?)").run(new Date(firstAt).toISOString());
+  const secondAt=firstAt+15*60_000;
+  const updated=JSON.parse(database.prepare("SELECT value FROM settings WHERE key='scheduled_reads'").get().value);
+  database.prepare("UPDATE settings SET value=? WHERE key='scheduled_reads'").run(JSON.stringify({...updated,cursor:subgroupCursor,next_run_at:new Date(secondAt).toISOString()}));
+  database.prepare("UPDATE connections SET lease_expires_at=? WHERE id='wis-5679'").run(new Date(secondAt+30_000).toISOString());
+  const second=queueScheduledReadIfDue(database,{now:secondAt,connected:true,id:'second-community'});
+  assert.equal(second.kind,'community_subgroups');
+  assert.equal(database.prepare('SELECT target FROM read_commands WHERE id=?').get(second.id).target,'200@g.us');
+ }finally{database.close();}
 });
 
 test('manual pending reads defer schedule without advancing its route or due time', () => {

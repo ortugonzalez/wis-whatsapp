@@ -1,7 +1,7 @@
 'use strict';
 const overviewBeforeObservability=overview;
-const scheduledKindNames={all:'Cuenta y grupos',blocklist:'Lista de bloqueos',communities:'Comunidades',catalog:'Catálogo comercial',collections:'Colecciones',newsletters:'Canales',account_limits:'Límites de la cuenta',account_username:'Nombre de usuario',contact_profiles:'Perfiles de contactos',group_requests:'Solicitudes de grupos',avatars:'Fotos de perfil',bot_list:'Bots de la cuenta',disappearing_mode:'Temporizador de mensajes'};
-const scheduledGateNames={disabled:'Pausada',not_due:'Dentro del intervalo',read_in_progress:'Esperando que termine otra lectura',connection_required:'Esperando conexión verificada',worker_unavailable:'Esperando un worker activo'};
+const scheduledKindNames={all:'Cuenta y grupos',blocklist:'Lista de bloqueos',communities:'Comunidades',catalog:'Catálogo comercial',collections:'Colecciones',newsletters:'Canales',account_limits:'Límites de la cuenta',account_username:'Nombre de usuario',contact_profiles:'Perfiles de contactos',group_requests:'Solicitudes de grupos',avatars:'Fotos de perfil',bot_list:'Bots de la cuenta',disappearing_mode:'Temporizador de mensajes',community_subgroups:'Subgrupos de comunidades'};
+const scheduledGateNames={disabled:'Pausada',not_due:'Dentro del intervalo',read_in_progress:'Esperando que termine otra lectura',connection_required:'Esperando conexión verificada',worker_unavailable:'Esperando un worker activo',known_community_required:'Esperando una comunidad conocida'};
 let overviewObservabilityTimer=null;
 let overviewObservabilityInFlight=false;
 function connectionStatusLabel(connection){

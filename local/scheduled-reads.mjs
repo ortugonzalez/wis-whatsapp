@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-export const SCHEDULED_READ_KINDS = Object.freeze(['all', 'blocklist', 'communities', 'catalog', 'collections', 'newsletters', 'account_limits', 'account_username', 'contact_profiles', 'group_requests', 'avatars', 'bot_list', 'disappearing_mode']);
+export const SCHEDULED_READ_KINDS = Object.freeze(['all', 'blocklist', 'communities', 'catalog', 'collections', 'newsletters', 'account_limits', 'account_username', 'contact_profiles', 'group_requests', 'avatars', 'bot_list', 'disappearing_mode', 'community_subgroups']);
 export const SCHEDULED_READ_INTERVALS = Object.freeze([15, 30, 60, 120]);
 const SETTING_KEY = 'scheduled_reads';
 
@@ -31,6 +31,15 @@ function readStored(database) {
 
 function writeStored(database, schedule) {
   database.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(SETTING_KEY, JSON.stringify(schedule));
+}
+
+function nextKnownCommunity(database) {
+  return database.prepare(`SELECT c.resource_id
+    FROM snapshots c
+    LEFT JOIN snapshots r ON r.kind='community_subgroups' AND r.resource_id=c.resource_id
+    WHERE c.kind='community' AND c.resource_id LIKE '%@g.us' AND json_extract(c.payload,'$.isCommunity')=1
+    ORDER BY coalesce(r.updated_at,''),c.resource_id
+    LIMIT 1`).get()?.resource_id || null;
 }
 
 export function getScheduledReadSettings(database, now = Date.now()) {
@@ -78,8 +87,20 @@ export function queueScheduledReadIfDue(database, { now = Date.now(), connected 
       return { status: 'read_in_progress' };
     }
     const kind = SCHEDULED_READ_KINDS[schedule.cursor % SCHEDULED_READ_KINDS.length];
+    const target = kind === 'community_subgroups' ? nextKnownCommunity(database) : null;
+    if (kind === 'community_subgroups' && !target) {
+      // Skip this turn so the communities read can still run and discover a
+      // known target; the route naturally returns on the next rotation.
+      writeStored(database, {
+        ...schedule,
+        cursor: (schedule.cursor + 1) % SCHEDULED_READ_KINDS.length,
+        next_run_at: new Date(now + schedule.interval_minutes * 60_000).toISOString(),
+      });
+      database.exec('COMMIT');
+      return { status: 'known_community_required' };
+    }
     const createdAt = new Date(now).toISOString();
-    database.prepare('INSERT INTO read_commands(id,kind,target,status,created_at,updated_at) VALUES(?,?,NULL,\'pending\',?,?)').run(id, kind, createdAt, createdAt);
+    database.prepare('INSERT INTO read_commands(id,kind,target,status,created_at,updated_at) VALUES(?,?,?,\'pending\',?,?)').run(id, kind, target, createdAt, createdAt);
     const updated = {
       ...schedule,
       cursor: (schedule.cursor + 1) % SCHEDULED_READ_KINDS.length,
@@ -108,12 +129,13 @@ export function getScheduledReadStatus(database, now = Date.now()) {
   const workerLeaseCurrent=Boolean(connection?.lease_expires_at&&Number.isFinite(Date.parse(connection.lease_expires_at))&&Date.parse(connection.lease_expires_at)>now);
   const due=Boolean(schedule.enabled&&schedule.next_run_at&&Date.parse(schedule.next_run_at)<=now);
   const active=Boolean(database.prepare("SELECT 1 AS active FROM read_commands WHERE status IN('pending','running') LIMIT 1").get());
-  const blockedReason=!schedule.enabled?'disabled':!due?'not_due':connection?.status!=='connected'||!identityVerified?'connection_required':!workerLeaseCurrent?'worker_unavailable':active?'read_in_progress':null;
+  const nextKind=SCHEDULED_READ_KINDS[schedule.cursor % SCHEDULED_READ_KINDS.length];
+  const blockedReason=!schedule.enabled?'disabled':!due?'not_due':connection?.status!=='connected'||!identityVerified?'connection_required':!workerLeaseCurrent?'worker_unavailable':active?'read_in_progress':nextKind==='community_subgroups'&&!nextKnownCommunity(database)?'known_community_required':null;
   return {
     enabled: schedule.enabled,
     interval_minutes: schedule.interval_minutes,
     next_run_at: schedule.next_run_at,
-    next_kind: SCHEDULED_READ_KINDS[schedule.cursor % SCHEDULED_READ_KINDS.length],
+    next_kind: nextKind,
     last_kind: schedule.last_kind,
     last_enqueued_at: schedule.last_enqueued_at,
     last_status: lastStatus,

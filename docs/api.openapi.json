@@ -2239,6 +2239,7 @@
                                 "read_in_progress",
                                 "connection_required",
                                 "worker_unavailable",
+                                "known_community_required",
                                 null
                               ],
                               "description": "Why a due scheduled read cannot currently be enqueued; null means it is ready."
@@ -2418,6 +2419,7 @@
                                 "read_in_progress",
                                 "connection_required",
                                 "worker_unavailable",
+                                "known_community_required",
                                 null
                               ]
                             }
