@@ -428,3 +428,7 @@ El turno `communities` se encoló a las 22:59:20 UTC y posteriormente figuró co
 ### Lectura programada de Catálogo comercial, 2026-09-30 23:15 UTC
 
 El turno `catalog` se encoló a las 23:14:20 UTC y terminó con el código sanitizado `read_timeout`. El recálculo de capacidades a las 23:15 UTC sigue en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); esta ejecución no agregó evidencia de catálogo. El timeout no demuestra que no haya productos. Próxima ruta: `collections`, prevista para las 23:29 UTC. Esta nota no incluye nombres, descripciones ni precios de productos.
+
+### Lectura programada de Colecciones, 2026-09-30 23:30 UTC
+
+El turno `collections` se encoló a las 23:29:21 UTC y posteriormente figuró como `done`. La cobertura recalculada a las 23:30 UTC sigue en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas, 44.471 sin observar); las funciones `Get collection` y `Get collections` permanecen en 0/15 y 0/19 rutas observadas. No se añadió evidencia WHAPI. La siguiente ruta programada es `newsletters` (Canales en el panel), prevista para las 23:44 UTC. Esta nota no incluye nombres de colecciones ni de productos.
