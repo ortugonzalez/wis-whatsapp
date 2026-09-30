@@ -310,3 +310,11 @@ La vista de capacidades volvió a calcular contra el mismo catálogo documentado
 La agenda mantiene `communities` para las 16:28 UTC. La vista de Comunidades no presenta destinos conocidos, así que no se lanzó manualmente `community_subgroups`; esa ruta debe esperar a que exista una comunidad persistida y el programador la omitirá si sigue sin haberla. Próximo frente: inspección offline de los candidatos Baileys para campos aún sin evidencia, empezando por separar qué lecturas remotas ya producen snapshots persistibles de qué resultados son solo estado de diagnóstico. No forzar otra consulta de catálogo ni duplicar tareas.
 
 QA independiente, 2026-09-30 16:22 UTC: aprobó los conteos agregados y el siguiente paso; no encontró datos personales, secretos ni inconsistencias con la revisión de agenda anterior.
+
+### Despliegue de rotación con recuperación, 2026-09-30 16:44 UTC
+
+Se desplegó `fix: skip scheduled reads after timeouts` en EasyPanel. La verificación en producción confirmó sesión conectada, identidad verificada, worker activo y cero operaciones pendientes/fallidas. El turno automático omitió `catalog` por timeout reciente, completó `collections` y dejó `newsletters` como próximo recurso; envíos y webhooks siguen deshabilitados. La vista Actividad volvió a cargar sin el error transitorio de respuesta HTML observado durante el reinicio. No hay evidencia nueva de mensajes entrantes desde la última observación del 2026-09-28.
+
+La rotación ahora evita repetir durante seis horas solo la ruta cuyo último comando falló con `read_timeout`; las demás fallas no se suprimen. Configuración muestra ruta omitida y motivo, incluso cuando todas las rutas estén temporalmente en recuperación. OpenAPI refleja el estado sin próxima ruta. QA independiente aprobó el cambio tras las 194 pruebas y la revisión focalizada 11/11.
+
+Próximo frente: seguir el turno `newsletters` de las 16:58 UTC y continuar el inventario de campos WHAPI sin evidencia por lecturas de solo lectura. Mantener en pausa toda acción de envío y no repetir manualmente el catálogo mientras el timeout permanezca en recuperación.
