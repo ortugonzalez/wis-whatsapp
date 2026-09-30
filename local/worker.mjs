@@ -655,8 +655,18 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(!/^\d+(?:-\d+)?@g\.us$/.test(target || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(target,target))throw Error('invalid_target');
         if(command.kind==='community_subgroups'&&!db.prepare("SELECT 1 FROM snapshots WHERE resource_id=? AND (kind='community' OR (kind='group' AND json_extract(payload,'$.isCommunity')=1)) LIMIT 1").get(target))throw Error('unknown_community');
         if(command.target!==target){command.target=target;db.prepare('UPDATE read_commands SET target=?,updated_at=? WHERE id=?').run(target,new Date().toISOString(),command.id);}
-        const result=await readCall(current,command.kind,[target]);
-        snapshot(command.kind,target,{[command.kind==='group_requests'?'requests':'groups']:result.rows,available:true,response_verified:true,truncated:result.truncated,error:null,source:'checked_baileys_iq'});
+        let approvalMode;
+        if(command.kind==='group_requests') {
+          const metadata=db.prepare("SELECT payload FROM snapshots WHERE kind='group' AND resource_id=?").get(target);
+          try { approvalMode=JSON.parse(metadata?.payload||'{}').joinApprovalMode; } catch { /* Unknown metadata keeps the normal read path. */ }
+        }
+        if(command.kind==='group_requests'&&approvalMode===false) {
+          snapshot('group_requests',target,{requests:[],available:false,response_verified:false,stale:false,skipped:true,skip_reason:'approval_not_enabled',error:null,status_code:null,source:'group_metadata',last_attempt_at:new Date().toISOString()});
+        } else {
+          if(command.kind==='group_requests')snapshot('group_requests',target,{skipped:false,skip_reason:null});
+          const result=await readCall(current,command.kind,[target]);
+          snapshot(command.kind,target,{[command.kind==='group_requests'?'requests':'groups']:result.rows,available:true,response_verified:true,truncated:result.truncated,error:null,source:'checked_baileys_iq'});
+        }
       } else if(command.kind==='avatar'||command.kind==='avatars') {
         let target=command.target;
         if(command.kind==='avatars') {
@@ -822,7 +832,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(command.kind==='disappearing_mode')snapshot('disappearing_mode',command.target,{available:false,response_verified:false,stale:true,scope:'known_chat',error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='group_invite')snapshot('group_invite',command.target,{code:null,expires_at:null,available:false,response_verified:false,stale:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
         if(command.kind==='community_invite')snapshot('community_invite',command.target,{code:null,expires_at:null,available:false,response_verified:false,stale:false,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
-        if(['community_subgroups','group_requests'].includes(command.kind))snapshot(command.kind,command.target,{available:false,stale:true,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});
+        if(['community_subgroups','group_requests'].includes(command.kind))snapshot(command.kind,command.target,{available:false,stale:true,error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString(),...(command.kind==='group_requests'?{skipped:false,skip_reason:null}:{})});
         if(command.kind==='avatar'||command.kind==='avatars') {
           const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(command.target);
           snapshot('avatar',command.target,{available:false,stale:Boolean(prior),error:failure.code,scope:'profile_picture',last_attempt_at:new Date().toISOString()});
