@@ -327,3 +327,9 @@ Después del despliegue de status codes, solicité una sola lectura `bot_list` d
 **Próxima ruta:** revisar el resultado agregado de `blocklist` una vez venza su turno y luego la ruta siguiente que indique el scheduler. Mantener `bot_list` como brecha sin volver a intentarlo hasta que exista evidencia técnica nueva, y seguir priorizando cobertura de campos frente a las 44.628 rutas documentadas.
 
 El código instalado y fijado del paquete `baileys@7.0.0-rc14` confirma que `getBotListV2` envía un único IQ de lectura `xmlns=bot`, versión `2`, y devuelve entradas de la sección `all`. La lectura de producción de las 18:55 confirmó otra vez `provider_error` sin un status HTTP numérico; no hay base para distinguir entre endpoint no admitido, rechazo remoto u otro fallo. No se añadió una ruta IQ paralela ni se aumentaron los reintentos. Próxima ruta sigue siendo `blocklist` a las 19:05 y después la rotación automática.
+
+### Resultado automático de blocklist - 2026-10-01 19:05
+
+La configuración reportó `blocklist` `done` a las 19:05, con lease de worker vigente; la agenda avanzó a `communities` para las 19:20. El recálculo inmediato del catálogo WHAPI continúa en 161/44.628 rutas (14 exactas, 147 semánticas revisadas, 44.467 sin observar), con 23/177 métodos que tienen alguna observación y cuatro completos. El resumen del panel sigue en 410 campos locales. Por tanto, la lectura de bloqueos no produjo nueva cobertura de rutas WHAPI. Conexión verificada y worker activo; no se abrieron datos de contactos bloqueados ni se emitieron mensajes.
+
+**Próxima ruta:** dejar que el scheduler ejecute `communities` a las 19:20 y comparar el mismo resumen de cobertura, lease y conexión; no iniciar una lectura paralela.
