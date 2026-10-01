@@ -42,3 +42,9 @@ test('scheduled reads distinguish overdue blocked work from future and paused sc
  assert.equal(context.scheduledRunAtLabel({enabled:true,due:false,next_run_at:'2026-09-28T21:00:00.000Z'}),'Fecha 2026-09-28T21:00:00.000Z');
  assert.equal(context.scheduledRunAtLabel({enabled:false,next_run_at:null}),'Pausada');
 });
+
+test('scheduled newsletter jobs are labeled distinctly from the channels view',async()=>{
+ const scheduledReads=await readFile(new URL('./public/scheduled-reads.js',import.meta.url),'utf8');
+ assert.match(source,/newsletters:'Canales \(newsletters\)'/);
+ assert.match(scheduledReads,/newsletters:'Canales \(newsletters\)'/);
+});

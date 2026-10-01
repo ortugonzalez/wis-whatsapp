@@ -1,6 +1,6 @@
 'use strict';
 const settingsPageBeforeScheduledReads=settingsPage;
-const scheduledReadLabels={all:'Cuenta y grupos',blocklist:'Lista de bloqueos',communities:'Comunidades',catalog:'Catálogo comercial',collections:'Colecciones',newsletters:'Canales',account_limits:'Límites de la cuenta',account_username:'Nombre de usuario de la cuenta',contact_profiles:'Perfiles de contactos (lote acotado)',group_requests:'Solicitudes de grupos (un grupo)',avatars:'Fotos de perfil conocidas (una por ciclo)',bot_list:'Bots de la cuenta',disappearing_mode:'Temporizador de mensajes (una conversación conocida)',community_subgroups:'Subgrupos de comunidades (una comunidad conocida)'};
+const scheduledReadLabels={all:'Cuenta y grupos',blocklist:'Lista de bloqueos',communities:'Comunidades',catalog:'Catálogo comercial',collections:'Colecciones',newsletters:'Canales (newsletters)',account_limits:'Límites de la cuenta',account_username:'Nombre de usuario de la cuenta',contact_profiles:'Perfiles de contactos (lote acotado)',group_requests:'Solicitudes de grupos (un grupo)',avatars:'Fotos de perfil conocidas (una por ciclo)',bot_list:'Bots de la cuenta',disappearing_mode:'Temporizador de mensajes (una conversación conocida)',community_subgroups:'Subgrupos de comunidades (una comunidad conocida)'};
 const scheduledStatusLabels={pending:'En cola',running:'En curso',done:'Completada',failed:'Fallida'};
 let scheduledReadsTimer=null;
 const navigateBeforeScheduledReads=navigate;
