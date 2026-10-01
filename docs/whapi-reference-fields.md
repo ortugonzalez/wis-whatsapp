@@ -35,6 +35,10 @@ Revalidación local, 2026-09-29 09:26 UTC: el cálculo de cobertura contra SQLit
 
 La referencia oficial se volvió a consultar: `snapshot-whapi.mjs` conservó 182 métodos y `whapi-fields.mjs` extrajo 182/182 definiciones, sin fallos. La comparación con la captura de 00:44 UTC encontró cero métodos añadidos/eliminados y cero cambios de operación, parámetros o campos; solo cambió `captured_at`. Por tanto, esta recaptura no incorpora variables nuevas.
 
+### Revalidación oficial, 2026-10-01 03:25 UTC
+
+`snapshot-whapi.mjs` volvió a encontrar 182 métodos; `whapi-fields.mjs` extrajo sus 182 definiciones sin fallos. El diff estructural contra la captura de 01:47 UTC contiene únicamente el cambio de `captured_at`: no aparecieron métodos, operaciones, parámetros ni campos nuevos. La matriz mantiene 182 IDs, sin faltantes ni sobrantes. El único método `get*` todavía `pending` es `getaccountregistrationdate`; Baileys 7.0.0-rc14 no tiene getter público seguro para `creation` y `last_registration`, así que no se infieren desde otros datos. La lectura del esquema público no accede a la cuenta ni acredita cobertura productiva.
+
 El auditor de cobertura leyó `.local/wis.sqlite` en modo `readOnly`. Esa base local se modificó por última vez el 2026-09-30 12:33 UTC y no sirve como evidencia actual de producción. En ese snapshot antiguo figuran 14 rutas exactas, 127 con equivalencia semántica revisada y 44.487 sin observación, entre 44.628 rutas documentadas; 23/177 métodos con respuestas tienen alguna ruta y 4 aparecen completos. No se compara este resultado con las métricas productivas anteriores ni se interpreta como un cambio en la cuenta vinculada. Próximo paso: cuando haya sesión administrativa disponible, volver a leer la cobertura autenticada del servidor y correlacionarla con las ejecuciones programadas recientes, sin exponer valores privados.
 
 ### Recaptura del catálogo público, 2026-09-30 17:04 UTC
