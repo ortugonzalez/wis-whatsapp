@@ -333,3 +333,9 @@ El código instalado y fijado del paquete `baileys@7.0.0-rc14` confirma que `get
 La configuración reportó `blocklist` `done` a las 19:05, con lease de worker vigente; la agenda avanzó a `communities` para las 19:20. El recálculo inmediato del catálogo WHAPI continúa en 161/44.628 rutas (14 exactas, 147 semánticas revisadas, 44.467 sin observar), con 23/177 métodos que tienen alguna observación y cuatro completos. El resumen del panel sigue en 410 campos locales. Por tanto, la lectura de bloqueos no produjo nueva cobertura de rutas WHAPI. Conexión verificada y worker activo; no se abrieron datos de contactos bloqueados ni se emitieron mensajes.
 
 **Próxima ruta:** dejar que el scheduler ejecute `communities` a las 19:20 y comparar el mismo resumen de cobertura, lease y conexión; no iniciar una lectura paralela.
+
+### Resultado automático de communities - 2026-10-01 19:20
+
+La configuración de producción confirmó `communities` `done` a las 19:20, con lease vigente, agenda activa y próximo turno `catalog` a las 19:35. El cálculo del catálogo se actualizó a las 19:20: sigue en 161/44.628 rutas de respuesta observadas o semánticamente revisadas (14 exactas y 147 semánticas); 44.467 siguen sin observar, 23/177 métodos tienen alguna observación y 4 están completos. No cambió la cobertura respecto de `blocklist`; leer comunidades no añadió una ruta WHAPI nueva. La página de conexión informa sesión conectada y pide verificar que la identidad sea la esperada; por separado, el worker continúa activo. No abrí nombres, integrantes ni códigos de invitación, ni inicié otra lectura.
+
+**Próxima ruta:** esperar el turno automático `catalog` de las 19:35 y revisar solo su resultado agregado y la frescura. No repetir manualmente `bot_list` ni el catálogo comercial, que conservan fallos sin diagnóstico concluyente. La paridad con WHAPI sigue incompleta.
