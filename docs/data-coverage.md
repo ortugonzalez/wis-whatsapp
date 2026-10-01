@@ -483,3 +483,8 @@ A las 07:48 UTC la siguiente ruta automática, `bot_list`, quedó registrada com
 
 
 A las 08:18 UTC el panel seguía mostrando la conexión verificada y el worker activo. La agenda pasó de `community_subgroups` a `all` para las 08:33 UTC, sin fila de comando ni fallo visible para la ruta anterior y sin cambio en el contador de fallos. Se registra solo ese cambio de ruta: no hay evidencia para atribuir la omisión a falta de objetivos ni para contarla como lectura completada.
+
+
+### Lectura automática de cuenta y grupos, 2026-10-01 08:33 UTC
+
+La ruta `all` terminó como completada a las 08:33 UTC y actualizó el timestamp del snapshot; la conexión permaneció verificada y el worker activo. Los agregados siguieron en 907 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos disponibles (26 conocidos). El último mensaje entrante en vivo continuó siendo del 2026-09-28 19:32 UTC, por lo que no hay mensajes nuevos observados. No se incluyeron identificadores ni contenido personal. La siguiente ruta es `blocklist`, prevista para las 08:48 UTC. La cobertura WHAPI no se recalculó después del timeout de catálogo y no se afirma paridad.
