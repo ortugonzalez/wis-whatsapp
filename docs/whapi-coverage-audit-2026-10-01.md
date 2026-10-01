@@ -345,3 +345,9 @@ La configuración de producción confirmó `communities` `done` a las 19:20, con
 El scheduler confirmó `catalog` `failed` con `read_timeout`; el worker permanece activo y el siguiente turno es `collections` a las 19:50. El catálogo WHAPI recalculado a las 19:38 UTC sigue en 161/44.628 rutas (14 exactas, 147 equivalencias revisadas), con 44.467 sin observar y 4 de 177 métodos completamente observados. No se agregó cobertura ni se reintentó el catálogo. Se conserva el timeout como causa observable, sin inferir si falló el proveedor público o el fallback Baileys.
 
 **Próxima ruta:** esperar `collections` a las 19:50 y revisar el estado agregado y la cobertura. Mantener el catálogo comercial en pausa hasta nueva evidencia técnica; no repetirlo manualmente.
+
+### Resultado automático de collections - 2026-10-01 19:50
+
+El scheduler confirmó `collections` `done`, con lease de worker vigente y agenda activa. El resumen WHAPI recalculado a las 19:50 continúa en 161/44.628 rutas observadas/revisadas, 14 exactas y 147 semánticas; 44.467 siguen sin observar, 23/177 métodos tienen alguna observación y 4 están completos. No aumentó la cobertura. La configuración reporta como siguiente `next_kind=newsletters` para las 20:05; el texto visible del panel lo etiqueta como “Canales”, por lo que se comprobará el `last_kind` real del próximo ciclo antes de registrar qué ruta ocurrió.
+
+**Próxima ruta:** esperar el siguiente ciclo de las 20:05 y leer solo `last_kind`, estado y cobertura agregada; no disparar consultas manuales mientras la agenda esté activa.
