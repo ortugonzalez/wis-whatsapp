@@ -71,6 +71,12 @@ test('chat and group mention and spam aliases use scoped Baileys evidence',()=>{
   assert.match(aliases.getgroups.fields['groups[].unread_mention'][0].note,/alcance limitado a grupos/);
 });
 
+test('group metadata aliases use aggregate fields scoped to known groups',()=>{
+  const groupFields=['pin','mute_until','archive','unread','read_only'];
+  for(const [method,fields] of [['getgroup',Object.fromEntries(groupFields.map(field=>[field,field]))],['getgroups',Object.fromEntries(groupFields.map(field=>[`groups[].${field}`,field]))]])for(const [alias,field] of Object.entries(fields)){assert.equal(aliases[method].fields[alias][0].field,`whapi_derived.group_${field}_from_chat`);assert.match(aliases[method].fields[alias][0].note,/grupos?( conocidos)?|chats grupales conocidos/);}
+  assert.equal(aliases.getgroups.fields['groups[].timestamp'][0].field,'whapi_derived.group_timestamp_from_chat');
+});
+
 test('contact aliases distinguish WhatsApp name fields and observed status',()=>{
   assert.equal(aliases.getcontacts.fields['contacts[].pushname'][0].field,'notify');
   assert.equal(aliases.getcontact.fields.status[0].field,'status.status');

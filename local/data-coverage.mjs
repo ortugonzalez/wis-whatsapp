@@ -18,6 +18,14 @@ export function deriveUnreadMention(chat) {
   return chat.unreadMentionCount > 0;
 }
 
+export function deriveChatPinned(chat) {
+  if (!chat || !Object.hasOwn(chat, 'pinned')) return null;
+  if (typeof chat.pinned === 'boolean') return chat.pinned;
+  if (chat.pinned === null) return false;
+  if (Number.isSafeInteger(chat.pinned) && chat.pinned > 0) return true;
+  return null;
+}
+
 function normalizeArrayIndexes(path) {
   let result = '', quoted = false, escaped = false;
   for (let i = 0; i < path.length; i++) {
@@ -145,6 +153,36 @@ export function buildDataCoverage(db, now = Date.now()) {
       derived_true_records: groupSpamCounts[0],
       derived_false_records: groupSpamCounts[1],
     });
+    const groupChatFields = {
+      pin: [0, 0],
+      archive: [0, 0],
+      read_only: [0, 0],
+      unread: 0,
+      timestamp: 0,
+      mute_until: 0,
+    };
+    for (const row of db.prepare("SELECT resource_id,payload FROM snapshots WHERE kind='chat'").iterate()) {
+      if (classifyWhatsAppChatType(row.resource_id) !== 'group') continue;
+      let payload = {};
+      try { payload = JSON.parse(row.payload) || {}; } catch { /* malformed snapshots add no evidence */ }
+      const pinState = deriveChatPinned(payload);
+      if (pinState !== null) groupChatFields.pin[pinState ? 0 : 1]++;
+      for (const [field, key] of [['archive', 'archived'], ['read_only', 'readOnly']]) {
+        if (typeof payload[key] === 'boolean') groupChatFields[field][payload[key] ? 0 : 1]++;
+      }
+      if (Number.isSafeInteger(payload.unreadCount) && payload.unreadCount >= 0) groupChatFields.unread++;
+      if (Number.isSafeInteger(payload.conversationTimestamp) && payload.conversationTimestamp >= 0) groupChatFields.timestamp++;
+      if (deriveChatMute(payload, now) !== null) groupChatFields.mute_until++;
+    }
+    for (const field of ['pin', 'archive', 'read_only']) {
+      const [trueRecords, falseRecords] = groupChatFields[field];
+      const records = trueRecords + falseRecords;
+      if (records > 0) chatKind.fields.set(`$.whapi_derived.group_${field}_from_chat`, { records, non_empty_text_records: 0, snapshot_updated_at: null, derived_true_records: trueRecords, derived_false_records: falseRecords });
+    }
+    for (const field of ['unread', 'timestamp', 'mute_until']) {
+      const records = groupChatFields[field];
+      if (records > 0) chatKind.fields.set(`$.whapi_derived.group_${field}_from_chat`, { records, non_empty_text_records: 0, snapshot_updated_at: null });
+    }
     let recognizedChatTypes = 0;
     for (const row of db.prepare("SELECT resource_id FROM snapshots WHERE kind='chat'").iterate()) {
       if (classifyWhatsAppChatType(row.resource_id)) recognizedChatTypes++;
