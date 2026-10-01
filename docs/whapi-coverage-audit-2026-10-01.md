@@ -303,3 +303,11 @@ El commit `90eb8c6` se desplego correctamente en Easypanel desde la rama configu
 El turno automático `disappearing_mode` terminó `done` a las 18:19 hora local. La agenda conserva worker activo y lease vigente; avanzó a `community_subgroups` para las 18:34. No se abrió una conversación ni se forzó una selección de comunidad. El éxito de esta consulta distinta no cambia el estado fallido de `bot_list`.
 
 **Proxima ruta:** observar `community_subgroups` a las 18:34 únicamente a través del scheduler. Si no existe una comunidad conocida elegible, aceptar el resultado `skipped` y continuar la rotación.
+
+### Diagnóstico seguro de bot_list y turno de comunidades - 2026-10-01
+
+EasyPanel desplegó el commit `Expose safe provider status for bot reads` con resultado `Success`. La API de bots y su panel ahora propagan únicamente `status_code` si es un entero HTTP entre 100 y 599; valores de otro tipo se descartan. Las pruebas agregadas confirman que no salen detalles crudos del proveedor. Revisión independiente: PASS (9/9); `npm test`: 233/233; validaciones de sintaxis del proyecto y `git diff --check`: correctos. Tras el deploy, el panel siguió mostrando conexión verificada y worker activo.
+
+El turno `community_subgroups` se omitió de forma segura por `known_community_required`: no había una comunidad conocida elegible. La escritura de snapshot coincidió con las 18:34, pero el resumen visible no permite atribuirla por sí sola a esa ruta. No se forzó una consulta ni se repitió `bot_list`. Su último resultado sigue `provider_error`; el nuevo campo diagnóstico aún no ha sido probado por una lectura nueva, y no hay código de estado que reportar. No se concluye que no existan bots.
+
+**Próxima ruta:** dejar que el scheduler ejecute `account` y `groups` a las 18:50 y revisar solo su estado agregado, frescura y conexión. Luego continuar con `blocklist` según la rotación. El turno `bot_list` queda pendiente de una futura ejecución automática con la instrumentación nueva; no repetirlo manualmente salvo una evidencia operativa distinta. El inventario completo WHAPI todavía tiene brechas y no se declara paridad.
