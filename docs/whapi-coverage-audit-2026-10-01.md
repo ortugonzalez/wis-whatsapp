@@ -47,3 +47,7 @@ El worker conserva solo una etapa de una lista fija (`public_catalog_page_discov
 ### Comparación de inventario tras el despliegue
 
 El explorador autenticado de producción volvió a mostrar 182 métodos, 44.628 rutas de respuesta, 161 rutas observadas (14 exactas y 147 equivalencias revisadas), 44.467 sin observar, 23/177 métodos con alguna observación y 4 completos. El CLI local sobre `.local/wis.sqlite` reportó los mismos 14 exactos pero 127 equivalencias (44.487 sin observar). Son bases distintas: la diferencia de 20 equivalencias es evidencia de que el checkout no representa fielmente la cobertura productiva y no debe usarse para reemplazarla. Estos conteos no prueban paridad funcional; tampoco se recuperaron valores de contactos ni se copiaron al informe.
+
+### Asociaciones de etiquetas: límite del getter
+
+La dependencia fijada es `baileys@7.0.0-rc14`. Su interfaz tipa `labels.edit` y `labels.association` como eventos, que el worker persiste. No se encontró un getter público para pedir un inventario histórico completo; los eventos recibidos también podrían incluir asociaciones sincronizadas por WhatsApp. Por tanto, WIS muestra lo recibido durante la sesión, pero no promete reconstruir el historial completo. Una lista vacía no demuestra ausencia de etiquetas; las asociaciones de mensajes y la cobertura íntegra de WHAPI siguen siendo brechas explícitas.

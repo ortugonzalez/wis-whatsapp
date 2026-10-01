@@ -125,7 +125,9 @@ test('label association explorer is visible from Labels and describes partial ev
   const explorer=await readFile(new URL('./public/explorer.js',import.meta.url),'utf8');
   assert.match(explorer,/page==='labels'\?\['labels','label-associations'\]/);
   assert.match(explorer,/endpoint:'label-associations'/);
-  assert.match(explorer,/no incluye asociaciones de mensajes ni historial completo de WHAPI/i);
+  assert.match(explorer,/no cuenta con un getter p.blico para pedir un inventario hist.rico completo/i);
+  assert.match(explorer,/eventos que recibi. la sesi.n, incluidos los que WhatsApp pudiera sincronizar/i);
+  assert.match(explorer,/una lista vac.a no demuestra que no existan asociaciones/i);
   assert.match(explorer,/Asociación activa de etiqueta/);
   assert.match(explorer,/No hay asociaciones activas de chat almacenadas; el inventario puede ser parcial/);
   assert.doesNotMatch(explorer,/current==='label-associations'\?[^:]*'Se observó una respuesta vacía/);
