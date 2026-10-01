@@ -1,6 +1,12 @@
 # Estado de entrega WIS WhatsApp
 
-Actualizado: **2026-09-30 11:38 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+Actualizado: **2026-09-30 22:32 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+
+### Verificación posterior, 2026-10-01 01:32 UTC
+
+EasyPanel confirmó el despliegue `fix: renew admin sessions from trusted activity` (`13fe484`). El JavaScript servido en producción coincide con el artefacto local del commit; `POST /api/session/refresh` respondió `authentication_required` sin cookie, como corresponde, y `GET /api/local-status` siguió en `connected` con `error: null`. Esto valida la versión servida y continuidad básica, no una renovación con sesión autenticada ni la frescura del worker. La política ahora conserva el acceso hasta 12 horas desde actividad confiable del usuario, con consultas limitadas a una cada 15 minutos y un tope absoluto de siete días. QA independiente: 18/18 pruebas; suite local: 199/199; build, API/n8n (5/5) y Python (12/12) aprobados.
+
+La pestaña de Chrome muestra el ingreso administrativo y el estado neutral de WhatsApp conectado. No se introdujo una contraseña ni se solicitó otro enlace de recuperación. El QR no debe actualizarse mientras la sesión esté conectada. Para verificar snapshots, lease del worker y lecturas productivas hace falta volver a iniciar sesión en el panel; el acceso administrativo de esta pestaña no está activo.
 
 ## Verificado en producción
 
