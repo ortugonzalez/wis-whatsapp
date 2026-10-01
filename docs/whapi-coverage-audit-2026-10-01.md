@@ -355,3 +355,9 @@ El scheduler confirmó `collections` `done`, con lease de worker vigente y agend
 La verificación posterior confirmó `last_kind=newsletters` y estado `done`; “Canales” era la etiqueta funcional del recurso WhatsApp newsletters, no una lectura distinta. Para quitar la ambigüedad en la vista de programación y en el resumen, ambas etiquetas ahora dicen `Canales (newsletters)`. Revisión independiente: PASS (8/8); `npm test` 234/234, validaciones de build y `git diff --check` correctas. El siguiente turno confirmado por la configuración es `account_limits` a las 20:20.
 
 El commit `ff65155` quedó desplegado manualmente en EasyPanel. La página de producción muestra ya `Canales (newsletters)` para el último `newsletters` completado; la conexión reporta identidad verificada y el worker de lecturas sigue activo. La siguiente ruta configurada es `account_limits` a las 20:20. El cambio solo aclara el nombre visible; no modifica qué se recopila ni crea paridad con WHAPI.
+
+### Resultado automático de account_limits - 2026-10-01 20:20
+
+La configuración reportó `account_limits` `done`, worker activo y lease vigente; siguiente ruta `account_username` a las 20:35. La cobertura de WHAPI se recalculó en 161/44.628 rutas (14 exactas, 147 semánticas), con 44.467 pendientes y cuatro métodos completos. No se observó una ruta de respuesta nueva. `getlimits` continúa descrito como responsabilidad local, porque esos límites locales no equivalen a cuotas del plan WHAPI.
+
+**Próxima ruta:** observar el resultado agregado de `account_username` a las 20:35. No inferir campos de username si WhatsApp no entrega una respuesta correlacionada y verificable.
