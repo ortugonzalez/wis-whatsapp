@@ -15,3 +15,13 @@ test('getnewsletters stays explicitly partial while using the public known-chann
   assert.match(capability.baileys_audit.next_step, /cobertura parcial/i);
   assert.doesNotMatch(capability.baileys_audit.next_step, /función deshabilitada/i);
 });
+
+test('community subgroup audit matches the verified read-only IQ route but does not claim WHAPI parity', () => {
+  const capability = matrix.capabilities.find(row => row.id === 'getcommunitysubgroups');
+  assert.ok(capability);
+  assert.equal(capability.status, 'partial');
+  assert.equal(capability.endpoint, '/api/v1/community-subgroups?target=JID');
+  assert.ok(capability.baileys_audit.methods.some(method => method.name === 'communityFetchLinkedGroups'));
+  assert.match(capability.baileys_audit.reason, /valida IQ\/result.*sub_groups.*IDs/i);
+  assert.match(capability.baileys_audit.next_step, /respuesta reciente.*contrastar los campos.*no inferir paridad/i);
+});

@@ -3976,8 +3976,8 @@
           }
         ],
         "support": "candidate",
-        "reason": "Consulta sub_groups tras resolver comunidad; necesita validar contenedor para evitar falso vacío.",
-        "next_step": "Usar JID de comunidad conocido y respuesta IQ verificada."
+        "reason": "La ruta WIS consulta solo comunidades ya conocidas y valida IQ/result, el contenedor sub_groups y los IDs recibidos. Una respuesta verificada vacía se distingue de una respuesta ausente o inválida.",
+        "next_step": "Mantener parcial hasta observar una respuesta reciente en esta cuenta y contrastar los campos de cada subgrupo con WHAPI; no inferir paridad por la validación del contenedor."
       }
     },
     {
