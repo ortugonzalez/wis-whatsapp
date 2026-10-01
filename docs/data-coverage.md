@@ -480,3 +480,6 @@ A las 07:35 UTC se solicitó una lectura `catalog` desde el botón del panel; a 
 
 
 A las 07:48 UTC la siguiente ruta automática, `bot_list`, quedó registrada como fallida con el código sanitizado `provider_error`; el contador agregado de fallos subió a 50. El panel mantuvo `Conectado · identidad verificada` y el worker activo, y avanzó la agenda a `message_timer` para las 08:02 UTC. No se reintentó la lectura ni se hizo una consulta manual. La cobertura de respuesta WHAPI sigue sin recálculo confirmado después del timeout de `catalog`; esta lectura tampoco aporta equivalencia nueva.
+
+
+A las 08:18 UTC el panel seguía mostrando la conexión verificada y el worker activo. La agenda pasó de `community_subgroups` a `all` para las 08:33 UTC, sin fila de comando ni fallo visible para la ruta anterior y sin cambio en el contador de fallos. Se registra solo ese cambio de ruta: no hay evidencia para atribuir la omisión a falta de objetivos ni para contarla como lectura completada.
