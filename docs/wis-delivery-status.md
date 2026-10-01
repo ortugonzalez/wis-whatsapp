@@ -1,6 +1,12 @@
 # Estado de entrega WIS WhatsApp
 
-Actualizado: **2026-09-30 22:43 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+Actualizado: **2026-09-30 23:44 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+
+### Fechas de escritura de snapshots en la auditoría WHAPI, 2026-10-01 02:44 UTC
+
+EasyPanel implementó `feat: show snapshot dates in WHAPI evidence` (`b1ce229`) con build `Success`. La cobertura local ya incluye `snapshot_updated_at`; el panel lo conserva en las coincidencias exactas y semánticas, tanto en el explorador como en el detalle de variables. El texto ahora dice **“snapshot guardado”** y aclara que esa fecha no confirma cuándo se observó por última vez el campo. Si no existe una fecha, lo muestra explícitamente como no disponible.
+
+Verificación pública después del despliegue: `GET /api/local-status` respondió HTTP 200, estado `connected` y `error: null`; el HTML y los 12 scripts públicos inspeccionados incluyen las etiquetas y la aclaración nuevas. Este endpoint confirma conexión básica, no identidad ni frescura del worker. No se inspeccionaron snapshots privados ni se tocó el QR. Suite local: 211/211; build estático y `git diff --check` aprobados; QA independiente PASS.
 
 ### Verificación posterior, 2026-10-01 01:32 UTC
 
