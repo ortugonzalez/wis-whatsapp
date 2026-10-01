@@ -6,6 +6,7 @@ import { cacheAvatar } from './avatars.mjs';
 import { archiveRejectedAuthDirectory } from './auth-recovery.mjs';
 import { groupMetadataByInviteCode, validGroupInviteCode } from './group-invite-info.mjs';
 import { newsletterByInviteMetadata, validNewsletterInviteCode } from './newsletter-invite-info.mjs';
+import { selectKnownNewsletterTargets } from './known-newsletters.mjs';
 import { normalizeDisappearingModeReply, isKnownChatJid } from './disappearing-mode.mjs';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, resolve, relative, isAbsolute } from 'node:path';
@@ -776,8 +777,8 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           saveGroups([group]);
         }
       } else if(command.kind==='newsletter' || command.kind==='newsletters') {
-        const known=db.prepare("SELECT wa_chat_id AS id FROM conversations WHERE wa_chat_id LIKE '%@newsletter' UNION SELECT resource_id AS id FROM snapshots WHERE kind='newsletter' ORDER BY id LIMIT 21").all().map(x=>x.id);
-        const targets=command.kind==='newsletter'?[command.target]:known.slice(0,20);
+        const selection=command.kind==='newsletter'?{targets:[command.target],truncated:false}:selectKnownNewsletterTargets(db);
+        const targets=selection.targets;
         let count=0,attempted=0,failures=0,firstFailure=null,firstError=null;
         for(const id of targets) {
           if(!/^\d+@newsletter$/.test(id || '') || !db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=? LIMIT 1").get(id,id))throw new Error('unknown_newsletter');
@@ -785,7 +786,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           try{const value=await readCall(current,'newsletterMetadata',['jid',id]);if(!value||typeof value!=='object'||value.id!==id)throw new Error('invalid_newsletter_metadata_response');snapshot('newsletter',id,{...safeNewsletter(value),available:true,response_verified:true,error:null});count++;}
           catch(error){if(!owns()||sock!==current)throw new Error('connection_changed');const failure=classifyReadError(error);firstFailure??=failure;firstError??=error;failures++;const prior=db.prepare("SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=?").get(id);snapshot('newsletter',id,{available:false,response_verified:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,last_attempt_at:new Date().toISOString()});if(command.kind==='newsletter')throw error;if(unresolvedRead?.socket===current)break;}
         }
-        if(command.kind==='newsletters'){const truncated=known.length>20,unattempted=targets.length-attempted,partial=targets.length===0||truncated||failures>0||unattempted>0;snapshot('newsletters','wis-5679',{available:count>0||targets.length===0,response_verified:count>0,count,attempted_count:attempted,failure_count:failures,unattempted_count:unattempted,known_only:true,truncated,partial,complete:!partial,error:count===0&&failures>0?firstFailure?.code:null,source:'known_local_channels'});if(count===0&&failures>0)throw firstError||new Error('read_failed');}
+        if(command.kind==='newsletters'){const truncated=selection.truncated,unattempted=targets.length-attempted,partial=targets.length===0||truncated||failures>0||unattempted>0;snapshot('newsletters','wis-5679',{available:count>0||targets.length===0,response_verified:count>0,count,attempted_count:attempted,failure_count:failures,unattempted_count:unattempted,known_only:true,truncated,partial,complete:!partial,error:count===0&&failures>0?firstFailure?.code:null,source:'known_local_channels'});if(count===0&&failures>0)throw firstError||new Error('read_failed');}
       } else if(command.kind==='newsletter_counts') {
         const target=command.target;
         if(!/^\d{1,40}@newsletter$/.test(target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=? LIMIT 1").get(target,target))throw new Error('unknown_newsletter');

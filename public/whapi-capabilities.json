@@ -2482,13 +2482,18 @@
       "screen": "/#capabilities",
       "baileys": null,
       "test": "Pruebas locales por módulo y evidencia operativa en docs/sqlite-delivery.md; equivalencia completa no verificada.",
-      "reason": "Canales ya conocidos por esta sesión; sin descubrimiento global.",
+      "reason": "Metadatos de canales conocidos por esta sesión; la rotación justa evita dejar canales conocidos sin actualizar, pero no permite descubrir un directorio completo.",
       "baileys_audit": {
         "version": "7.0.0-rc14",
-        "methods": [],
-        "support": "no_public_method_found",
-        "reason": "Métodos newsletterMetadata/FetchMessages no prueban listado completo de canales.",
-        "next_step": "Mantener función deshabilitada y revisar evidencia de una API pública antes de implementarla."
+        "methods": [
+          {
+            "name": "newsletterMetadata",
+            "file": "node_modules/baileys/lib/Socket/newsletter.js"
+          }
+        ],
+        "support": "candidate",
+        "reason": "newsletterMetadata consulta un canal conocido; WIS renueva lotes acotados a IDs locales no observados o más antiguos. Baileys no expone aquí un listado remoto global.",
+        "next_step": "Mantener la cobertura parcial y no presentar canales conocidos como directorio completo; reevaluar si Baileys incorpora una API pública de descubrimiento."
       }
     },
     {
