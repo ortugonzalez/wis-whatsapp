@@ -343,7 +343,7 @@
         "methods": [],
         "support": "no_public_method_found",
         "reason": "No se encontró getter público de fecha de creación de cuenta; registrationId criptográfico no representa una fecha.",
-        "next_step": "Verificar si existe una lectura de solo lectura, correlacionada con la cuenta propia, en el protocolo disponible. Si no se demuestra, mantener pendiente y explicar la brecha en el panel."
+        "next_step": "La inspección de Baileys 7.0.0-rc14 no encontró un getter público. Mantener pendiente y reevaluar solo ante un getter o contrato documentado; no inferir fechas desde registrationId."
       }
     },
     {
