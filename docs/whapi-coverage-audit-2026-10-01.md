@@ -5,3 +5,7 @@ Se ejecutó `npm run audit:whapi-fields -- --summary` después del despliegue. E
 **Alcance de la evidencia:** el comando leyó `.local/wis.sqlite` de este checkout y el catálogo WHAPI versionado. No consultó la base de EasyPanel ni prueba disponibilidad actual de datos del número. Estos totales describen la copia local; no son cobertura productiva y no demuestran paridad.
 
 **Próxima ruta:** con una sesión administrativa activa en Chrome, obtener el resumen agregado autenticado de producción y comparar únicamente `observed_at`, cantidad de rutas y estados de lectura. Después, seleccionar la brecha Get menos cubierta con un getter público verificable. No leer ni copiar contenido personal.
+
+## Evidencia obsoleta en el explorador
+
+La cobertura conserva snapshots históricos como prueba de que un campo fue observado, pero esa cuenta por sí sola no indica vigencia. El informe de campo ahora separa los registros cuyo payload tiene `stale: true` y los muestra como evidencia obsoleta en el detalle WHAPI. No los elimina ni los etiqueta como actuales; las marcas de tiempo siguen siendo las del guardado/último éxito explícito. Pruebas: `data-coverage.test.mjs` y `capability-audit-freshness.test.mjs`.

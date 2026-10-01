@@ -22,6 +22,16 @@ function observedVariableEvidence(row){
  if(candidates.length)return candidates.map(candidate=>`Equivalencia revisada sin observación: ${candidate.kind}.${candidate.field} · ${candidate.note}`).join(' | ');
  return sources.length?'Sin ruta exacta ni equivalencia revisada':'Sin alcance local revisado';
 }
+const observedVariableEvidenceBeforeStaleness=observedVariableEvidence;
+observedVariableEvidence=function(row){
+ const evidence=observedVariableEvidenceBeforeStaleness(row);
+ if(row.direction!=='response'||!window.WIS_COVERAGE_AVAILABLE)return evidence;
+ const aliases=window.WIS_WHAPI_FIELD_ALIASES?.[row.capability_id]||{},observed=window.WIS_OBSERVED_FIELD_MAP||new Map(),sources=Array.isArray(aliases.source_kinds)?aliases.source_kinds:[],candidates=aliases.fields?.[row.field_path]||[],fields=new Map();
+ for(const item of observed.get(row.field_path)||[])if(sources.includes(item.kind))fields.set(item.kind+'\\0'+row.field_path,item);
+ for(const candidate of candidates)for(const item of observed.get(candidate.field)||[])if(item.kind===candidate.kind)fields.set(item.kind+'\\0'+candidate.field,item);
+ const stale=[...fields.values()].reduce((total,item)=>total+(Number.isSafeInteger(item.stale_records)?item.stale_records:0),0);
+ return stale?`${evidence} - ${stale} registro(s) de evidencia marcados obsoletos` : evidence;
+};
 const capabilitiesBeforeAudit=capabilities;
 capabilities=async function(){
  const epoch=viewEpoch;
