@@ -339,3 +339,9 @@ La configuración reportó `blocklist` `done` a las 19:05, con lease de worker v
 La configuración de producción confirmó `communities` `done` a las 19:20, con lease vigente, agenda activa y próximo turno `catalog` a las 19:35. El cálculo del catálogo se actualizó a las 19:20: sigue en 161/44.628 rutas de respuesta observadas o semánticamente revisadas (14 exactas y 147 semánticas); 44.467 siguen sin observar, 23/177 métodos tienen alguna observación y 4 están completos. No cambió la cobertura respecto de `blocklist`; leer comunidades no añadió una ruta WHAPI nueva. La página de conexión informa sesión conectada y pide verificar que la identidad sea la esperada; por separado, el worker continúa activo. No abrí nombres, integrantes ni códigos de invitación, ni inicié otra lectura.
 
 **Próxima ruta:** esperar el turno automático `catalog` de las 19:35 y revisar solo su resultado agregado y la frescura. No repetir manualmente `bot_list` ni el catálogo comercial, que conservan fallos sin diagnóstico concluyente. La paridad con WHAPI sigue incompleta.
+
+### Resultado automático de catalog - 2026-10-01 19:35
+
+El scheduler confirmó `catalog` `failed` con `read_timeout`; el worker permanece activo y el siguiente turno es `collections` a las 19:50. El catálogo WHAPI recalculado a las 19:38 UTC sigue en 161/44.628 rutas (14 exactas, 147 equivalencias revisadas), con 44.467 sin observar y 4 de 177 métodos completamente observados. No se agregó cobertura ni se reintentó el catálogo. Se conserva el timeout como causa observable, sin inferir si falló el proveedor público o el fallback Baileys.
+
+**Próxima ruta:** esperar `collections` a las 19:50 y revisar el estado agregado y la cobertura. Mantener el catálogo comercial en pausa hasta nueva evidencia técnica; no repetirlo manualmente.
