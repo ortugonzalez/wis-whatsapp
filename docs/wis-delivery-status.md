@@ -57,3 +57,7 @@ EasyPanel desplegó `fix: clarify dashboard login while WhatsApp is connected`. 
 5. Validar los ejemplos de Python y n8n en entornos de prueba y documentar credenciales y permisos sin almacenarlos en Git.
 
 Referencias: [matriz de campos WHAPI](whapi-reference-fields.md), [cobertura de datos](data-coverage.md), [manual de SQLite](sqlite-local.md), [despliegue EasyPanel](easypanel.md).
+
+### Asociaciones de etiquetas desplegadas, 2026-10-01 03:16 UTC
+
+EasyPanel confirmó `Success` para el commit `da780485084b61c73ab896c45fd458734869cf37` (`feat: surface observed label associations`). Después del despliegue, la ruta pública `/api/local-status` respondió HTTP 200 con estado `connected`, y `/explorer.js` incluyó la pestaña y el aviso de cobertura parcial. Esto verifica servicio, assets y estado público de conexión; no autentica el panel, no comprueba el lease del worker ni demuestra que el evento haya recibido nuevas asociaciones activas. No se escaneó QR ni se enviaron mensajes. QA independiente PASS; `npm test` 215/215, build y `git diff --check` PASS.
