@@ -353,3 +353,5 @@ El scheduler confirmó `collections` `done`, con lease de worker vigente y agend
 **Próxima ruta:** esperar el siguiente ciclo de las 20:05 y leer solo `last_kind`, estado y cobertura agregada; no disparar consultas manuales mientras la agenda esté activa.
 
 La verificación posterior confirmó `last_kind=newsletters` y estado `done`; “Canales” era la etiqueta funcional del recurso WhatsApp newsletters, no una lectura distinta. Para quitar la ambigüedad en la vista de programación y en el resumen, ambas etiquetas ahora dicen `Canales (newsletters)`. Revisión independiente: PASS (8/8); `npm test` 234/234, validaciones de build y `git diff --check` correctas. El siguiente turno confirmado por la configuración es `account_limits` a las 20:20.
+
+El commit `ff65155` quedó desplegado manualmente en EasyPanel. La página de producción muestra ya `Canales (newsletters)` para el último `newsletters` completado; la conexión reporta identidad verificada y el worker de lecturas sigue activo. La siguiente ruta configurada es `account_limits` a las 20:20. El cambio solo aclara el nombre visible; no modifica qué se recopila ni crea paridad con WHAPI.
