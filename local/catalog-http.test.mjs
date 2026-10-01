@@ -47,6 +47,15 @@ test('catalog discovery waits for every in-flight scan before returning a timeou
  const observation=pending.then(error=>{settled=true;return error;});await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false);
  releaseFirst();await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false);releaseSecond();const error=await observation;assert.equal(error.code,'read_timeout');
 });
+test('catalog discovery tolerates one transient static bundle failure when another bundle has config',async()=>{
+ const script='__d("WAWebGraphQLConstants",[],function(){var g="WA|FAKE_TEST_ONLY";l.WHATSAPP_GRAPHQL_CATALOG_ACCESS_TOKEN=g;});';
+ const found=await discoverPublicCatalogConfig({fetchImpl:async url=>{
+  if(url==='https://web.whatsapp.com/')return new Response('<script src="https://static.whatsapp.net/a.js"></script><script src="https://static.whatsapp.net/b.js"></script>');
+  if(url.endsWith('/a.js'))throw new PublicCatalogError('read_timeout');
+  return new Response(script);
+ }});
+ assert.equal(found.token,config.token);assert.equal(found.catalog,config.catalog);
+});
 test('HTTP output bounds, malformed JSON and GraphQL errors remain sanitized',async()=>{
  for(const response of [new Response('notjson SECRET'),json({errors:[{message:'SECRET'}]}),new Response('SECRET',{headers:{'content-length':String(5*1024*1024)}})]) {
   const reader=createPublicCatalogReader({ownJid:'5491111115679@s.whatsapp.net',discover:async()=>config,fetchImpl:async()=>response});

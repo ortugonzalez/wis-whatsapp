@@ -12,13 +12,16 @@ async function refreshObservedData(feedback){
     if(state.page!=='overview'){failed.push('panel cerrado; secuencia detenida');break;}
     attempted++;setCoverageSyncFeedback(`Consultando ${kind} (${attempted}/${coverageReadKinds.length})…`);
     const command=await api('/api/v1/sync','POST',{kind},{timeoutMs:5000});let result=command;
-    const deadline=Date.now()+90000;
+    // Catalog commands have a 210 s end-to-end deadline across discovery,
+    // pagination and fallback. Poll beyond it so the UI can observe the terminal
+    // state before deciding whether to stop the remaining read sequence.
+    const deadline=Date.now()+240000;
     while(['pending','running'].includes(result.status)&&Date.now()<deadline){
      await new Promise(resolve=>setTimeout(resolve,2000));
      result=await api(`/api/v1/sync?id=${encodeURIComponent(command.id)}`,'GET',undefined,{timeoutMs:5000});
     }
     if(result.status!=='done')failed.push(`${kind}: ${result.status==='failed'?result.error||'falló':'sigue en curso; secuencia detenida'}`);
-    if(['pending','running'].includes(result.status))break;
+    if(['pending','running'].includes(result.status)){failed.push(`${kind}: la lectura sigue procesándose en el servidor; no se iniciarán más rutas`);break;}
     if(result.status==='done')completed++;
    }
    setCoverageSyncFeedback(failed.length?`Respuestas correctas: ${completed}/${coverageReadKinds.length}; pasos iniciados: ${attempted}. ${failed.join(' · ')}`:`Lecturas correctas: ${completed}/${coverageReadKinds.length}. Actualizando cobertura local…`);

@@ -2,6 +2,8 @@
 // credential persistence, arbitrary targets, automatic retries or auth bypass.
 const ENDPOINT='https://graph.whatsapp.com/graphql/catalog';
 const DOCS={catalog:'30445081048424116',collections:'9430970660362540'};
+const DISCOVERY_SCAN_BUDGET_MS=40000;
+const DISCOVERY_SCRIPT_TIMEOUT_MS=10000;
 export class PublicCatalogError extends Error {
   constructor(code,status=null){super(code);this.name='PublicCatalogError';this.code=code;this.status_code=Number.isInteger(status)?status:null;}
 }
@@ -65,11 +67,18 @@ export async function discoverPublicCatalogConfig({fetchImpl=fetch,maxScripts=60
   const html=await fetchText(fetchImpl,'https://web.whatsapp.com/',{method:'GET'},2*1024*1024,15000);
   const urls=[...new Set([...html.matchAll(/(?:src|href)="([^"\s]+\.js(?:\?[^"\s]*)?)"/g)].map(x=>x[1].replaceAll('&amp;','&')))];
   const scripts=urls.filter(value=>{try {const u=new URL(value);return u.protocol==='https:' && u.hostname==='static.whatsapp.net' && !u.username && !u.password && !u.port;}catch{return false;}}).slice(0,Math.min(100,Math.max(1,maxScripts)));
-  let index=0,totalBytes=0;const result={...DOCS};const started=Date.now();
+  let index=0,totalBytes=0;const result={...DOCS};const started=Date.now();let transientFailures=0;
   async function scan() {
-    while(index<scripts.length && !result.token && Date.now()-started<90000 && totalBytes<40*1024*1024) {
+    while(index<scripts.length && !result.token && Date.now()-started<DISCOVERY_SCAN_BUDGET_MS && totalBytes<40*1024*1024) {
       const url=scripts[index++];
-      const source=await fetchText(fetchImpl,url,{method:'GET'},8*1024*1024,15000);
+      let source;
+      try {source=await fetchText(fetchImpl,url,{method:'GET'},8*1024*1024,DISCOVERY_SCRIPT_TIMEOUT_MS);}
+      catch(error) {
+        // WhatsApp publishes many static bundles; a stale CDN URL or one slow
+        // bundle must not discard a valid token discovered by another worker.
+        if(error instanceof PublicCatalogError && ['read_timeout','transport_failed','provider_http_error','not_found'].includes(error.code)) {transientFailures++;continue;}
+        throw error;
+      }
       totalBytes+=Buffer.byteLength(source);
       if(totalBytes>40*1024*1024)throw new PublicCatalogError('discovery_budget_exceeded');
       Object.assign(result,extractPublicCatalogConfig(source));
@@ -78,7 +87,7 @@ export async function discoverPublicCatalogConfig({fetchImpl=fetch,maxScripts=60
   const scans=await Promise.allSettled([scan(),scan(),scan()]);
   const failed=scans.find(result=>result.status==='rejected');
   if(failed)throw failed.reason;
-  if(!result.token)throw new PublicCatalogError('public_catalog_config_unavailable');
+  if(!result.token)throw new PublicCatalogError(transientFailures?'read_timeout':'public_catalog_config_unavailable');
   return result;
 }
 function fields(value,names) {

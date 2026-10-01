@@ -412,6 +412,18 @@ test('catalog restarts a checked own-account read after settled public transport
   assert.equal(nested.products_collected,false);assert.equal(nested.products_truncated,true);
  } finally {await worker.stop();db.close();}
 });
+test('catalog pagination stays within one end-to-end command deadline',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();const dir=mkdtempSync(resolve(tmpdir(),'wis-catalog-command-deadline-')),ev=new EventEmitter();let publicCalls=0,fallbackCalls=0;
+ const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},getCatalog:async()=>{fallbackCalls++;return {products:[]};}};
+ const fake={default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),readIntervalMs:0,catalogCommandTimeoutMs:120,publicCatalogReaderFactory:()=>({catalog:async()=>{publicCalls++;await new Promise(resolve=>setTimeout(resolve,70));return {products:[{id:`page-${publicCalls}`}],paging:{after:`cursor-${publicCalls}`}};},collections:async()=>({collections:[]})})});
+ try {
+  ev.emit('connection.update',{connection:'open'});await new Promise(resolve=>setImmediate(resolve));db.prepare('DELETE FROM read_commands').run();const now=new Date().toISOString();db.prepare("INSERT INTO read_commands(id,kind,status,created_at,updated_at) VALUES('bounded-catalog','catalog','pending',?,?)").run(now,now);
+  await worker.drainReads();assert.equal(db.prepare("SELECT status FROM read_commands WHERE id='bounded-catalog'").get().status,'failed');assert.equal(db.prepare("SELECT error FROM read_commands WHERE id='bounded-catalog'").get().error,'read_timeout');assert.equal(publicCalls,2);assert.equal(fallbackCalls,0);
+  await new Promise(resolve=>setTimeout(resolve,35));assert.equal(db.prepare("SELECT count(*) n FROM events WHERE kind='read.late_completed'").get().n,1);assert.equal(publicCalls,2);
+ } finally {await worker.stop();db.close();}
+});
+
 test('newsletter invite lookup uses Baileys read metadata and never persists the invite code',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();const dir=mkdtempSync(resolve(tmpdir(),'wis-newsletter-invite-worker-')),ev=new EventEmitter(),code='ChannelInvite_123';let calls=0;
  let emptyMetadata=false;const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},newsletterMetadata:async(type,key)=>{calls++;assert.equal(type,'invite');assert.equal(key,code);return emptyMetadata?null:{id:'12345@newsletter',name:'Canal',description:'Descripción',creation_time:1700000000,subscribers:42,verification:'VERIFIED',picture:{url:'https://cdn.invalid/?token=PRIVATE'},invite:code,owner:'private-owner'};}};

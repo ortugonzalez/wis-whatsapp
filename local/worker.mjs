@@ -115,8 +115,8 @@ export function readBudgetMs(method, override) {
   return method==='getCollections'?35000:12000;
 }
 export function readCallBudgetMs(method, override) {
-  // A public catalog call may spend up to ~120 s discovering current web
-  // config, then 30 s on one page; leave room for its own abort/fallback path.
+  // This is a per-call limit. Catalog commands additionally have an absolute
+  // end-to-end deadline so pagination and fallback cannot multiply this budget.
   return ['publicCatalog','publicCollections'].includes(method)&&override===undefined?210000:readBudgetMs(method,override);
 }
 export async function checkedGroupInvite(socket,target) {
@@ -353,7 +353,8 @@ export function messageContext(message) {
   return {quote:{...safeFields(ctx,['stanzaId','participant','remoteJid']),...(quoted?{type:quoted.type,body_preview:quoted.body.slice(0,512)}:{})},mentions:(ctx.mentionedJid || []).filter(x=>typeof x==='string').slice(0,100)};
 }
 
-export async function runWorker({ db, baileys, logger, authDir = resolve(root, '.local/baileys-auth'), mediaDir = resolve(root, '.local/media'), readTimeoutMs, readIntervalMs = 2000, publicCatalogReaderFactory, avatarCache=cacheAvatar, avatarDir=resolve(root,'.local/avatars') }) {
+export async function runWorker({ db, baileys, logger, authDir = resolve(root, '.local/baileys-auth'), mediaDir = resolve(root, '.local/media'), readTimeoutMs, catalogCommandTimeoutMs=210000, readIntervalMs = 2000, publicCatalogReaderFactory, avatarCache=cacheAvatar, avatarDir=resolve(root,'.local/avatars') }) {
+  if(!Number.isFinite(catalogCommandTimeoutMs)||catalogCommandTimeoutMs<=0||catalogCommandTimeoutMs>900000)throw new Error('invalid_catalog_command_timeout');
   mkdirSync(authDir, {recursive:true, mode:0o700});
   mkdirSync(mediaDir, {recursive:true, mode:0o700});
   const owner = randomUUID();
@@ -467,6 +468,9 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     const diagnostic=activeReadCommand?{command_id:activeReadCommand.id,kind:activeReadCommand.kind,method:name}:null;
     const diagnosticResource=activeReadCommand?.target || 'wis-5679';
     try {
+      const commandRemaining=Number.isFinite(activeReadCommand?.deadline_at)?activeReadCommand.deadline_at-Date.now():Infinity;
+      const callBudget=Math.min(readCallBudgetMs(name,readTimeoutMs),commandRemaining);
+      if(callBudget<=0)throw new Error('read_timeout');
       const pending={socket:current};unresolvedRead=pending;
       // Local timeout does not cancel Baileys' IQ request. Block further reads until
       // that request settles (or a different socket takes over), avoiding fan-out.
@@ -480,7 +484,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         throw error;
       }).finally(()=>{if(unresolvedRead===pending)unresolvedRead=null;});
       pending.request=request;
-       const value=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('read_timeout'));},readCallBudgetMs(name,readTimeoutMs));})]);
+       const value=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('read_timeout'));},callBudget);})]);
       if(!owns() || sock!==current)throw new Error('connection_changed');
       return value;
     } finally {clearTimeout(timer);}
@@ -548,7 +552,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     if(readBusy || !owns() || !sock || unresolvedRead?.socket===sock || connection().status!=='connected' || Date.now()-lastReadAt<readIntervalMs)return;
     const command=db.prepare("SELECT * FROM read_commands WHERE status='pending' ORDER BY created_at LIMIT 1").get();
     if(!command)return;
-    readBusy=true;lastReadAt=Date.now();activeReadCommand=command;
+    readBusy=true;lastReadAt=Date.now();activeReadCommand=command.kind==='catalog'?{...command,deadline_at:Date.now()+catalogCommandTimeoutMs}:command;
     const current=sock;
     let attemptScope=null;
     db.prepare("UPDATE read_commands SET status='running',error=NULL,updated_at=? WHERE id=? AND status='pending'").run(new Date().toISOString(),command.id);
