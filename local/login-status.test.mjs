@@ -29,12 +29,12 @@ test('an active reconnect displays the safe replacement guidance',async()=>{
 
 test('an exhausted local connection clarifies that another panel QR is a separate session',async()=>{
  const message=await renderStatus({status:'disconnected',error:'reconnect_exhausted',last_disconnect:{reason:'connection_replaced',status_code:440}});
- assert.match(message,/otra instalación de WIS no se transfiere a esta instancia local/);
+ assert.match(message,/otra instalación de WIS no se transfiere a este panel/);
 });
 
 test('a revoked session does not promise an immediate QR before controlled recovery',async()=>{
  const message=await renderStatus({status:'disconnected',error:'session_revoked',last_disconnect:{reason:'logged_out',status_code:401}});
- assert.match(message,/WhatsApp rechazó las credenciales locales guardadas/);
+ assert.match(message,/WhatsApp rechazó las credenciales guardadas/);
  assert.match(message,/Todavía no hay un QR nuevo/);
  assert.match(message,/recuperación controlada/);
 });
