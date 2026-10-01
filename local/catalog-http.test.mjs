@@ -33,7 +33,7 @@ test('collections valid empty result differs from malformed/no response and auth
 });
 test('public catalog request timeout aborts its HTTP request and returns a typed timeout',async()=>{
  const reader=createPublicCatalogReader({ownJid:'5491111115679@s.whatsapp.net',discover:async()=>config,catalogTimeoutMs:5,fetchImpl:async(_url,{signal})=>new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(new Error('aborted')), {once:true}))});
- await assert.rejects(reader.catalog(),error=>error.name==='PublicCatalogError'&&error.code==='public_catalog_http_timeout');
+ await assert.rejects(reader.catalog(),error=>error.name==='PublicCatalogError'&&error.code==='public_catalog_http_timeout'&&error.phase==='public_catalog_query');
 });
 test('catalog discovery waits for every in-flight scan before returning a timeout',async()=>{
  let releaseFirst,releaseSecond,settled=false;
@@ -45,7 +45,7 @@ test('catalog discovery waits for every in-flight scan before returning a timeou
  const pending=discoverPublicCatalogConfig({fetchImpl}).catch(error=>error);
  await new Promise(resolve=>setImmediate(resolve));assert.equal(typeof releaseFirst,'function');assert.equal(typeof releaseSecond,'function');
  const observation=pending.then(error=>{settled=true;return error;});await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false);
- releaseFirst();await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false);releaseSecond();const error=await observation;assert.equal(error.code,'read_timeout');
+ releaseFirst();await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false);releaseSecond();const error=await observation;assert.equal(error.code,'read_timeout');assert.equal(error.phase,'public_catalog_bundle_scan');
 });
 test('catalog discovery tolerates one transient static bundle failure when another bundle has config',async()=>{
  const script='__d("WAWebGraphQLConstants",[],function(){var g="WA|FAKE_TEST_ONLY";l.WHATSAPP_GRAPHQL_CATALOG_ACCESS_TOKEN=g;});';
@@ -61,4 +61,6 @@ test('HTTP output bounds, malformed JSON and GraphQL errors remain sanitized',as
   const reader=createPublicCatalogReader({ownJid:'5491111115679@s.whatsapp.net',discover:async()=>config,fetchImpl:async()=>response});
   await assert.rejects(reader.catalog(),e=>!e.message.includes('SECRET'));
  }
+ const malformed=createPublicCatalogReader({ownJid:'5491111115679@s.whatsapp.net',discover:async()=>config,fetchImpl:async()=>new Response('{"data":null}')});
+ await assert.rejects(malformed.catalog(),error=>error.code==='invalid_catalog_response'&&error.phase==='public_catalog_query');
 });

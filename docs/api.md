@@ -17,6 +17,8 @@ Las respuestas usan `{data: ...}` o `{error: código}`. Las listas paginadas inc
 | `media` | Inventario local; `?path=` entrega bytes autenticados |
 | `account`, `groups`, `snapshots`, `events` | Datos recibidos y actividad local con controles de acceso |
 | `products`, `collections`, `labels`, `communities`, `channels` | Exploradores con disponibilidad y alcance explícitos |
+
+Los resúmenes de catálogo pueden incluir etapas de lectura y códigos de fallback de una lista permitida (`last_attempt_phase`, `fallback_phase`, `fallback_reason`). Sirven para distinguir el descubrimiento público de las consultas Baileys; no confirman que el catálogo privado exista o esté vacío y no exponen solicitudes ni credenciales.
 | `capabilities`, `reference-fields` | Cobertura WIS y campos de referencia WHAPI, diferenciados |
 | `webhooks`, `webhook-deliveries`, `webhook-events` | Configuración desactivada, trazabilidad y contrato de eventos |
 

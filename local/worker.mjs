@@ -99,7 +99,8 @@ export function classifyReadError(error) {
   if(['avatar_unavailable','avatar_destination_rejected','avatar_download_failed','avatar_timeout','avatar_too_large','invalid_avatar_media'].includes(marker))code=marker;
   if(!code && marker.startsWith('invalid_') && marker.endsWith('_response'))code='invalid_response';
   if(!code)code=status_code===401 || status_code===403?'access_denied':status_code===404?'not_found':status_code===429?'rate_limited':status_code===408 || status_code===504?'read_timeout':status_code && status_code>=500?'provider_error':'read_failed';
-  return {code,status_code,...(Number.isSafeInteger(error?.provider_code)?{provider_code:error.provider_code}:{})};
+  const phase=['public_catalog_page_discovery','public_catalog_bundle_scan','public_catalog_query','public_collections_query','public_catalog_read_deadline','baileys_get_catalog','baileys_get_collections'].includes(error?.phase)?error.phase:null;
+  return {code,status_code,...(phase?{phase}:{}),...(Number.isSafeInteger(error?.provider_code)?{provider_code:error.provider_code}:{})};
 }
 function canFallbackPublicCatalog(error) {
   return error?.code==='public_catalog_unavailable' || error instanceof PublicCatalogError && ['public_catalog_http_timeout','read_timeout','transport_failed'].includes(error.code);
@@ -484,7 +485,9 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         throw error;
       }).finally(()=>{if(unresolvedRead===pending)unresolvedRead=null;});
       pending.request=request;
-       const value=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('read_timeout'));},callBudget);})]);
+      let value;
+      try {value=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;const error=new Error('read_timeout');if(business)error.phase=name==='getCatalog'?'baileys_get_catalog':'baileys_get_collections';else if(publicRead)error.phase='public_catalog_read_deadline';reject(error);},callBudget);})]);}
+      catch(error){if(business&&error&&typeof error==='object'&&!error.phase)error.phase=name==='getCatalog'?'baileys_get_catalog':'baileys_get_collections';throw error;}
       if(!owns() || sock!==current)throw new Error('connection_changed');
       return value;
     } finally {clearTimeout(timer);}
@@ -704,9 +707,10 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           const products=new Map();const seenCursors=new Set();let cursor,pages=0,partial=false,usePublicCatalog=publicScope;
           const previousCatalog=db.prepare("SELECT payload FROM snapshots WHERE kind='catalog' AND resource_id=?").get(jid);
           let previousScope='observed_catalog';try{previousScope=JSON.parse(previousCatalog?.payload||'{}').scope||previousScope;}catch{}
+          let fallbackFailure=null;
           do {
             let page;
-            if(usePublicCatalog){try{page=await readCall(current,'publicCatalog',[{after:cursor || null}]);}catch(error){if(!canFallbackPublicCatalog(error))throw error;if(pages){products.clear();seenCursors.clear();cursor=undefined;pages=0;partial=false;}usePublicCatalog=false;scope={scope:'own_account',known_only:false,source:'checked_baileys_iq_fallback'};attemptScope=scope;}}
+            if(usePublicCatalog){try{page=await readCall(current,'publicCatalog',[{after:cursor || null}]);}catch(error){if(!canFallbackPublicCatalog(error))throw error;fallbackFailure=classifyReadError(error);if(pages){products.clear();seenCursors.clear();cursor=undefined;pages=0;partial=false;}usePublicCatalog=false;scope={scope:'own_account',known_only:false,source:'checked_baileys_iq_fallback',fallback_reason:fallbackFailure.code,fallback_phase:fallbackFailure.phase??'public_catalog_query'};attemptScope=scope;}}
             if(!page)page=await readCall(current,'getCatalog',[{jid,limit:100,...(cursor?{cursor}:{})}]);
             if(!Array.isArray(page?.products))throw new Error('invalid_catalog_response');
             partial ||= Boolean(page.truncated);
@@ -720,7 +724,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           try {
             if(previousScope!==scope.scope || (!cursor && !partial))db.prepare("DELETE FROM snapshots WHERE kind='product' AND resource_id LIKE ?").run(jid+':%');
             for(const [id,value] of products)snapshot('product',jid+':'+id,{...value,owner_jid:jid,scope:scope.scope??'own_account',available:true});
-            snapshot('catalog',jid,{available:true,response_verified:true,product_count:products.size,has_more:Boolean(cursor),truncated:Boolean(cursor)||partial,pages,source:scope.source??'getCatalog',...scope,last_attempt_scope:scope.scope??'own_account',last_attempt_source:scope.source??'getCatalog',error:null,provider_code:null,status_code:null});
+            snapshot('catalog',jid,{available:true,response_verified:true,product_count:products.size,has_more:Boolean(cursor),truncated:Boolean(cursor)||partial,pages,source:scope.source??'getCatalog',...scope,last_attempt_scope:scope.scope??'own_account',last_attempt_source:scope.source??'getCatalog',last_attempt_phase:usePublicCatalog?'public_catalog_query':'baileys_get_catalog',fallback_reason:fallbackFailure?.code??null,fallback_phase:fallbackFailure?(fallbackFailure.phase??'public_catalog_query'):null,error:null,provider_code:null,status_code:null});
             if(!owns() || sock!==current)throw new Error('connection_changed');
             db.exec('COMMIT');
           } catch(error) {try{db.exec('ROLLBACK');}catch{}throw error;}
@@ -732,7 +736,8 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
             try { result=await readCall(current,'publicCollections',[{}]); }
             catch(error) {
               if(!canFallbackPublicCatalog(error))throw error;
-              scope={scope:'own_account',known_only:false,source:'checked_baileys_iq_fallback'};
+              const fallbackFailure=classifyReadError(error);
+              scope={scope:'own_account',known_only:false,source:'checked_baileys_iq_fallback',fallback_reason:fallbackFailure.code,fallback_phase:fallbackFailure.phase??'public_collections_query'};
               attemptScope=scope;
               result=await readCall(current,'getCollections',[jid,100]);
             }
@@ -745,7 +750,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           try {
             if(previousCollectionScope!==collectionScope||complete)db.prepare("DELETE FROM snapshots WHERE kind='collection' AND resource_id LIKE ?").run(jid+':%');
             for(const c of result.collections.slice(0,limit))if(c.id!==undefined && c.id!==null)snapshot('collection',jid+':'+c.id,{...safeFields(c,['id','name','products_truncated','products_collected']),owner_jid:jid,...scope,status:safeFields(c.status,['status','canAppeal']),products:(c.products || []).slice(0,100).map(safeProduct),available:true});
-            snapshot('collections',jid,{available:true,response_verified:true,collection_count:Math.min(result.collections.length,limit),truncated,source:scope.source??'getCollections',...scope,last_attempt_scope:collectionScope,last_attempt_source:scope.source??'getCollections',error:null,provider_code:null,status_code:null});
+            snapshot('collections',jid,{available:true,response_verified:true,collection_count:Math.min(result.collections.length,limit),truncated,source:scope.source??'getCollections',...scope,last_attempt_scope:collectionScope,last_attempt_source:scope.source??'getCollections',last_attempt_phase:publicCollectionScope?'public_collections_query':'baileys_get_collections',fallback_reason:scope.fallback_reason??null,fallback_phase:scope.fallback_phase??null,error:null,provider_code:null,status_code:null});
             if(!owns() || sock!==current)throw new Error('connection_changed');
             db.exec('COMMIT');
           } catch(error) {try{db.exec('ROLLBACK');}catch{}throw error;}
@@ -849,7 +854,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(summaryKind && resource) {
           const prior=db.prepare('SELECT payload FROM snapshots WHERE kind=? AND resource_id=?').get(summaryKind,resource);
           let priorData={};try{priorData=JSON.parse(prior?.payload||'{}');}catch{}
-          snapshot(summaryKind,resource,{available:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,provider_code:failure.provider_code ?? null,...(prior?{scope:priorData.scope??null,known_only:priorData.known_only??null,source:priorData.source??null}:{}),...(attemptScope?{last_attempt_scope:attemptScope.scope??null,last_attempt_source:attemptScope.source??null}:{}),last_attempt_at:new Date().toISOString()});
+          snapshot(summaryKind,resource,{available:false,stale:Boolean(prior),error:failure.code,status_code:failure.status_code,provider_code:failure.provider_code ?? null,...(prior?{scope:priorData.scope??null,known_only:priorData.known_only??null,source:priorData.source??null}:{}),last_attempt_phase:failure.phase??null,...(attemptScope?{last_attempt_scope:attemptScope.scope??null,last_attempt_source:attemptScope.source??null,fallback_reason:attemptScope.fallback_reason??null,fallback_phase:attemptScope.fallback_phase??null}:{fallback_reason:null,fallback_phase:null}),last_attempt_at:new Date().toISOString()});
         }
         event('read.failed',command.target || 'wis-5679',{kind:command.kind,command_id:command.id,error:failure.code,status_code:failure.status_code});
       }

@@ -3187,7 +3187,7 @@
     "/products": {
       "get": {
         "summary": "Read persisted products; read scope",
-        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs. Detail exposes safe persisted fields only, provider product_id/collection_id separately from local id, and owner-scoped summary metadata. No remote lookup; historical availability is not current provider verification.",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs. Detail exposes safe persisted fields only, provider product_id/collection_id separately from local id, and owner-scoped summary metadata. Catalog summaries may include allowlisted last_attempt_phase, fallback_phase and fallback_reason values for diagnosis; they never include request payloads or credentials. No remote lookup; historical availability is not current provider verification.",
         "parameters": [
           {
             "name": "q",
@@ -3299,7 +3299,7 @@
     "/collections": {
       "get": {
         "summary": "Read persisted collections; read scope",
-        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs. Detail exposes safe persisted fields only, provider product_id/collection_id separately from local id, and owner-scoped summary metadata. No remote lookup; historical availability is not current provider verification.",
+        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs. Detail exposes safe persisted fields only, provider product_id/collection_id separately from local id, and owner-scoped summary metadata. Catalog summaries may include allowlisted last_attempt_phase, fallback_phase and fallback_reason values for diagnosis; they never include request payloads or credentials. No remote lookup; historical availability is not current provider verification.",
         "parameters": [
           {
             "name": "q",

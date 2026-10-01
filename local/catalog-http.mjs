@@ -5,7 +5,7 @@ const DOCS={catalog:'30445081048424116',collections:'9430970660362540'};
 const DISCOVERY_SCAN_BUDGET_MS=40000;
 const DISCOVERY_SCRIPT_TIMEOUT_MS=10000;
 export class PublicCatalogError extends Error {
-  constructor(code,status=null){super(code);this.name='PublicCatalogError';this.code=code;this.status_code=Number.isInteger(status)?status:null;}
+  constructor(code,status=null,phase=null){super(code);this.name='PublicCatalogError';this.code=code;this.status_code=Number.isInteger(status)?status:null;this.phase=['public_catalog_page_discovery','public_catalog_bundle_scan','public_catalog_query','public_collections_query'].includes(phase)?phase:null;}
 }
 function moduleSource(source,name) {
   const start=source.indexOf(`__d("${name}"`);
@@ -37,34 +37,34 @@ export function extractPublicCatalogConfig(source) {
   }
   return output;
 }
-async function boundedText(response,maxBytes) {
+async function boundedText(response,maxBytes,phase=null) {
   const declared=Number(response.headers.get('content-length'));
-  if(Number.isFinite(declared) && declared>maxBytes)throw new PublicCatalogError('response_too_large');
+  if(Number.isFinite(declared) && declared>maxBytes)throw new PublicCatalogError('response_too_large',null,phase);
   const reader=response.body?.getReader();
   if(!reader)return '';
   const chunks=[];let size=0;
   try {
-    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>maxBytes)throw new PublicCatalogError('response_too_large');chunks.push(value);}
+    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>maxBytes)throw new PublicCatalogError('response_too_large',null,phase);chunks.push(value);}
   } finally {await reader.cancel().catch(()=>{});}
   const buffer=new Uint8Array(size);let offset=0;for(const chunk of chunks){buffer.set(chunk,offset);offset+=chunk.byteLength;}
   return new TextDecoder().decode(buffer);
 }
-function statusError(status) {
-  return new PublicCatalogError(status===401 || status===403?'access_denied':status===429?'rate_limited':status===404?'not_found':'provider_http_error',status);
+function statusError(status,phase) {
+  return new PublicCatalogError(status===401 || status===403?'access_denied':status===429?'rate_limited':status===404?'not_found':'provider_http_error',status,phase);
 }
-async function fetchText(fetchImpl,url,options,maxBytes,timeoutMs,timeoutCode='read_timeout') {
+async function fetchText(fetchImpl,url,options,maxBytes,timeoutMs,timeoutCode='read_timeout',phase=null) {
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try {
     const response=await fetchImpl(url,{...options,credentials:'omit',redirect:'error',signal:controller.signal});
-    if(!response.ok)throw statusError(response.status);
-    return await boundedText(response,maxBytes);
+    if(!response.ok)throw statusError(response.status,phase);
+    return await boundedText(response,maxBytes,phase);
   } catch(error) {
     if(error instanceof PublicCatalogError)throw error;
-    throw new PublicCatalogError(controller.signal.aborted?timeoutCode:'transport_failed');
+    throw new PublicCatalogError(controller.signal.aborted?timeoutCode:'transport_failed',null,phase);
   } finally {clearTimeout(timer);}
 }
 export async function discoverPublicCatalogConfig({fetchImpl=fetch,maxScripts=60}={}) {
-  const html=await fetchText(fetchImpl,'https://web.whatsapp.com/',{method:'GET'},2*1024*1024,15000);
+  const html=await fetchText(fetchImpl,'https://web.whatsapp.com/',{method:'GET'},2*1024*1024,15000,'read_timeout','public_catalog_page_discovery');
   const urls=[...new Set([...html.matchAll(/(?:src|href)="([^"\s]+\.js(?:\?[^"\s]*)?)"/g)].map(x=>x[1].replaceAll('&amp;','&')))];
   const scripts=urls.filter(value=>{try {const u=new URL(value);return u.protocol==='https:' && u.hostname==='static.whatsapp.net' && !u.username && !u.password && !u.port;}catch{return false;}}).slice(0,Math.min(100,Math.max(1,maxScripts)));
   let index=0,totalBytes=0;const result={...DOCS};const started=Date.now();let transientFailures=0;
@@ -72,7 +72,7 @@ export async function discoverPublicCatalogConfig({fetchImpl=fetch,maxScripts=60
     while(index<scripts.length && !result.token && Date.now()-started<DISCOVERY_SCAN_BUDGET_MS && totalBytes<40*1024*1024) {
       const url=scripts[index++];
       let source;
-      try {source=await fetchText(fetchImpl,url,{method:'GET'},8*1024*1024,DISCOVERY_SCRIPT_TIMEOUT_MS);}
+      try {source=await fetchText(fetchImpl,url,{method:'GET'},8*1024*1024,DISCOVERY_SCRIPT_TIMEOUT_MS,'read_timeout','public_catalog_bundle_scan');}
       catch(error) {
         // WhatsApp publishes many static bundles; a stale CDN URL or one slow
         // bundle must not discard a valid token discovered by another worker.
@@ -87,7 +87,7 @@ export async function discoverPublicCatalogConfig({fetchImpl=fetch,maxScripts=60
   const scans=await Promise.allSettled([scan(),scan(),scan()]);
   const failed=scans.find(result=>result.status==='rejected');
   if(failed)throw failed.reason;
-  if(!result.token)throw new PublicCatalogError(transientFailures?'read_timeout':'public_catalog_config_unavailable');
+  if(!result.token)throw new PublicCatalogError(transientFailures?'read_timeout':'public_catalog_config_unavailable',null,'public_catalog_bundle_scan');
   return result;
 }
 function fields(value,names) {
@@ -114,28 +114,29 @@ export function createPublicCatalogReader({ownJid,fetchImpl=fetch,discover=disco
   if(!/^[1-9]\d{7,14}@s\.whatsapp\.net$/.test(jid))throw new PublicCatalogError('invalid_own_jid');
   let configuration;
   async function query(kind,{after=null}={}) {
-    if(after!==null && (typeof after!=='string' || after.length>2048))throw new PublicCatalogError('invalid_cursor');
+    if(after!==null && (typeof after!=='string' || after.length>2048))throw new PublicCatalogError('invalid_cursor',null,kind==='catalog'?'public_catalog_query':'public_collections_query');
     configuration ||= await discover({fetchImpl});
-    if(!configuration?.token || !/^\d{10,30}$/.test(configuration[kind] || ''))throw new PublicCatalogError('public_catalog_config_unavailable');
+    if(!configuration?.token || !/^\d{10,30}$/.test(configuration[kind] || ''))throw new PublicCatalogError('public_catalog_config_unavailable',null,'public_catalog_bundle_scan');
     const shared={after,width:'100',height:'100',direct_connection_encrypted_info:null,variant_info_fields:null,variant_thumbnail_height:null,variant_thumbnail_width:null};
     const request=kind==='catalog'?{product_catalog:{jid,allow_shop_source:'ALLOWSHOPSOURCE_TRUE',limit:'50',catalog_session_id:null,...shared}}:{collections:{biz_jid:jid,collection_limit:'50',item_limit:'50',...shared}};
-    const text=await fetchText(fetchImpl,ENDPOINT,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify({access_token:configuration.token,doc_id:configuration[kind],lang:'en_US',variables:{request}})},4*1024*1024,catalogTimeoutMs,'public_catalog_http_timeout');
-    let body;try{body=JSON.parse(text);}catch{throw new PublicCatalogError('invalid_json_response');}
-    if(!plainObject(body))throw new PublicCatalogError('invalid_catalog_response');
+    const phase=kind==='catalog'?'public_catalog_query':'public_collections_query';
+    const text=await fetchText(fetchImpl,ENDPOINT,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify({access_token:configuration.token,doc_id:configuration[kind],lang:'en_US',variables:{request}})},4*1024*1024,catalogTimeoutMs,'public_catalog_http_timeout',phase);
+    let body;try{body=JSON.parse(text);}catch{throw new PublicCatalogError('invalid_json_response',null,phase);}
+    if(!plainObject(body))throw new PublicCatalogError('invalid_catalog_response',null,phase);
     if(body.errors?.length || body.error) {
       const candidate=body.errors?.[0]?.code ?? body.errors?.[0]?.extensions?.code ?? body.error?.code;
-      const failure=new PublicCatalogError(candidate===2498052?'public_catalog_unavailable':'graphql_error');
+      const failure=new PublicCatalogError(candidate===2498052?'public_catalog_unavailable':'graphql_error',null,phase);
       if(Number.isSafeInteger(candidate))failure.provider_code=candidate;
       throw failure;
     }
-    if(!plainObject(body.data))throw new PublicCatalogError('invalid_catalog_response');
+    if(!plainObject(body.data))throw new PublicCatalogError('invalid_catalog_response',null,phase);
     const payload=kind==='catalog'?body.data?.xwa_product_catalog_get_product_catalog?.product_catalog:body.data?.xwa_product_catalog_get_collections;
     const values=kind==='catalog'?payload?.products:payload?.collections;
-    if(!plainObject(payload) || !Array.isArray(values))throw new PublicCatalogError('invalid_catalog_response');
+    if(!plainObject(payload) || !Array.isArray(values))throw new PublicCatalogError('invalid_catalog_response',null,phase);
     // Validate every row before declaring a verified response, including rows
     // beyond the display cap. A malformed result is never an empty catalog.
     const valid=kind==='catalog'?values.every(validProduct):values.every(c=>plainObject(c) && validId(c.id) && (c.products===undefined || (Array.isArray(c.products) && c.products.every(validProduct))));
-    if(!valid)throw new PublicCatalogError('invalid_catalog_response');
+    if(!valid)throw new PublicCatalogError('invalid_catalog_response',null,phase);
     const result={scope:'public_catalog',source:'public_whatsapp_graphql',owner_jid:jid,response_verified:true,available:true,fetched_at:new Date().toISOString(),paging:paging(payload?.paging),truncated:values.length>50};
     if(kind==='catalog')result.products=values.slice(0,50).map(product);
     else result.collections=values.slice(0,50).map(c=>({...fields(c,['id','name']),...(Array.isArray(c.products)?{products:c.products.slice(0,50).map(product),products_truncated:c.products.length>50}:{products_collected:false})}));
