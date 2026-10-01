@@ -299,3 +299,7 @@ En el worktree reemplacé la consulta IQ manual por el getter de solo lectura `g
 El commit `90eb8c6` se desplego correctamente en Easypanel desde la rama configurada. Tras el reinicio, el panel volvio a mostrar la conexion verificada y el worker activo; la persistencia de la sesion se conservo. Luego solicite una unica lectura manual de `bot_list` con el codigo nuevo; termino a las 18:11 con `provider_error`, sin resultado verificable ni codigo mas especifico. El cambio de getter no resolvio por si solo el fallo y no hay evidencia para atribuir una causa. No repito esta ruta ni infiero una lista vacia. Suite completa 233/233, validaciones del proyecto, revision independiente y `git diff --check` pasaron antes del despliegue.
 
 **Proxima ruta:** conservar la agenda existente y esperar `disappearing_mode` a las 18:19. Registrar estado agregado y frescura; dejar `bot_list` como brecha hasta que exista evidencia distinta para diagnosticarla.
+
+El turno automático `disappearing_mode` terminó `done` a las 18:19 hora local. La agenda conserva worker activo y lease vigente; avanzó a `community_subgroups` para las 18:34. No se abrió una conversación ni se forzó una selección de comunidad. El éxito de esta consulta distinta no cambia el estado fallido de `bot_list`.
+
+**Proxima ruta:** observar `community_subgroups` a las 18:34 únicamente a través del scheduler. Si no existe una comunidad conocida elegible, aceptar el resultado `skipped` y continuar la rotación.
