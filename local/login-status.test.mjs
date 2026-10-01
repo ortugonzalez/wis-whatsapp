@@ -15,6 +15,13 @@ async function renderStatus(data){
  return status.textContent;
 }
 
+test('a connected WhatsApp line tells the user that dashboard login is separate and a QR scan is unnecessary',async()=>{
+ const message=await renderStatus({status:'connected',error:null,last_disconnect:null});
+ assert.match(message,/El acceso al panel es independiente/);
+ assert.match(message,/iniciá sesión para ver tus datos/);
+ assert.match(message,/No hace falta escanear otro QR/);
+});
+
 test('a historical replaced connection does not hide a new QR prompt',async()=>{
  const message=await renderStatus({status:'qr_pending',error:null,last_disconnect:{reason:'connection_replaced',status_code:440}});
  assert.match(message,/espera el escaneo de su QR/);
