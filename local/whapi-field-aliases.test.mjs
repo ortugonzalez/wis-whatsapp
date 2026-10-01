@@ -60,6 +60,17 @@ test('conversation and message aliases use stable local identifiers',()=>{
   assert.equal(aliases.getmessages.fields['messages[].id'][0].field,'wa_message_id');
 });
 
+test('chat and group mention and spam aliases use scoped Baileys evidence',()=>{
+  assert.equal(aliases.getchat.fields.unread_mention[0].field,'whapi_derived.all_unread_mention_from_unread_mention_count');
+  assert.equal(aliases.getchats.fields['chats[].unread_mention'][0].field,'whapi_derived.all_unread_mention_from_unread_mention_count');
+  assert.equal(aliases.getgroup.fields.unread_mention[0].field,'whapi_derived.group_unread_mention_from_unread_mention_count');
+  assert.equal(aliases.getgroups.fields['groups[].unread_mention'][0].field,'whapi_derived.group_unread_mention_from_unread_mention_count');
+  for(const [method,field] of [['getchat','not_spam'],['getchats','chats[].not_spam']])assert.equal(aliases[method].fields[field][0].field,'notSpam');
+  for(const [method,field] of [['getgroup','not_spam'],['getgroups','groups[].not_spam']])assert.equal(aliases[method].fields[field][0].field,'whapi_derived.group_not_spam_from_not_spam');
+  assert.match(aliases.getchats.fields['chats[].unread_mention'][0].note,/unreadMentionCount.*mayor que cero/);
+  assert.match(aliases.getgroups.fields['groups[].unread_mention'][0].note,/alcance limitado a grupos/);
+});
+
 test('contact aliases distinguish WhatsApp name fields and observed status',()=>{
   assert.equal(aliases.getcontacts.fields['contacts[].pushname'][0].field,'notify');
   assert.equal(aliases.getcontact.fields.status[0].field,'status.status');

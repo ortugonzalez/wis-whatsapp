@@ -437,7 +437,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   function saveChats(chats) {
     for(const c of chats.slice(0,10000)) {
       if(!owns() || !c.id || c.id==='status@broadcast')continue;
-      snapshot('chat',c.id,safeFields(c,['id','name','displayName','unreadCount','archived','pinned','muteEndTime','conversationTimestamp','lastMessageRecvTimestamp','readOnly','ephemeralExpiration','markedAsUnread']));
+      snapshot('chat',c.id,safeFields(c,['id','name','displayName','unreadCount','unreadMentionCount','notSpam','archived','pinned','muteEndTime','conversationTimestamp','lastMessageRecvTimestamp','readOnly','ephemeralExpiration','markedAsUnread']));
       const name=c.name || c.displayName || null;
       const contact=db.prepare('SELECT id FROM contacts WHERE wa_jid=?').get(c.id);
       db.prepare('INSERT OR IGNORE INTO conversations(id,contact_id,wa_chat_id,title,display_name,last_message_at) VALUES(?,?,?,?,?,?)').run(randomUUID(),contact?.id || null,c.id,name,name,timestamp(c.conversationTimestamp));

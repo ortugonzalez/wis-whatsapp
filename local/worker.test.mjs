@@ -195,7 +195,7 @@ test('read-only metadata commands persist account/groups, normalize events and r
   ev.emit('connection.update',{connection:'open',qr:'never-store'});
   ev.emit('contacts.upsert',[{id:'555@lid',phoneNumber:'5491111111111@s.whatsapp.net',name:'Saved Name',verifiedName:'Business Name',secret:'never-store'}]);
   ev.emit('contacts.update',[{id:'555@lid',notify:'Push Name'}]);
-  ev.emit('chats.upsert',[{id:'555@lid',name:'Saved Name',unreadCount:2,archived:true,tcToken:'never-store'}]);
+  ev.emit('chats.upsert',[{id:'555@lid',name:'Saved Name',unreadCount:2,unreadMentionCount:3,notSpam:false,archived:true,tcToken:'never-store'}]);
   const labelAssocAt=new Date().toISOString();db.prepare('INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES(?,?,?,?)').run('label_association','chat:retired:',JSON.stringify({chatId:'chat',labelId:'retired',associated:true}),labelAssocAt);
   ev.emit('labels.edit',{id:'priority',name:'Priority',color:3,deleted:false});ev.emit('labels.edit',{id:'retired',name:'Retired',color:4,deleted:true});
    ev.emit('presence.update',{id:'555@lid',presences:{'555@lid':{lastKnownPresence:'available',lastSeen:123,secret:'never-store'}}});
@@ -217,6 +217,8 @@ test('read-only metadata commands persist account/groups, normalize events and r
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='group'").get().payload).subject,'Group');
   assert.equal(db.prepare("SELECT status FROM read_commands WHERE kind='all'").get().status,'done');
   assert.equal(db.prepare("SELECT payload FROM snapshots WHERE kind='chat' AND resource_id='555@lid'").get().payload.includes('tcToken'),false);
+  const chatSnapshot=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='chat' AND resource_id='555@lid'").get().payload);
+  assert.equal(chatSnapshot.unreadMentionCount,3);assert.equal(chatSnapshot.notSpam,false);assert.equal(JSON.stringify(chatSnapshot).includes('never-store'),false);
   assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE payload LIKE '%never-store%'").get().n,0);
   assert.equal(db.prepare("SELECT count(*) AS n FROM events WHERE payload LIKE '%never-store%'").get().n,0);
   assert.equal(reads,4);assert.equal(writes,0);

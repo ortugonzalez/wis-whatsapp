@@ -12,6 +12,12 @@ export function deriveChatMute(chat, now = Date.now()) {
   return chat.muteEndTime > now;
 }
 
+export function deriveUnreadMention(chat) {
+  if (!chat || !Object.hasOwn(chat, 'unreadMentionCount')) return null;
+  if (!Number.isSafeInteger(chat.unreadMentionCount) || chat.unreadMentionCount < 0) return null;
+  return chat.unreadMentionCount > 0;
+}
+
 function normalizeArrayIndexes(path) {
   let result = '', quoted = false, escaped = false;
   for (let i = 0; i < path.length; i++) {
@@ -102,6 +108,43 @@ export function buildDataCoverage(db, now = Date.now()) {
         derived_false_records: unmutedRecords,
       });
     }
+    const mentionEvidence = db.prepare("SELECT resource_id,json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.unreadMentionCount') AS value_type,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.unreadMentionCount') AS mention_count FROM snapshots WHERE kind='chat'").all();
+    const mentionCounts = { all: [0, 0], group: [0, 0] };
+    for (const row of mentionEvidence) {
+      if (row.value_type !== 'integer') continue;
+      const unread = deriveUnreadMention({ unreadMentionCount: row.mention_count });
+      if (unread === null) continue;
+      const scopes = classifyWhatsAppChatType(row.resource_id) === 'group' ? ['all', 'group'] : ['all'];
+      for (const scope of scopes) {
+        if (unread) mentionCounts[scope][0]++;
+        else mentionCounts[scope][1]++;
+      }
+    }
+    for (const [scope, [unreadRecords, clearRecords]] of Object.entries(mentionCounts)) {
+      const knownMentionStates = unreadRecords + clearRecords;
+      if (knownMentionStates > 0) chatKind.fields.set(`$.whapi_derived.${scope}_unread_mention_from_unread_mention_count`, {
+        records: knownMentionStates,
+        non_empty_text_records: 0,
+        snapshot_updated_at: null,
+        derived_true_records: unreadRecords,
+        derived_false_records: clearRecords,
+      });
+    }
+    const spamEvidence = db.prepare("SELECT resource_id,json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.notSpam') AS value_type,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.notSpam') AS not_spam FROM snapshots WHERE kind='chat'").all();
+    const groupSpamCounts = [0, 0];
+    for (const row of spamEvidence) {
+      if (classifyWhatsAppChatType(row.resource_id) !== 'group') continue;
+      if (row.value_type === 'true') groupSpamCounts[0]++;
+      else if (row.value_type === 'false') groupSpamCounts[1]++;
+    }
+    const knownGroupSpamStates = groupSpamCounts[0] + groupSpamCounts[1];
+    if (knownGroupSpamStates > 0) chatKind.fields.set('$.whapi_derived.group_not_spam_from_not_spam', {
+      records: knownGroupSpamStates,
+      non_empty_text_records: 0,
+      snapshot_updated_at: null,
+      derived_true_records: groupSpamCounts[0],
+      derived_false_records: groupSpamCounts[1],
+    });
     let recognizedChatTypes = 0;
     for (const row of db.prepare("SELECT resource_id FROM snapshots WHERE kind='chat'").iterate()) {
       if (classifyWhatsAppChatType(row.resource_id)) recognizedChatTypes++;
