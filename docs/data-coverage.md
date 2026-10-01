@@ -440,3 +440,7 @@ El turno `newsletters` se encoló a las 23:44:21 UTC y posteriormente figuró co
 ### Lectura programada de límites de cuenta, 2026-10-01 00:00 UTC
 
 El turno `account_limits` se encoló a las 23:59:21 UTC y posteriormente figuró como `done`. La matriz recalculada a las 23:59 UTC permanece en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar), sin aumento global atribuible al turno. Los límites locales de WIS no equivalen a cuotas ni a un volumen seguro de WhatsApp. Próxima ruta: `account_username`, prevista para las 00:14 UTC.
+
+### Lectura programada de Username, 2026-10-01 00:15 UTC
+
+El turno `account_username` se encoló a las 00:14:21 UTC y posteriormente figuró como `done`. `Get account username` permanece en 0/3 rutas y la matriz global en 157/44.628 (14 exactas, 143 equivalencias revisadas, 44.471 sin observar); este resultado no demuestra que la cuenta carezca de username. Próxima ruta: `contact_profiles`, prevista para las 00:29 UTC. Esta nota no incluye valores de perfil.
