@@ -488,3 +488,8 @@ A las 08:18 UTC el panel seguía mostrando la conexión verificada y el worker a
 ### Lectura automática de cuenta y grupos, 2026-10-01 08:33 UTC
 
 La ruta `all` terminó como completada a las 08:33 UTC y actualizó el timestamp del snapshot; la conexión permaneció verificada y el worker activo. Los agregados siguieron en 907 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos disponibles (26 conocidos). El último mensaje entrante en vivo continuó siendo del 2026-09-28 19:32 UTC, por lo que no hay mensajes nuevos observados. No se incluyeron identificadores ni contenido personal. La siguiente ruta es `blocklist`, prevista para las 08:48 UTC. La cobertura WHAPI no se recalculó después del timeout de catálogo y no se afirma paridad.
+
+
+### Lectura automática de lista de bloqueos, 2026-10-01 08:48 UTC
+
+La ruta `blocklist` terminó como completada a las 08:48 UTC; el dashboard muestra la marca de intento y de snapshot exitoso a esa hora. El contador de fallos permaneció en 50, la conexión siguió verificada y el worker activo. La evidencia se limita al estado de la lectura; no se incluyen ni se deducen identidades de contactos. Próxima ruta: `communities`, prevista para las 09:03 UTC.
