@@ -493,3 +493,8 @@ La ruta `all` terminó como completada a las 08:33 UTC y actualizó el timestamp
 ### Lectura automática de lista de bloqueos, 2026-10-01 08:48 UTC
 
 La ruta `blocklist` terminó como completada a las 08:48 UTC; el dashboard muestra la marca de intento y de snapshot exitoso a esa hora. El contador de fallos permaneció en 50, la conexión siguió verificada y el worker activo. La evidencia se limita al estado de la lectura; no se incluyen ni se deducen identidades de contactos. Próxima ruta: `communities`, prevista para las 09:03 UTC.
+
+
+### Lectura automática de comunidades, 2026-10-01 09:03 UTC
+
+La ruta `communities` terminó como completada a las 09:03 UTC y guardó un snapshot; el contador de fallos se mantuvo en 50, con la conexión verificada y el worker activo. No se incluyeron nombres ni identificadores de comunidades. La lectura confirma que esta ruta específica respondió, no la cobertura completa de `getcommunities`. Próxima ruta: `collections`, prevista para las 09:18 UTC. La matriz general WHAPI no se recalculó en esta revisión.
