@@ -3,7 +3,7 @@ PRAGMA foreign_keys=ON;
 PRAGMA busy_timeout=5000;
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS connections(id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'disconnected',phone TEXT,expected_phone_e164 TEXT,qr_payload TEXT,qr_expires_at TEXT,last_error TEXT,lease_owner TEXT,lease_expires_at TEXT,command TEXT,updated_at TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,expires_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,expires_at TEXT NOT NULL,created_at TEXT);
 CREATE TABLE IF NOT EXISTS password_reset_tokens(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL UNIQUE,expires_at TEXT NOT NULL,used_at TEXT,created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS password_reset_attempts(id TEXT PRIMARY KEY,request_key TEXT NOT NULL,created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS password_reset_attempts_lookup ON password_reset_attempts(request_key,created_at DESC);

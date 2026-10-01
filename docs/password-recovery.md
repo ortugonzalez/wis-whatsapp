@@ -13,4 +13,6 @@ Con una dirección `@gmail.com`, el panel usa Gmail SMTP seguro por el puerto 46
 
 Luego guarda el entorno y despliega. En la pantalla de acceso, pulsa **Olvidé mi contraseña**; el enlace vence en 30 minutos y solo puede usarse una vez. Al cambiar la clave, se invalidan todas las sesiones web existentes. Se limitan las solicitudes de recuperación a tres por dirección de red cada 15 minutos. El token se guarda como hash y nunca aparece en logs ni en la respuesta de solicitud.
 
+La sesión administrativa vence tras 12 horas sin actividad real en el panel. Solo interacciones de usuario confiables del navegador pueden renovar esa ventana; el panel limita la consulta de renovación a una cada 15 minutos y la API extiende el vencimiento a 12 horas desde esa actividad. La consulta automática de datos no cuenta como actividad y no mantiene abierta una pantalla desatendida. Cada sesión tiene un límite absoluto de siete días desde el inicio de sesión. La contraseña sigue siendo obligatoria y la renovación no cambia los permisos.
+
 Hasta que exista SMTP válido, `password_recovery_available` queda en `false` y el formulario muestra que el correo no está configurado. Un fallo de entrega elimina el token pendiente y no informa secretos del proveedor.

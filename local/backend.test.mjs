@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {scryptSync,randomBytes} from 'node:crypto';
+import {scryptSync,randomBytes,createHash} from 'node:crypto';
 import {mkdtemp,mkdir,writeFile,stat,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {resolve} from 'node:path';
@@ -190,6 +190,30 @@ test('Easypanel HTTPS proxy requires exact host, origin and forwarded protocol',
   const login=await request();assert.equal(login.status,200,login.body);assert.match(login.headers['set-cookie'][0],/; Secure(?:;|$)/);
   assert.equal((await request({host:'other.example.test'})).status,403);assert.equal((await request({origin:'https://attacker.example.test'})).status,403);assert.equal((await request({proto:'https,http'})).status,403);assert.equal((await request({proto:'http'})).status,403);
  }finally{await new Promise(r=>server.close(r));database.close();await rm(temp,{recursive:true,force:true});}
+});
+
+test('admin session extends only after recent user activity and never beyond seven days',async()=>{
+ const database=openDatabase(':memory:'),salt='session-refresh-test',password=randomBytes(20).toString('hex');database.prepare("INSERT INTO settings(key,value) VALUES('admin_password',?)").run(salt+':'+scryptSync(password,salt,64).toString('hex'));
+ const temp=await mkdtemp(resolve(tmpdir(),'wis-session-refresh-')),server=makeServer(database,{stateDir:temp,adminUsername:'ortu'});await new Promise(resolveServer=>server.listen(0,'127.0.0.1',resolveServer));const base='http://127.0.0.1:'+server.address().port;let cookie='';
+ const call=async(path,method='GET',body,headers={})=>{const response=await fetch(base+path,{method,headers:{...(cookie?{Cookie:cookie}:{}),Origin:base,'Content-Type':'application/json',...headers},...(body!==undefined?{body:JSON.stringify(body)}:{})});return {status:response.status,json:await response.json(),headers:response.headers};};
+ try{
+  assert.equal((await call('/api/session/refresh','POST',{})).status,401);
+  const login=await call('/api/login','POST',{username:'ortu',password});assert.equal(login.status,200);cookie=login.headers.get('set-cookie').split(';')[0];const sessionToken=cookie.split('=')[1],tokenHash=createHash('sha256').update(sessionToken).digest('hex'),now=Date.now();
+  assert.equal((await call('/api/session/refresh','POST',{unexpected:true})).status,400);
+  database.prepare('UPDATE sessions SET created_at=?,expires_at=? WHERE token_hash=?').run(new Date(now-8*3600000).toISOString(),new Date(now+4*3600000).toISOString(),tokenHash);
+  assert.equal((await call('/api/session')).json.data.authenticated,true);assert.equal(database.prepare('SELECT expires_at FROM sessions WHERE token_hash=?').get(tokenHash).expires_at,new Date(now+4*3600000).toISOString());
+  const refreshed=await call('/api/session/refresh','POST',{});assert.equal(refreshed.status,200);assert.deepEqual(refreshed.json.data,{refreshed:true});assert.match(refreshed.headers.get('set-cookie'),/HttpOnly; SameSite=Strict; Path=\/; Max-Age=\d+/);cookie=refreshed.headers.get('set-cookie').split(';')[0];
+  const renewed=database.prepare('SELECT expires_at,created_at FROM sessions WHERE token_hash=?').get(tokenHash);assert.ok(Math.abs(Date.parse(renewed.expires_at)-(Date.now()+12*3600000))<1000);assert.equal(renewed.created_at,new Date(now-8*3600000).toISOString());
+  const stillFresh=await call('/api/session/refresh','POST',{});assert.deepEqual(stillFresh.json.data,{refreshed:false});assert.equal(stillFresh.headers.get('set-cookie'),null);
+  assert.equal((await call('/api/session/refresh','POST',{}, {Origin:'https://other.example'})).status,403);
+  const readerToken='wis_'+randomBytes(32).toString('base64url');database.prepare('INSERT INTO tokens(id,name,token_hash,scopes,created_at) VALUES(?,?,?,?,?)').run('reader','Reader',createHash('sha256').update(readerToken).digest('hex'),'[\"read\"]',new Date().toISOString());
+  assert.equal((await call('/api/session/refresh','POST',{}, {Authorization:'Bearer '+readerToken})).status,403);
+  database.prepare('UPDATE sessions SET created_at=? WHERE token_hash=?').run(new Date(Date.now()-7*24*3600000-1000).toISOString(),tokenHash);assert.equal((await call('/api/session')).json.data.authenticated,false);assert.equal(database.prepare('SELECT count(*) AS n FROM sessions WHERE token_hash=?').get(tokenHash).n,0);
+ }finally{await new Promise(resolveServer=>server.close(resolveServer));database.close();await rm(temp,{recursive:true,force:true});}
+});
+
+test('legacy 12-hour sessions gain an issuance timestamp from their stored expiry',async()=>{
+ const temp=await mkdtemp(resolve(tmpdir(),'wis-legacy-session-'));try{const file=resolve(temp,'test.sqlite');let database=openDatabase(file);const expiresAt='2099-01-01T12:00:00.000Z';database.prepare('INSERT INTO sessions(token_hash,expires_at) VALUES(?,?)').run('legacy-session',expiresAt);database.exec('CREATE TABLE legacy_sessions(token_hash TEXT PRIMARY KEY,expires_at TEXT NOT NULL); INSERT INTO legacy_sessions SELECT token_hash,expires_at FROM sessions; DROP TABLE sessions; ALTER TABLE legacy_sessions RENAME TO sessions');database.close();database=openDatabase(file);const migrated=database.prepare('SELECT created_at FROM sessions WHERE token_hash=?').get('legacy-session');assert.equal(migrated.created_at,'2099-01-01T00:00:00.000Z');database.close();}finally{await rm(temp,{recursive:true,force:true});}
 });
 
 test('reopening additive schema preserves existing contact and session state',async()=>{const temp=await mkdtemp(resolve(tmpdir(),'wis-migration-test-'));try{const file=resolve(temp,'test.sqlite');let database=openDatabase(file);database.prepare("INSERT INTO contacts(id,phone_e164,display_name,created_at) VALUES('keep','+12025550111','Existing data',?)").run(new Date().toISOString());database.prepare("INSERT INTO sessions(token_hash,expires_at) VALUES('session','2099-01-01T00:00:00Z')").run();database.close();database=openDatabase(file);assert.equal(database.prepare("SELECT display_name FROM contacts WHERE id='keep'").get().display_name,'Existing data');assert.equal(database.prepare('SELECT count(*) AS n FROM sessions').get().n,1);assert.equal(database.prepare('SELECT count(*) AS n FROM snapshots').get().n,0);database.close();}finally{await rm(temp,{recursive:true,force:true});}});

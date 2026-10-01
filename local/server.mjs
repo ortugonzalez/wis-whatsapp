@@ -8,6 +8,7 @@ import {createGroupInviteInfoRpc,validGroupInviteCode} from './group-invite-info
 import {createNewsletterInviteInfoRpc,validNewsletterInviteCode} from './newsletter-invite-info.mjs';
 import {isKnownChatJid} from './disappearing-mode.mjs';
 import {createPasswordRecoverySender,validRecoveryEmail} from './password-recovery.mjs';
+import {isSessionActive,nextSessionExpiry,shouldRefreshSession} from './session-policy.mjs';
 import {createServer} from 'node:http';
 import {randomBytes,randomUUID,createHash,scryptSync,timingSafeEqual} from 'node:crypto';
 import {readFile,writeFile,mkdir,realpath,stat} from 'node:fs/promises';
@@ -104,10 +105,16 @@ export function makeServer(database=db,options={}){
    res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('Content-Security-Policy',"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'");
    let actor=null;const bearer=req.headers.authorization;
    if(bearer){const match=/^Bearer (wis_[A-Za-z0-9_-]{40,})$/.exec(bearer);if(!match)fail(401,'invalid_token');const token=database.prepare('SELECT * FROM tokens WHERE token_hash=? AND revoked_at IS NULL').get(hash(match[1]));if(!token)fail(401,'invalid_token');actor={id:token.id,admin:false,scopes:JSON.parse(token.scopes)};}
-   else {const cookie=/(?:^|;\s*)wis_session=([^;]+)/.exec(req.headers.cookie??'');if(cookie){const session=database.prepare('SELECT * FROM sessions WHERE token_hash=? AND expires_at>?').get(hash(cookie[1]),now());if(session)actor={id:'admin',admin:true,scopes};}}
+   else {const cookie=/(?:^|;\s*)wis_session=([^;]+)/.exec(req.headers.cookie??'');if(cookie){const tokenHash=hash(cookie[1]),session=database.prepare('SELECT * FROM sessions WHERE token_hash=? AND expires_at>?').get(tokenHash,now());if(session&&isSessionActive(session))actor={id:'admin',admin:true,scopes,session,sessionToken:cookie[1],sessionHash:tokenHash};else if(session)database.prepare('DELETE FROM sessions WHERE token_hash=?').run(tokenHash);}}
    let originMatches=false;try{originMatches=new URL(req.headers.origin??'').origin===new URL(origin).origin;}catch{}if(method!=='GET'&&method!=='HEAD'&&!bearer&&!originMatches)fail(403,'origin_required');
    const auth=(scope='read',admin=false)=>{if(!actor)fail(401,'authentication_required');if(admin&&!actor.admin||scope&&!actor.scopes.includes(scope))fail(403,'insufficient_scope');};
    if(['/api/session','/api/me'].includes(path)&&method==='GET')return send({authenticated:Boolean(actor),admin:Boolean(actor?.admin)});
+   if(path==='/api/session/refresh'&&method==='POST'){
+    auth('read',true);const body=await jsonBody(req);if(Object.keys(body).length)fail(400,'invalid_session_refresh');const current=actor.session,instant=Date.now();if(!shouldRefreshSession(current,instant))return send({refreshed:false});
+    const expiresAt=nextSessionExpiry(current,instant),expiresAtMs=Date.parse(expiresAt);if(!Number.isFinite(expiresAtMs)||expiresAtMs<=instant)fail(401,'authentication_required');
+    const updated=database.prepare('UPDATE sessions SET expires_at=? WHERE token_hash=? AND expires_at=?').run(expiresAt,actor.sessionHash,current.expires_at);if(!updated.changes){const latest=database.prepare('SELECT * FROM sessions WHERE token_hash=?').get(actor.sessionHash);if(isSessionActive(latest,instant))return send({refreshed:false});fail(401,'authentication_required');}
+    const maxAge=Math.max(1,Math.ceil((expiresAtMs-instant)/1000));res.setHeader('Set-Cookie','wis_session='+actor.sessionToken+'; HttpOnly; SameSite=Strict; Path=/; Max-Age='+maxAge+(protocol==='https'?'; Secure':''));return send({refreshed:true});
+   }
    if(path==='/api/login-config'&&method==='GET')return send({username:adminUsername,password_recovery_available:passwordRecoveryAvailable});
    if(path==='/api/runtime-info'&&method==='GET')return send({environment:process.env.WIS_DEPLOYMENT_KIND==='production'?'production':'local',storage:'sqlite'});
    if(path==='/api/local-status'&&method==='GET'){
@@ -156,7 +163,7 @@ export function makeServer(database=db,options={}){
     const b=await jsonBody(req);const stored=database.prepare("SELECT value FROM settings WHERE key='admin_password'").get()?.value;if(!stored)fail(503,'bootstrap_required');
     const [salt,value]=stored.split(':');const valid=(b.username??'localadmin')===adminUsername&&typeof b.password==='string'&&b.password.length<512&&timingSafeEqual(scryptSync(b.password,salt,64),Buffer.from(value,'hex'));
     if(!valid){failures.set(key,{count:attempt?.until>Date.now()?attempt.count+1:1,until:Date.now()+900000});fail(401,'invalid_credentials');}
-    failures.delete(key);const token=randomBytes(32).toString('base64url');database.prepare('INSERT INTO sessions(token_hash,expires_at) VALUES(?,?)').run(hash(token),new Date(Date.now()+12*3600000).toISOString());res.setHeader('Set-Cookie','wis_session='+token+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200'+(protocol==='https'?'; Secure':''));audit('login','admin');return send({authenticated:true,admin:true});
+    failures.delete(key);const token=randomBytes(32).toString('base64url'),createdAt=now(),expiresAt=new Date(Date.now()+12*3600000).toISOString();database.prepare('INSERT INTO sessions(token_hash,expires_at,created_at) VALUES(?,?,?)').run(hash(token),expiresAt,createdAt);res.setHeader('Set-Cookie','wis_session='+token+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200'+(protocol==='https'?'; Secure':''));audit('login','admin');return send({authenticated:true,admin:true});
    }
    if(path==='/api/logout'&&method==='POST'){auth();const cookie=/(?:^|;\s*)wis_session=([^;]+)/.exec(req.headers.cookie??'');if(cookie)database.prepare('DELETE FROM sessions WHERE token_hash=?').run(hash(cookie[1]));res.setHeader('Set-Cookie','wis_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'+(protocol==='https'?'; Secure':''));return send({authenticated:false});}
    if(path.startsWith('/api/whatsapp/')){
