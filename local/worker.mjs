@@ -212,26 +212,19 @@ export async function checkedNewsletterMessages(socket,target) {
   return {messages,count:messages.length,truncated:entries.length>=50,partial:true,complete:false,limit:50};
 }
 export async function checkedBotList(socket) {
-  const reply=await socket.query({tag:'iq',attrs:{xmlns:'bot',to:'s.whatsapp.net',type:'get'},content:[{tag:'bot',attrs:{v:'2'}}]},10000);
-  if(!reply)throw Error('read_timeout');
-  if(!Array.isArray(reply.content))throw Error('invalid_bot_response');
-  const error=reply.content.find(x=>x?.tag==='error');
-  if(error||reply.attrs?.type==='error')throw Object.assign(Error('provider_error'),{statusCode:Number(error?.attrs?.code)});
-  const bot=reply.content.find(x=>x?.tag==='bot');
-  if(reply.tag!=='iq'||reply.attrs?.type!=='result'||!Array.isArray(bot?.content))throw Error('invalid_bot_response');
-  const sections=bot.content.filter(x=>x?.tag==='section'&&x.attrs?.type==='all');
-  if(!sections.length)throw Error('invalid_bot_response');
+  if(typeof socket?.getBotListV2!=='function')throw Error('capability_unavailable');
+  const result=await socket.getBotListV2();
+  // Baileys maps a missing bot container/section to [], so that value cannot
+  // prove an empty list. Keep it unknown instead of claiming verified absence.
+  if(!Array.isArray(result)||result.length===0)throw Error('invalid_bot_response');
   const bots=[];
-  for(const section of sections) {
-    if(section.content!==undefined&&!Array.isArray(section.content))throw Error('invalid_bot_response');
-    for(const value of section.content||[]) {
-      if(value?.tag!=='bot'||typeof value.attrs?.jid!=='string'||!/^\d{1,40}@(s\.whatsapp\.net|lid|bot)$/.test(value.attrs.jid))throw Error('invalid_bot_response');
-      const persona=value.attrs.persona_id;
-      if(persona!==undefined&&(typeof persona!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(persona)))throw Error('invalid_bot_response');
-      if(bots.length<=1000)bots.push({jid:value.attrs.jid,persona_id:persona??null});
-    }
+  for(const value of result) {
+    if(!value||typeof value.jid!=='string'||!/^\d{1,40}@(s\.whatsapp\.net|lid|bot)$/.test(value.jid))throw Error('invalid_bot_response');
+    const persona=value.personaId;
+    if(persona!==undefined&&(typeof persona!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(persona)))throw Error('invalid_bot_response');
+    if(bots.length<1000)bots.push({jid:value.jid,persona_id:persona??null});
   }
-  return {bots:bots.slice(0,1000),truncated:bots.length>1000,partial:true,complete:false,limit:1000};
+  return {bots,truncated:result.length>1000,partial:true,complete:false,limit:1000};
 }
 export async function checkedBusinessRead(socket,method,args) {
   if(typeof socket.query!=='function')throw new Error('capability_unavailable');
@@ -463,7 +456,8 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     const newsletterRead=name==='newsletter_messages';
     const botRead=name==='bot_list';
     const list=['fetchBlocklist','groupFetchAllParticipating','communityFetchAllParticipating'].includes(name);
-    if(!publicRead&&!communityInviteRead&&typeof current[business||list||groupRead||limitsRead||newsletterRead||botRead?'query':name]!=='function')throw new Error('capability_unavailable');
+    if(botRead&&typeof current.getBotListV2!=='function')throw new Error('capability_unavailable');
+    if(!publicRead&&!communityInviteRead&&!botRead&&typeof current[business||list||groupRead||limitsRead||newsletterRead?'query':name]!=='function')throw new Error('capability_unavailable');
     if(communityInviteRead&&typeof current.communityInviteCode!=='function')throw new Error('capability_unavailable');
     let timer,timedOut=false;
     const diagnostic=activeReadCommand?{command_id:activeReadCommand.id,kind:activeReadCommand.kind,method:name}:null;
@@ -513,16 +507,19 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     return results;
   }
   async function readOwnUsername(current) {
-    const jid=current.user?.id?.replace(/:\d+(?=@)/,'');
-    if(!jid)throw new Error('account_identity_unavailable');
+    const ownJids=new Set([current.user?.id,current.user?.lid].filter(value=>typeof value==='string').map(value=>value.replace(/:\d+(?=@)/,'')).filter(value=>/^\d+@(s\.whatsapp\.net|lid)$/.test(value)));
+    if(!ownJids.size)throw new Error('account_identity_unavailable');
     const previous=db.prepare("SELECT payload FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get();
     const preservePrevious=()=>{try{const data=previous?JSON.parse(previous.payload):null;return typeof data?.username==='string'?{username:data.username,stale:true}:{};}catch{return {};}};
     try {
       if(typeof baileys.USyncQuery!=='function'||typeof baileys.USyncUser!=='function'||typeof current.executeUSyncQuery!=='function')throw new Error('capability_unavailable');
-      const query=new baileys.USyncQuery().withUser(new baileys.USyncUser().withId(jid)).withUsernameProtocol();
+      const query=new baileys.USyncQuery();
+      for(const jid of ownJids)query.withUser(new baileys.USyncUser().withId(jid));
+      query.withUsernameProtocol();
       const result=await readCall(current,'executeUSyncQuery',[query]);
-      const matches=Array.isArray(result?.list)?result.list.filter(value=>value&&typeof value.id==='string'&&value.id.replace(/:\d+(?=@)/,'')===jid):[];
-      const username=matches.length===1&&typeof matches[0].username==='string'&&matches[0].username.length>0&&matches[0].username.length<=128?matches[0].username:null;
+      const matches=Array.isArray(result?.list)?result.list.filter(value=>value&&typeof value.id==='string'&&ownJids.has(value.id.replace(/:\d+(?=@)/,''))):[];
+      const usernames=[...new Set(matches.map(value=>value.username).filter(value=>typeof value==='string'&&value.length>0&&value.length<=128))];
+      const username=usernames.length===1?usernames[0]:null;
       snapshot('account_username','wis-5679',username?{available:true,response_verified:true,username,source:'usync_username_protocol',error:null}:{available:false,response_verified:false,...preservePrevious(),source:'usync_username_protocol',error:'no_exact_username_reply'});
       return {available:Boolean(username)};
     } catch(error) {
@@ -611,7 +608,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       } else if(command.kind==='bot_list') {
         if(command.target)throw Error('invalid_target');
         const result=await readCall(current,'bot_list');
-        snapshot('bot_list','wis-5679',{...result,available:true,response_verified:true,error:null,source:'checked_bot_iq'});
+        snapshot('bot_list','wis-5679',{...result,available:true,response_verified:true,error:null,source:'baileys_getBotListV2'});
       } else if(command.kind==='newsletter_messages') {
         if(!/^\d{1,40}@newsletter$/.test(command.target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('unknown_newsletter');
         const result=await readCall(current,'newsletter_messages',[command.target]);

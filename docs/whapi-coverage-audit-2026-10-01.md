@@ -57,3 +57,239 @@ La dependencia fijada es `baileys@7.0.0-rc14`. Su interfaz tipa `labels.edit` y 
 Tras el despliegue anterior, la primera carga de Chrome mostró que el resumen no podía interpretar una respuesta del servicio. Una recarga posterior recuperó el panel y sus agregados (907 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos); la tarjeta de conexión seguía verificada. No se pudo atribuir aquella respuesta a una ruta concreta antes de corregir el diagnóstico, así que no se registra como causa resuelta. El cliente ahora identifica el prefijo controlado del endpoint y el estado HTTP, omite queries e IDs dinámicos y mantiene una lista permitida para las dos rutas fijas de diagnóstico. Las pruebas cubren 503 HTML, query/ID privados, esas rutas fijas y respuestas JSON válidas. Desplegado en EasyPanel y revisado por QA independiente (3/3 pruebas enfocadas; suite completa 226/226).
 
 **Próxima ruta:** si el aviso reaparece, usar el endpoint y estado visibles para rastrear el fallo concreto. En paralelo, continuar el inventario de getters públicos de solo lectura por una ruta distinta; no repetir el getter del catálogo después de su `read_timeout` sin un cambio verificable en lector o transporte.
+
+### Sesión vinculada y refresco manual verificados — 2026-10-01
+
+Con la sesión administrativa existente en Chrome, Inicio mostró la conexión vinculada activa e identidad verificada. La recolección manual `all`, solicitada desde Configuración, terminó en estado `done` a las 06:43 (hora local); la tabla no mostró resultado ni error para esa solicitud. Inicio reflejó 908 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos, con 1.000 eventos, 28 tipos de datos guardados y 410 campos listados. Había cero operaciones pendientes o fallidas. No se inspeccionaron ni registraron valores, destinos o identificadores de contactos.
+
+Configuración sigue mostrando la agenda de lecturas habilitada cada 15 minutos, lease vigente, envíos deshabilitados, webhooks deshabilitados e historial completo `false`. Inicio mantiene 50 lecturas fallidas históricas agregadas; la tabla de errores incluye `bot_list` (`provider_error`) y `catalog` (`read_timeout`). El contador de operaciones fallidas está separado de estos fallos de lectura. Que la lectura `all` haya terminado no resuelve esas rutas independientes ni completa el historial previo al enlace. La acción no envió mensajes, reintentó el catálogo ni cambió la sesión.
+
+El catálogo visible en producción carga 182 métodos y 182 esquemas, y advierte que los candidatos y las variables observadas no prueban paridad. El valor agregado de metadatos grupales sigue limitado a grupos conocidos y no revela campos individuales. Permanecen brechas grandes de lectura y de operaciones no disponibles en Baileys.
+
+**Próxima ruta:** revisar una lectura independiente pendiente distinta de `catalog` y `bot_list`, usando la ficha de frescura y únicamente evidencia agregada. Después documentar los getters sin método público y los campos aún no observados. No habilitar envíos, webhooks ni campañas como parte de esta verificación.
+
+### Rotación automática confirmada en producción — 2026-10-01
+
+Sin modificar la programación ni lanzar otra consulta manual, esperé el siguiente turno automático de `account_limits`. Configuración registró `done` a las 06:48 hora local (09:48:54 UTC), mantuvo el lease vigente y avanzó la próxima ruta a `account_username` para las 07:03 hora local. `catalog` y `bot_list` siguen figurando como fallos históricos independientes; el éxito de esta lectura no los resuelve. La agenda productiva ya cumple el intervalo de 15 minutos y rota entre tipos; no creé una segunda automatización para duplicar esa carga.
+
+**Próxima ruta:** dejar que la ruta automática `account_username` termine y revisar solo estado, hora y presencia agregada. Mantener pausa de envíos y webhooks; luego avanzar a otra ruta con evidencia de lectura, sin repetir las que fallaron salvo que cambie el lector o la evidencia del transporte.
+
+### Perfil Business: campos pendientes ya contemplados por el lector — 2026-10-01
+
+Revisé en producción el detalle de `getbusinessprofile` y el allowlist del worker. El lector propio ya conserva de forma acotada `address`, `email`, `website[]`, zona horaria y hasta 28 entradas de horarios; el lector de perfiles Business de contactos conocidos también conserva dirección, email, sitios y las entradas recibidas. No hace falta ampliar el allowlist ni hacer consultas masivas a contactos.
+
+El explorador autenticado reporta 8/12 rutas de respuesta para `getbusinessprofile`: se observaron el identificador correlacionado, descripción, objeto de horarios, zona horaria y cuatro componentes de configuración del horario. No se observaron dirección, email, lista de sitios ni la ruta de configuración de horarios como arreglo. La lectura propia terminó correctamente a las 06:43 hora local y los cuatro pendientes seguían indicados como “revisados sin observación”. Esto es evidencia de ausencia en la respuesta observada, no prueba de que esos campos estén vacíos en la cuenta. No registrar sus valores ni modificar el perfil.
+
+**Próxima ruta:** el scheduler mostraba `account_username` para las 07:03 hora local. Esperar ese turno automático y validar solo si hubo respuesta correlacionada, su hora y estado; si no devuelve un resultado verificable, mantenerlo parcial y pasar a un getter de solo lectura distinto. No repetir el perfil Business, no consultar perfiles en lote y no habilitar operaciones de escritura.
+
+El turno automático de `account_username` terminó en `done` a las 07:03 hora local. El explorador de datos muestra el snapshot actualizado, pero `response_verified` sigue falso y no apareció un campo `username`; por eso el endpoint sigue parcial y la respuesta no prueba que la cuenta carezca de nombre. El mismo panel fijó `contact_profiles` como próxima ruta para las 07:18 hora local. La sesión permaneció conectada y no se cambiaron datos de WhatsApp.
+
+**Próxima ruta:** dejar completar `contact_profiles` y contrastar solo número de lecturas/estado/actualidad, sin copiar contenido ni IDs de contactos. Mantener el alcance automático acotado a contactos ya conocidos; no disparar un escaneo manual adicional ni ampliar el lote.
+
+### Turno automático de perfiles y siguiente ruta — 2026-10-01
+
+El panel autenticado confirmó que `contact_profiles` terminó `Completada` a las 07:18 hora local; su contador agregado pasó de 9 a 10. Los totales visibles se mantuvieron en 908 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos, y el explorador continuó listando 410 campos. No se inspeccionaron valores ni perfiles individuales, así que el resultado solo confirma que el lector programado completó su ciclo; no demuestra cobertura nueva ni que todas las propiedades de perfil estén disponibles.
+
+La conexión permaneció `Conectada · identidad verificada`, el worker activo y el recolector dentro del intervalo. La siguiente ruta automática quedó en `group_requests` para las 07:33 hora local. Los mensajes en vivo todavía muestran su última recepción observada el 28/9; no hubo evidencia nueva de actividad entrante durante esta revisión.
+
+**Próxima ruta:** dejar terminar `group_requests` y registrar únicamente hora, estado y conteos agregados; no copiar solicitudes, IDs, nombres ni números. Después seguir con el siguiente recurso de solo lectura habilitado por la agenda, conservando los envíos pausados y los webhooks deshabilitados.
+
+### Solicitudes de grupos: error agregado y rotación continúa — 2026-10-01
+
+La ejecución automática de `group_requests` terminó `failed` a las 07:33 hora local; la tabla solo registró `provider_error`, sin detalle seguro que permita atribuirlo a un motivo más específico. La agenda conservó el lease vigente y avanzó a `avatars` para las 07:48. No abrí ni registré solicitudes, nombres, números o IDs, y no repetí la lectura manualmente.
+
+**Próxima ruta:** esperar `avatars` y revisar solo estado/hora. Si esa lectura falla, conservar el error agregado y avanzar por la rotación; no consultar avatares individuales.
+
+La ruta automática `avatars` terminó `done` a las 07:48 hora local y el lease siguió vigente. La interfaz no mostró resultado agregado de propiedades nuevas, así que esto acredita el ciclo completado, no cobertura adicional. El scheduler avanzó a `bot_list` para las 08:03. No abrí archivos de avatar ni perfil individual.
+
+**Próxima ruta:** esperar el turno de `bot_list`; revisar únicamente estado y código de resultado sanitizado. Si vuelve a fallar, dejar la ruta en fallo y continuar con el scheduler, sin llamadas manuales repetidas.
+
+El turno automático `bot_list` terminó `failed` a las 08:03 hora local con el mismo código agregado `provider_error`; no apareció evidencia que justifique un reintento. El lease continúa vigente y la rotación avanzó a `disappearing_mode` para las 08:18. La respuesta de bots no se leyó ni se copió.
+
+**Próxima ruta:** observar `disappearing_mode` en la siguiente ejecución y anotar solo estado/hora. Las rutas de lectura con fallos históricos siguen siendo brechas, no equivalencias demostradas con WHAPI.
+
+El turno automático `disappearing_mode` terminó `done` a las 08:18 hora local; el panel no mostró campos agregados nuevos para esa lectura. El lease continuó vigente y la próxima ruta avanzó a `community_subgroups` para las 08:33. No se abrió ninguna conversación ni se consultaron valores individuales.
+
+**Próxima ruta:** esperar la consulta limitada a subgrupos de una comunidad ya conocida y verificar únicamente estado/hora, sin listar nombres o participantes.
+
+La ruta `community_subgroups` no se ejecutó: el scheduler la omitió a las 08:33 hora local por `known_community_required`; no había una comunidad conocida elegible. El lease sigue vigente y la siguiente ruta quedó en `all` para las 08:48. No busqué ni seleccioné una comunidad para forzar la lectura.
+
+**Próxima ruta:** dejar que el ciclo `all` programado termine y revisar estado agregado; mantener fuera del informe nombres, participantes y contenido de conversaciones.
+
+El ciclo automático `all` terminó `done` a las 08:48 hora local. La agenda mantuvo el lease vigente y avanzó a `blocklist` para las 09:03; los totales visibles del panel siguieron en 908 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos. No se inspeccionaron conversaciones ni listas de personas. La finalización confirma el ciclo secuencial, pero no recupera el historial anterior al enlace ni acredita paridad con todos los esquemas WHAPI.
+
+**Próxima ruta:** esperar `blocklist` y registrar únicamente resultado agregado. No activar bloqueos ni realizar mutaciones.
+
+La lectura programada `blocklist` terminó `done` a las 09:03 hora local; no se mostró resultado en la tabla de solicitudes. El scheduler conservó su lease y avanzó a `communities` para las 09:18. La lista se consultó en modo lectura, sin crear ni modificar bloqueos.
+
+**Próxima ruta:** esperar `communities` y comprobar su estado, sin leer nombres, temas ni miembros.
+
+El ciclo automático `communities` terminó `done` a las 09:18 hora local; la tabla no indicó error ni resultado adicional. La siguiente ruta automática quedó en `collections` para las 09:33, con el lease vigente. Este resultado confirma que terminó el lector, pero no implica descubrir comunidades globales ni completar los campos de WHAPI.
+
+**Próxima ruta:** observar `collections` y sus conteos agregados, sin consultar títulos ni valores de colecciones.
+
+`collections` terminó `done` a las 09:33 hora local. En ese mismo turno la agenda omitió `catalog` por `recent_read_timeout`, sin volver a ejecutar el lector que continúa fallando; luego avanzó a `newsletters` para las 09:48. El lease sigue vigente. No se leyó ningún título, mensaje de canal ni valor de colección.
+
+**Próxima ruta:** esperar `newsletters` y verificar solo estado/hora; mantener el catálogo aplazado hasta que exista evidencia de transporte distinta.
+
+La lectura automática `newsletters` terminó `done` a las 09:48 hora local, con el lease vigente y sin error en la tabla. La próxima ruta rotó a `account_limits` para las 10:03. El estado `done` no se toma como validación de cada subcampo de la referencia, y no se consultó contenido de canales.
+
+**Próxima ruta:** verificar `account_limits` y el estado de conexión con conteos/rutas, sin copiar valores de cuota ni indicadores por cuenta.
+
+El turno automático `account_limits` terminó `done` a las 10:03 hora local; no transcribí valores de cuota, estados ni timers. La siguiente ruta quedó en `account_username` para las 10:18, con el worker y el lease activos. La finalización del snapshot no valida todas las propiedades ni implica que WHAPI y Baileys compartan formato.
+
+**Próxima ruta:** esperar la consulta correlacionada del username propio y documentar solo si hubo respuesta verificable, nunca el valor del usuario.
+
+La lectura `account_username` terminó `done` a las 10:18 hora local y su contador agregado llegó a 13. En la tabla de campos, `response_verified` aparece en un registro con conteo verdadero cero; el campo `username` no aparece. Por lo tanto, no hay una respuesta propia correlacionada demostrada y el username continúa desconocido; no inferí que la cuenta carezca de él ni copié valores. La próxima ruta automática es `contact_profiles` a las 10:33, limitada a contactos conocidos.
+
+**Próxima ruta:** verificar solo estado y cantidad de perfiles procesados; no abrir ni transcribir perfiles.
+
+El lector automático `contact_profiles` terminó `done` a las 10:33 hora local; el lease siguió vigente y la siguiente ruta pasó a `group_requests` para las 10:48. La tabla no dio un resultado de campos agregado para el turno, por lo que no lo cuento como cobertura adicional. No se consultó ningún perfil individual.
+
+**Próxima ruta:** esperar el siguiente `group_requests`; revisar solo el código agregado y no reintentar si persiste `provider_error`.
+
+La lectura programada `group_requests` ahora terminó `done` a las 10:48 hora local, a diferencia del turno anterior con `provider_error`. El agregado de snapshots informa cinco registros con `response_verified`, pero cero marcados como verificados; por eso el estado exitoso de la operación no prueba una respuesta útil ni una lista actual de solicitudes. No abrí solicitudes ni inspeccioné grupo/destinatarios. La siguiente ruta rotó a `avatars` para las 11:03.
+
+**Próxima ruta:** dejar correr `avatars` y confirmar únicamente estado/tiempo; mantener los campos de solicitudes como no verificados hasta obtener evidencia correlacionada explícita.
+
+El ciclo automático `avatars` terminó `done` a las 11:03 hora local y el scheduler avanzó a `bot_list` para las 11:18. El registro agregado muestra un nuevo snapshot/ciclo, pero no expone contenido y no basta para demostrar nuevas URLs o metadatos de perfil; no inspeccioné avatares individuales. El lease siguió vigente.
+
+**Próxima ruta:** observar si `bot_list` se ejecuta o se omite por enfriamiento; registrar solo tipo, hora y código general.
+
+`bot_list` se ejecutó automáticamente a las 11:18 hora local y terminó `failed` con `provider_error`. El scheduler mantiene el lease y rotó a `disappearing_mode` para las 11:33. No consulté la lista devuelta ni lancé una segunda prueba; la evidencia agregada no identifica la fase ni la causa del error.
+
+**Próxima ruta:** dejar que el ciclo `disappearing_mode` avance; no insistir en `bot_list` hasta que el lector o la evidencia de transporte cambien.
+
+### Revalidación del catálogo WHAPI y versión Baileys — 2026-10-01
+
+Volví a descargar el índice público y procesé sus definiciones: siguen siendo 182 métodos y 182/182 esquemas extraídos, sin errores. El diff estructural de `public/whapi-capabilities.json` y `public/whapi-fields.json` contra la captura de las 03:25 UTC contiene solo `captured_at`; no cambiaron métodos ni campos/operaciones. El registro npm también mantiene `baileys` en `7.0.0-rc14` como `latest` (legacy `6.7.24`), así que no apareció una versión nueva para justificar otro barrido de API.
+
+Esto confirma que el catálogo público no cambió, no que Baileys implemente sus 182 métodos. Los artefactos quedaron recapturados a las 14:36–14:37 UTC; la cobertura propia sigue pendiente de validar en las rutas marcadas parcial/no soportada.
+
+**Próxima ruta:** retomar la agenda productiva en `community_subgroups`; la última ejecución verificó que no había una comunidad conocida elegible, así que aceptar la omisión automática y pasar luego a otra lectura.
+
+La agenda omitió `community_subgroups` a las 11:49 hora local con `known_community_required`; no hay comunidad conocida elegible y no seleccioné ninguna manualmente. El worker conserva su lease. Avanzó a `all` para las 12:04, sin enviar mensajes ni cambiar la cuenta.
+
+**Próxima ruta:** esperar el ciclo programado `all` y anotar únicamente estado/timestamp agregado, manteniendo excluidos los contenidos personales.
+
+El ciclo `all` finalizó `done` a las 12:04 hora local y el panel permaneció conectado. La agenda avanzó a `blocklist` para las 12:19. Los agregados del overview cambiaron de 908 a 911 contactos; conversaciones 567, mensajes 1.512, grupos 18, tipos guardados 28 y rutas de campo 410 se mantuvieron iguales. El historial completo continúa en No. El contador global de lecturas fallidas muestra 53 (52 en la captura anterior); no atribuyo ese aumento al ciclo `all` porque el contador reúne otros turnos intermedios. No accedí a los tres registros nuevos ni a conversaciones.
+
+**Próxima ruta:** esperar `blocklist` y revisar estado, conexión y conteos agregados; no tocar bloqueos.
+
+El lector programado `blocklist` terminó `done` a las 12:19 hora local; el worker conserva su lease y la siguiente ruta rotó a `communities` para las 12:34. No se modificó la lista. El catálogo WHAPI recapturado no tuvo cambios estructurales y sigue sirviendo de referencia, no de evidencia de variables disponibles en esta sesión.
+
+**Próxima ruta:** verificar si la lectura de comunidades añade recursos conocidos, usando solo conteos, sin exponer sus nombres o miembros.
+
+`communities` terminó `done` a las 12:34 hora local; la agenda continuó con `catalog` para las 12:49. El estado disponible no expone un resultado agregado de campos para el ciclo de comunidades, por lo que no lo interpreto como nuevas comunidades conocidas. El siguiente intento de catálogo está dentro de la agenda existente tras su enfriamiento; no lo ejecuté manualmente ni abrí productos/valores.
+
+**Próxima ruta:** observar el intento programado de `catalog` tras el enfriamiento y guardar solo la fase/código sanitizado y el estado del worker.
+
+La ruta `catalog` volvió a ejecutarse desde la agenda existente a las 12:49 y terminó `failed` con `read_timeout`. No se lanzó una consulta manual. La siguiente ruta quedó en `collections` para las 13:04; el timeout es recurrente, pero la fase y causa no están determinadas. No se afirma que el catálogo de la cuenta esté vacío.
+
+**Próxima ruta:** dejar que `collections` siga la rotación y guardar su resultado agregado. Para reintentar catalog hace falta cambiar o diagnosticar el transporte/lector, no repetir la misma llamada.
+
+`collections` terminó `done` a las 13:04 hora local con el lease activo; no se inspeccionaron nombres, productos ni payloads de colecciones. No apareció evidencia agregada de rutas de campo nuevas respecto de las 410 ya listadas. La agenda avanzó a `newsletters` para las 13:19.
+
+**Próxima ruta:** dejar que `newsletters` termine y revisar solo estado/hora y cambio de conteos de rutas; no leer contenido de canales.
+
+La lectura programada `newsletters` terminó `done` a las 13:19 hora local. No abrí canales ni mensajes, y la vista de campos no señaló nuevas rutas observadas; los 410 campos siguen siendo el inventario actual. La agenda avanzó a `account_limits` para las 13:34, con el worker y el lease activos.
+
+**Próxima ruta:** revisar el estado de `account_limits` y la frescura, sin registrar valores de cuota ni inferir un límite seguro de envío.
+
+El ciclo automático `account_limits` terminó `done` a las 13:34 hora local; el worker y el lease siguieron activos. La próxima ruta es `account_username` a las 13:49. Los valores de cuota no se copiaron al informe ni se usaron para sugerir volúmenes de envío.
+
+**Próxima ruta:** comprobar únicamente si la lectura de `account_username` recibe una respuesta propia verificable; jamás registrar el nombre de usuario.
+
+El ciclo automático `account_username` terminó `done` a las 13:49 hora local, pero el agregador de cobertura continúa mostrando un registro con `response_verified` y cero verdaderos; no aparece una ruta de campo `username`. El getter, por tanto, no verificó un username para esta cuenta; el nombre permanece desconocido (no se infiere ausencia). La siguiente ruta es `contact_profiles` a las 14:04, aún acotada a contactos ya conocidos.
+
+**Próxima ruta:** revisar únicamente estado/hora del lote de perfiles; no abrir valores individuales.
+
+El lote automático `contact_profiles` terminó a las 14:04 hora local y el panel siguió conectado con el worker activo. La agenda rotó a `group_requests` para las 14:19. Los agregados pasaron de 915 a 917 contactos; las conversaciones (567), mensajes (1.512), grupos (18) y las 410 rutas de campo permanecieron iguales. La ruta `contact.status.status` pasó de 32 a 35 registros, mientras el conteo de textos no vacíos permaneció en 19. No se inspeccionaron los perfiles individuales ni se repitió manualmente la lectura.
+
+**Próxima ruta:** revisar el resultado programado `group_requests` con solo conteos y estado sanitizado; no abrir solicitudes ni seleccionar grupos o participantes.
+
+La ruta programada `group_requests` terminó `done` a las 14:19 hora local y rotó a `avatars` para las 14:34; la conexión y el worker siguen activos. El overview registra 918 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos; continúan 410 rutas de campo observadas. El índice de snapshots muestra seis registros con el campo `group_requests.requests` y no marca nuevos textos no vacíos; esto no permite inferir el número de solicitudes ni que la lista esté vacía. No se consultaron destinos, solicitudes ni participantes.
+
+**Próxima ruta:** comprobar el lote programado `avatars` solo por estado y conteos; no abrir ni exportar imágenes.
+
+El lector programado de `avatars` terminó a las 14:34 hora local; el historial agregado de esa ruta avanzó de cinco a seis lecturas completadas y la tabla sigue listando 410 rutas observadas, sin evidencia de nuevas variables. La conexión WhatsApp continúa verificada y el worker activo. No abrí imágenes ni consulté destinos; la interfaz de cobertura no expone el valor de `available_count`, así que no afirmo cuántas fotos resultaron disponibles. La siguiente ruta es `bot_list` a las 14:49.
+
+**Próxima ruta:** registrar solo el estado y código sanitizado del turno automático `bot_list`, que tiene fallos históricos; no repetirlo manualmente.
+
+### Estado funcional visible del catálogo en producción — 2026-10-01
+
+Revisé la matriz autenticada `#capabilities` en Chrome sin abrir fichas de recursos ni valores privados. La interfaz enumera 182 funciones y 182 esquemas: 0 métodos verificados de punta a punta, 61 parciales, 120 pendientes y 1 no soportado. Estos estados son distintos de la cobertura por campos: que cuatro métodos tengan todas las rutas de respuesta inventariadas/observadas no los convierte en métodos verificados, como advierte la propia matriz. La página quedó nuevamente en Vista general; no se modificó el runtime productivo.
+
+**Próxima ruta:** esperar el intento automático `bot_list` y, tras registrarlo, escoger una ruta pendiente con getter disponible que no dependa de ese método ni del catálogo agotado por timeout.
+
+El turno automático `bot_list` terminó `failed` a las 14:49 hora local con el código sanitizado `provider_error`; el contador de fallos pasó de nueve a diez. La cuenta permaneció conectada y el worker activo. La agenda rotó a `disappearing_mode` para las 15:04. No repetí `bot_list` manualmente: el resultado sigue sin identificar una fase o variable nueva, por lo que insistir con el mismo IQ no aportaría evidencia adicional.
+
+**Próxima ruta:** revisar el estado agregado del `disappearing_mode` programado y comprobar qué campos fueron realmente devueltos, sin modificar la retención de ningún chat.
+
+La consulta automática `disappearing_mode` quedó completada a las 15:04 hora local; su historial subió de siete a ocho éxitos y la matriz registra el campo numérico `duration_seconds` en ocho de nueve snapshots de esa clase. El inventario de campos sigue en 410 rutas. Esto confirma que se guardó un valor validado, pero no se inspeccionó ni se expuso la duración de ningún chat; tampoco se cambió su temporizador. El worker continúa activo. La siguiente ruta de la agenda es `community_subgroups` a las 15:19; el scheduler puede omitirla porque exige una comunidad elegible ya conocida.
+
+La comparación de esquema confirma que `getgroup.ephemeral` de WHAPI es numérico y su equivalencia revisada en WIS es `group.ephemeralDuration`. El `disappearing_mode.duration_seconds` de un chat es otro getter y no se mapea a `getcall.duration_seconds`; la coincidencia del nombre no basta para afirmar equivalencia.
+
+**Próxima ruta:** respetar la condición del scheduler para `community_subgroups`; si se omite por falta de comunidad conocida, seguir con el próximo tipo de lectura en la rotación en vez de elegir un destino manualmente.
+
+Configuración confirmó que el scheduler omitió `community_subgroups` a las 15:19 hora local con `known_community_required`, mantuvo el lease y programó `all` para las 15:34. Esto valida la salida prevista por la regla de selección; no se eligió una comunidad ni se ejecutó una consulta manual.
+
+El turno automático `all` terminó a las 15:34 y la agenda avanzó a `blocklist` para las 15:49. La agenda local subió de 918 a 922 contactos; conversaciones (567), mensajes (1.512), grupos (18) y rutas de campo (410) no cambiaron. No abrí los cuatro contactos nuevos, chats ni miembros de grupos. La sesión y el worker continuaron activos.
+
+**Próxima ruta:** revisar solo el estado agregado de `blocklist`; no consultar ni exportar identificadores bloqueados.
+
+La lectura programada `blocklist` terminó a las 15:49 hora local y su contador agregado de lecturas completadas pasó a 24. La conexión siguió verificada con worker activo; el panel conserva 922 contactos, 567 conversaciones, 1.512 mensajes, 18 grupos y 410 rutas de campo. No se consultó la lista ni se copiaron identificadores. La siguiente ruta programada es `communities` a las 16:04.
+
+`communities` terminó a las 16:04 hora local; el historial agregado avanzó de 25 a 26 lecturas completadas. Los contadores de entidades y las 410 rutas observadas no cambiaron; conexión y worker siguen activos. La interfaz no aporta evidencia de una nueva comunidad elegible ni de campos nuevos, así que no elijo un destino para subgrupos. La próxima ruta es `collections` a las 16:19.
+
+`collections` completó su ciclo a las 16:19 y el historial agregado subió a 24 lecturas completadas. Los contactos aumentaron de 922 a 923; conversaciones (567), mensajes (1.512), grupos (18) y rutas observadas (410) permanecieron iguales. La conexión y el worker siguen activos. No abrí colecciones, nombres ni productos; la siguiente ruta es `newsletters` a las 16:34.
+
+`newsletters` completó su ciclo programado a las 16:34; el historial agregado aumentó de 24 a 25 lecturas. Los agregados del overview (923 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos) y las 410 rutas observadas no cambiaron. La conexión está verificada y el worker sigue activo. No abrí canales ni mensajes. La agenda avanzó a `account_limits` para las 16:49; no se consultarán ni registrarán valores de cuota.
+
+ **Próxima ruta:** comprobar únicamente que `account_limits` complete y que el worker conserve su lease; mantener fuera del informe los valores de cuota.
+
+### Control de frescura de la auditoría — 2026-10-01
+
+La ejecución local de `whapi-field-coverage-cli` toma por defecto la base SQLite local, no la base de producción. El archivo tenía mtime `2026-10-01T01:19:44.695Z`, pero eso no representa la frescura de sus snapshots. Añadí al resumen del CLI el origen lógico de la base y `latest_snapshot_updated_at`; la consulta read-only reporta `2026-09-28T23:43:23.869Z`, unas 68 horas antes de la observación del panel productivo (16:36 hora de Buenos Aires), cuyo snapshot más reciente sí aparecía a las 16:36. El `observed_at` del CLI es solo la hora de generación del informe. Por estas razones excluyo sus conteos de toda afirmación de cobertura actual de producción. Además, “410 campos observados” describe rutas guardadas en WIS; no significa que existan 410 variables de WHAPI ni que el esquema WHAPI esté completo. La siguiente lectura programada es `account_limits` a las 16:49; su resultado se limitará a estado y frescura, sin valores.
+
+Al volver a Inicio, la conexión y el worker seguían activos; contactos subió de 923 a 924 mientras conversaciones (567), mensajes (1.512), grupos (18), tipos guardados (28) y campos listados (410) se mantuvieron. El snapshot más reciente seguía en 16:36, así que el nuevo contacto no se atribuye a una lectura específica ni se examina individualmente.
+
+La lectura programada `account_limits` terminó a las 16:49 y el historial agregado de esa ruta pasó de 20 a 21 ciclos completados. Conexión, worker y 410 campos observados permanecieron sin cambios. No inspeccioné los valores de cuota ni temporizadores. Próxima ruta: `account_username` a las 17:04; su salida se verificará solo por estado y cobertura, sin revelar el nombre.
+
+`account_username` terminó automáticamente a las 17:04 y su historial agregado pasó a 15 ciclos completados. Sin embargo, la ruta `response_verified` sigue en falso; no se verificó una respuesta de username para esta cuenta. El dato permanece desconocido, no se concluye que esté ausente. Conexión, worker y 410 campos observados siguen activos/sin cambio. Próxima ruta: `contact_profiles` a las 17:19, limitada a conteos agregados sin abrir perfiles.
+
+Antes de ese lote, la tabla productiva de cobertura muestra 36 de 924 registros de contacto con `profile_read_at` (aprox. 3,9%). Es una proporción sobre todos los contactos conocidos; algunos no tendrán un perfil consultable, así que no equivale a porcentaje de cobertura elegible. La usaré solo como referencia agregada y no inspeccioné los perfiles asociados.
+
+El lote `contact_profiles` terminó a las 17:19 y su historial subió de 12 a 13 lecturas completadas. El indicador pasó de 36 a 39 registros con `profile_read_at`, mientras contactos subió de 924 a 925. Esto es progreso de consulta, no evidencia de que los tres perfiles contengan todos los campos de WHAPI. Conexión y worker activos; las rutas observadas siguen en 410. Próxima ruta: `group_requests` a las 17:34; revisar solo estado/conteos y no abrir solicitudes.
+
+En el worktree local ajusté `account_username` para consultar en un solo USync las identidades propias PN y LID que expone la sesión y aceptar solamente una respuesta ligada exactamente a uno de esos aliases autenticados; respuestas ajenas o en conflicto siguen sin guardarse. La prueba de regresión cubre una respuesta asociada al LID propio y una respuesta ajena. La suite completa queda en 232/232. Este cambio todavía está en el worktree y no está activo en producción; la lectura de las 17:04 ocurrió con la versión desplegada anterior.
+
+### Lecturas WHAPI pendientes frente a Baileys — 2026-10-01
+
+Al revisar la referencia capturada, encontré 59 métodos con operación exclusivamente `GET`: 53 parciales, cinco pendientes y uno no soportado. No hay un getter de datos inequívocamente seguro entre los cinco pendientes que no tenga ya una ruta automática equivalente: `loginuserrowdata` y `loginuserviaauthcode` son parte del ciclo de vinculación/autorización (la documentación oficial de [Login user with QR-rowdata](https://whapi.readme.io/reference/loginuserrowdata) confirma que `wakeup` es verdadero por defecto y puede lanzar el canal); `getaccountregistrationdate` no tiene un getter público identificado en Baileys, y `findnewsletter`/`recommendednewsletter` tampoco tienen método público identificado. No invoco ni implemento esas rutas como lecturas pasivas sin un contrato seguro verificado. Esto no reduce los 182 métodos del catálogo: explica una brecha concreta de portabilidad y mantiene separado el inventario de la paridad probada.
+
+### Revision y verificacion adicional de username - 2026-10-01
+
+La prueba local conserva casos exitosos PN y LID, incluyendo identidad solo-LID y sufijo de dispositivo; tambien comprueba respuesta ajena, usernames contradictorios y aliases propios que se normalizan al mismo JID. Las respuestas ajenas o contradictorias no se guardan y solo preservan como obsoleto el dato propio previo. La revision independiente de qa_username_aliases acepto el cambio sin defectos bloqueantes. npm test: 232/232; prueba enfocada: 1/1; git diff --check: correcto. Sigue en el worktree y no esta desplegado.
+
+**Proxima ruta:** esperar el turno programado group_requests de las 17:34 hora local; revisar solo estado agregado, conexion y frescura. No abrir solicitudes ni disparar lecturas manuales mientras corre la agenda.
+
+
+### Resultado programado group_requests - 2026-10-01 17:34
+
+El intento automatico termino failed con el codigo sanitizado provider_error; el contador paso de 6 a 7 fallos de esa ruta. La conexion siguio verificada y el worker activo. El inventario permanece en 410 rutas observadas; no se abrieron solicitudes ni se repitio la lectura manualmente, y no se concluye que una lista este vacia.
+
+**Proxima ruta:** revisar solo estado agregado/frescura del lote programado avatars a las 17:49; no abrir, descargar ni exportar imagenes.
+
+
+### Resultado programado avatars - 2026-10-01 17:49
+
+El ciclo automatico termino failed con provider_error. La conexion siguio verificada y el worker activo; el inventario permanece en 410 rutas observadas. No se abrieron ni descargaron imagenes, y el resumen no permite inferir si hubo imagenes disponibles.
+
+**Proxima ruta:** observar solo el estado agregado de bot_list a las 18:04; no consultar manualmente el mismo getter si vuelve a fallar.
+
+La ruta automática `bot_list` terminó `failed` a las 18:04 hora local con `provider_error`; el total histórico agregado para esa lectura avanzó a 10. La conexión siguió verificada, el worker activo y el inventario permaneció en 410 campos. El panel pasó a la ruta de temporizador de mensajes para las 18:19. El resultado no identifica la causa de transporte ni se interpreta como lista vacía.
+
+En el worktree reemplacé la consulta IQ manual por el getter de solo lectura `getBotListV2` que Baileys expone y añadí validación de identidad, límites y metadatos. El getter convierte una respuesta sin contenedor de bots en `[]`; por eso una lista vacía ahora queda como respuesta no verificable y no como ausencia confirmada. La alternativa aún no está desplegada y esta ejecución productiva usó el código anterior, así que no atribuyo el fallo a una causa concreta. La revisión independiente aceptó el cierre conservador y el test de regresión. Después del cambio, `npm test` pasó 233/233, `npm run build` (validaciones de sintaxis del proyecto) y `git diff --check` pasaron. El alcance sigue sin probar paridad ni cobertura completa.
+
+**Proxima ruta:** mantener el ciclo automático `disappearing_mode` a las 18:19; no repetir `bot_list` manualmente. Antes de desplegar la alternativa local, terminar la suite y build completos y confirmar la ruta de entrega.

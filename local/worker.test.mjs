@@ -7,7 +7,7 @@ import {resolve} from 'node:path';
 import {EventEmitter} from 'node:events';
 import {proto} from 'baileys';
 import {PublicCatalogError} from './catalog-http.mjs';
-import {timestamp,identityMatches,acquireLease,mediaFile,runWorker,safeGroup,normalizeContent,classifyReadError,readBudgetMs,readCallBudgetMs,checkedBusinessRead,checkedListRead,callSnapshot,checkedGroupRead,checkedAccountLimits,checkedNewsletterMessages,reconnectDecision} from './worker.mjs';
+import {timestamp,identityMatches,acquireLease,mediaFile,runWorker,safeGroup,normalizeContent,classifyReadError,readBudgetMs,readCallBudgetMs,checkedBusinessRead,checkedListRead,callSnapshot,checkedGroupRead,checkedAccountLimits,checkedNewsletterMessages,checkedBotList,reconnectDecision} from './worker.mjs';
 
 test('rapid connection flaps reach a bounded reconnect stop while stable sessions reset the streak',()=>{
  let attempts=0;const delays=[];
@@ -24,6 +24,19 @@ test('account limits require actual objects and never default missing restrictio
  const quota=await checkedAccountLimits(socket({total_quota:100,used_quota:0,capping_status:'CAPPED',mv_status:'BOGUS',cycle_start_timestamp:'1700000000'}),'quota');assert.equal(quota.used_quota,0);assert.equal(quota.mv_status,null);assert.equal(quota.cycle_start_timestamp,'1700000000');assert.equal(quota.capping_status,'CAPPED');
  const restricted=await checkedAccountLimits(socket({is_active:true,time_enforcement_ends:'1700000000',enforcement_type:'WEB_COMPANION_ONLY'}),'timelock');assert.equal(restricted.is_active,true);
  const quality=await checkedAccountLimits(socket({enforcement_type:'BIZ_QUALITY'}),'timelock');assert.equal(quality.enforcement_type,'BIZ_QUALITY');assert.equal(quality.is_active,null);
+});
+
+test('bot list uses Baileys getter, validates identities and bounds retained metadata',async()=>{
+ let reads=0,writes=0;
+ const socket={getBotListV2:async()=>{reads++;return [{jid:'123@s.whatsapp.net',personaId:'helpful_bot'},{jid:'456@lid',personaId:undefined}];},query:async()=>{writes++;throw Error('unexpected raw query');}};
+ const result=await checkedBotList(socket);
+ assert.deepEqual(result,{bots:[{jid:'123@s.whatsapp.net',persona_id:'helpful_bot'},{jid:'456@lid',persona_id:null}],truncated:false,partial:true,complete:false,limit:1000});
+ assert.equal(reads,1);assert.equal(writes,0);
+ await assert.rejects(checkedBotList({getBotListV2:async()=>[]}),/invalid_bot_response/);
+ await assert.rejects(checkedBotList({getBotListV2:async()=>[{jid:'not-an-identity'}]}),/invalid_bot_response/);
+ await assert.rejects(checkedBotList({getBotListV2:async()=>[{jid:'123@bot',personaId:'bad value'}]}),/invalid_bot_response/);
+ assert.equal((await checkedBotList({getBotListV2:async()=>Array.from({length:1001},(_,index)=>({jid:`${index+1}@bot`,personaId:'bot'}))})).bots.length,1000);
+ await assert.rejects(checkedBotList({}),/capability_unavailable/);
 });
 
 test('checked group lists require verified container and never turn timeout into empty data',async()=>{
@@ -185,7 +198,7 @@ test('read-only metadata commands persist account/groups, normalize events and r
  const socket={ev,user:{id:'5491111115679:1@s.whatsapp.net',name:'Owner',noiseKey:'never-store'},end(){},
   fetchStatus:async()=>{reads++;return[{id:'5491111115679@s.whatsapp.net',status:{status:'About',setAt:new Date('2026-01-01T00:00:00Z'),secret:'never-store'}}];},
   fetchPrivacySettings:async()=>{reads++;return {last:'contacts',profile:'contacts',auth:'never-store'};},
-  getBusinessProfile:async()=>{reads++;return {description:'Business',website:['https://example.test'],business_hours:{timezone:'America/Argentina/Buenos_Aires',config:[{day_of_week:'monday',mode:'specific_hours',open_time:540,close_time:1080,secret:'never-store'}]}};},
+  getBusinessProfile:async()=>{reads++;return {address:'Test address',description:'Business',email:'business@example.test',category:'retail',website:['https://example.test'],business_hours:{timezone:'America/Argentina/Buenos_Aires',config:[{day_of_week:'monday',mode:'specific_hours',open_time:540,close_time:1080,secret:'never-store'}]},secret:'never-store'};},
   groupFetchAllParticipating:async()=>{reads++;return {'123@g.us':{id:'123@g.us',subject:'Group',size:1,participants:[{id:'111@lid',admin:'admin'}],inviteCode:'never-store'}};},
   sendMessage(){writes++;},chatModify(){writes++;},groupUpdateSubject(){writes++;}
  };
@@ -205,6 +218,7 @@ test('read-only metadata commands persist account/groups, normalize events and r
   assert.equal(profile.name,'Owner');
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='status'").get().payload).items[0].status.setAt,'2026-01-01T00:00:00.000Z');
    assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='business'").get().payload).business_hours.config[0].open_time,540);
+   const ownBusiness=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='business'").get().payload);assert.equal(ownBusiness.address,'Test address');assert.equal(ownBusiness.email,'business@example.test');assert.equal(ownBusiness.category,'retail');assert.deepEqual(ownBusiness.website,['https://example.test']);assert.equal(JSON.stringify(ownBusiness).includes('never-store'),false);
    const presence=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='presence' AND resource_id='555@lid'").get().payload);assert.equal(presence.presences['555@lid'].lastKnownPresence,'available');assert.equal(presence.presences['666@lid'].lastKnownPresence,'composing');assert.ok(presence.presences['555@lid'].observed_at);assert.ok(presence.presences['666@lid'].observed_at);assert.equal(JSON.stringify(presence).includes('never-store'),false);const NativeDate=Date;globalThis.Date=class extends NativeDate{constructor(...args){super(...(args.length?args:['2026-09-28T06:00:00.000Z']));}static now(){return NativeDate.parse('2026-09-28T06:00:00.000Z');}};try{for(let batch=0;batch<3;batch++){const presences=Object.fromEntries(Array.from({length:256},(_,index)=>[`${batch*256+7000000+index}@lid`,{lastKnownPresence:'available'}]));ev.emit('presence.update',{id:'555@lid',presences});}}finally{globalThis.Date=NativeDate;}const bounded=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='presence' AND resource_id='555@lid'").get().payload);assert.equal(Object.keys(bounded.presences).length,512);assert.equal(bounded.presences['7000000@lid'],undefined);assert.ok(bounded.presences['7000256@lid']);assert.ok(bounded.presences['7000767@lid']);
   const contact=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='contact'").get().payload);
   assert.equal(contact.name,'Saved Name');assert.equal(contact.notify,'Push Name');
@@ -224,26 +238,34 @@ test('read-only metadata commands persist account/groups, normalize events and r
   assert.equal(reads,4);assert.equal(writes,0);
  } finally {await worker.stop();db.close();}
 });
-test('own account username read stores only an exact USync identity reply and preserves stale data when unmatched',async()=>{
+test('own account username read verifies PN and LID aliases, rejects unrelated or conflicting replies, and preserves stale data',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();
- const dir=mkdtempSync(resolve(tmpdir(),'wis-username-test-')),ev=new EventEmitter();let writes=0,reply;
- const own='5491111115679@s.whatsapp.net';
+ const dir=mkdtempSync(resolve(tmpdir(),'wis-username-test-')),ev=new EventEmitter();let writes=0,reply,expectedIds=[];
+ const own='5491111115679@s.whatsapp.net',ownLid='123456789012345@lid';
  class User{withId(id){this.id=id;return this;}}
  class Query{constructor(){this.users=[];this.protocols=[];}withUser(user){this.users.push(user);return this;}withUsernameProtocol(){this.protocols.push({name:'username'});return this;}}
- const socket={ev,user:{id:'5491111115679:2@s.whatsapp.net'},end(){},executeUSyncQuery:async query=>{assert.equal(query.users[0].id,own);assert.deepEqual(query.protocols.map(x=>x.name),['username']);return reply;}};
+ const socket={ev,user:{id:'5491111115679:2@s.whatsapp.net',lid:ownLid},end(){},executeUSyncQuery:async query=>{assert.deepEqual(query.users.map(user=>user.id),expectedIds);assert.deepEqual(query.protocols.map(x=>x.name),['username']);return reply;}};
  const fake={USyncUser:User,USyncQuery:Query,default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
  const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),readIntervalMs:0});
  const enqueue=async id=>{const date=new Date().toISOString();db.prepare('INSERT INTO read_commands(id,kind,status,created_at,updated_at) VALUES(?,?,?,?,?)').run(id,'account_username','pending',date,date);for(let attempt=0;attempt<20&&db.prepare('SELECT status FROM read_commands WHERE id=?').get(id).status==='pending';attempt++){await worker.drainReads();await new Promise(resolve=>setTimeout(resolve,5));}};
  try{
   await new Promise(resolve=>setTimeout(resolve,10));ev.emit('connection.update',{connection:'open'});
-  reply={list:[{id:own,username:'wis_owner',secret:'NEVER_STORE'}]};await enqueue('username-exact');
-  const stored=db.prepare("SELECT payload FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get();assert.ok(stored,JSON.stringify({command:db.prepare("SELECT status,error FROM read_commands WHERE id='username-exact'").get(),connection:db.prepare("SELECT status,lease_expires_at FROM connections WHERE id='wis-5679'").get()}));let value=JSON.parse(stored.payload);
+  expectedIds=[own,ownLid];reply={list:[{id:own,username:'wis_owner',secret:'NEVER_STORE'}]};await enqueue('username-pn');
+  const stored=db.prepare("SELECT payload FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get();assert.ok(stored,JSON.stringify({command:db.prepare("SELECT status,error FROM read_commands WHERE id='username-pn'").get(),connection:db.prepare("SELECT status,lease_expires_at FROM connections WHERE id='wis-5679'").get()}));let value=JSON.parse(stored.payload);
   assert.deepEqual({available:value.available,response_verified:value.response_verified,username:value.username,source:value.source},{available:true,response_verified:true,username:'wis_owner',source:'usync_username_protocol'});
-  assert.equal(JSON.stringify(value).includes('NEVER_STORE'),false);assert.equal(db.prepare("SELECT status FROM read_commands WHERE id='username-exact'").get().status,'done');
+  assert.equal(JSON.stringify(value).includes('NEVER_STORE'),false);assert.equal(db.prepare("SELECT status FROM read_commands WHERE id='username-pn'").get().status,'done');
+  reply={list:[{id:'123456789012345:2@lid',username:'wis_owner_lid',secret:'NEVER_STORE'}]};await enqueue('username-lid');
+  value=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get().payload);assert.equal(value.username,'wis_owner_lid');assert.equal(value.response_verified,true);assert.equal(JSON.stringify(value).includes('NEVER_STORE'),false);
   reply={list:[{id:'5491111110000@s.whatsapp.net',username:'somebody_else'}]};await enqueue('username-unmatched');
   value=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get().payload);
-  assert.equal(value.available,false);assert.equal(value.response_verified,false);assert.equal(value.username,'wis_owner');assert.equal(value.stale,true);assert.equal(value.error,'no_exact_username_reply');assert.equal(JSON.stringify(value).includes('somebody_else'),false);
-  assert.equal(db.prepare("SELECT status FROM read_commands WHERE id='username-unmatched'").get().status,'done');assert.equal(writes,0);
+  assert.equal(value.available,false);assert.equal(value.response_verified,false);assert.equal(value.username,'wis_owner_lid');assert.equal(value.stale,true);assert.equal(value.error,'no_exact_username_reply');assert.equal(JSON.stringify(value).includes('somebody_else'),false);
+  assert.equal(db.prepare("SELECT status FROM read_commands WHERE id='username-unmatched'").get().status,'done');
+  reply={list:[{id:own,username:'pn_value'},{id:ownLid,username:'lid_value'}]};await enqueue('username-conflicting');
+  value=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get().payload);assert.equal(value.available,false);assert.equal(value.response_verified,false);assert.equal(value.username,'wis_owner_lid');assert.equal(value.stale,true);assert.equal(value.error,'no_exact_username_reply');assert.equal(JSON.stringify(value).includes('pn_value'),false);assert.equal(JSON.stringify(value).includes('lid_value'),false);
+  socket.user={lid:`${ownLid.split('@')[0]}:5@lid`};expectedIds=[ownLid];reply={list:[{id:ownLid,username:'wis_lid_only'}]};await enqueue('username-lid-only');
+  value=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get().payload);assert.equal(value.available,true);assert.equal(value.response_verified,true);assert.equal(value.username,'wis_lid_only');
+  socket.user={id:'5491111115679:3@s.whatsapp.net',lid:'5491111115679:8@s.whatsapp.net'};expectedIds=[own];reply={list:[{id:own,username:'wis_deduplicated'}]};await enqueue('username-deduplicated-alias');
+  value=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get().payload);assert.equal(value.available,true);assert.equal(value.username,'wis_deduplicated');assert.equal(writes,0);
  }finally{await worker.stop();db.close();}
 });
 test('known-chat disappearing mode read stores only an exactly correlated duration',async()=>{
