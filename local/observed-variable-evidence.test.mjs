@@ -53,3 +53,13 @@ test('a field value itself is never included in availability evidence',()=>{
  const result=evidence({textCount:1});
  assert.doesNotMatch(result,/valor privado/);
 });
+
+test('WHAPI label association evidence uses only observed active chat associations',async()=>{
+ const aliasesContext={window:{}};
+ runInNewContext(readFileSync(new URL('./public/whapi-field-aliases.js',import.meta.url),'utf8'),aliasesContext);
+ context.window={WIS_COVERAGE_AVAILABLE:true,WIS_WHAPI_FIELD_ALIASES:aliasesContext.window.WIS_WHAPI_FIELD_ALIASES,WIS_OBSERVED_FIELD_MAP:new Map([['chatId',[{kind:'label_chat_association',records:1,total:1,non_empty_text_records:1,snapshot_updated_at:'2026-10-01T00:00:00.000Z'}]]])};
+ const result=getEvidence({capability_id:'getlabelassociations',direction:'response',field_path:'chats[].id'});
+ assert.match(result,/Equivalencia observada label_chat_association\.chatId/);
+ assert.match(result,/eventos Baileys/);
+ assert.match(result,/no recupera asociaciones históricas/);
+});

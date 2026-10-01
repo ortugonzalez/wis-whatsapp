@@ -112,6 +112,23 @@ test('metadata-only capability entries still declare an evidence scope',()=>{
   assert.equal(aliases.getlabels.fields,undefined);
 });
 
+test('label association evidence is limited to active chat-level Baileys events',()=>{
+  assert.deepEqual(Array.from(aliases.getlabelassociations.source_kinds),['label_chat_association']);
+  assert.equal(aliases.getlabelassociations.fields['chats[].id'][0].field,'chatId');
+  assert.match(aliases.getlabelassociations.fields['chats[].id'][0].note,/no recupera asociaciones históricas.*consulta completa de WHAPI/);
+});
+
+test('label association explorer is visible from Labels and describes partial event coverage',async()=>{
+  const explorer=await readFile(new URL('./public/explorer.js',import.meta.url),'utf8');
+  assert.match(explorer,/page==='labels'\?\['labels','label-associations'\]/);
+  assert.match(explorer,/endpoint:'label-associations'/);
+  assert.match(explorer,/no incluye asociaciones de mensajes ni historial completo de WHAPI/i);
+  assert.match(explorer,/Asociación activa de etiqueta/);
+  assert.match(explorer,/No hay asociaciones activas de chat almacenadas; el inventario puede ser parcial/);
+  assert.doesNotMatch(explorer,/current==='label-associations'\?[^:]*'Se observó una respuesta vacía/);
+  assert.match(explorer,/current==='label-associations'\?'Sin asociaciones activas coincidentes'/);
+});
+
 test('field aliases include clear explanations and bounded source paths',()=>{
   for(const [method,config] of Object.entries(aliases))for(const [field,mappings] of Object.entries(config.fields||{}))for(const mapping of mappings){
     assert.ok(mapping.field.length<=160,`${method}.${field} path is bounded`);

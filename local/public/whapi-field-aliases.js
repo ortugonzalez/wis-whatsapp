@@ -316,7 +316,12 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     }),
   }),
   getlabels: Object.freeze({ source_kinds: Object.freeze(['labels']) }),
-  getlabelassociations: Object.freeze({ source_kinds: Object.freeze(['labels']) }),
+  getlabelassociations: Object.freeze({
+    source_kinds: Object.freeze(['label_chat_association']),
+    fields: Object.freeze({
+      'chats[].id': Object.freeze([{ kind: 'label_chat_association', field: 'chatId', note: 'ID de chat de una asociación activa de etiqueta observada por eventos Baileys; no recupera asociaciones históricas ni equivale a una consulta completa de WHAPI' }]),
+    }),
+  }),
   getblacklist: Object.freeze({ source_kinds: Object.freeze(['blocklist']) }),
   getcommunities: Object.freeze({ source_kinds: Object.freeze(['communities', 'community']) }),
   getcommunity: Object.freeze({ source_kinds: Object.freeze(['community','community_invite']), fields: Object.freeze({ invite_code: Object.freeze([{ kind: 'community_invite', field: 'code', note: 'código de invitación consultado manualmente para una comunidad conocida; solo se conserva dentro del TTL y se borra al vencer', requires_non_empty_text: true }]) }) }),

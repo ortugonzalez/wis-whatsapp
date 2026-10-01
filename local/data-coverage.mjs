@@ -124,6 +124,12 @@ export function buildDataCoverage(db, now = Date.now()) {
     });
   }
   const contextualKinds = [];
+  const chatLabelAssociations = db.prepare("SELECT count(*) AS records,max(updated_at) AS updated_at FROM snapshots WHERE kind='label_association' AND json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.type')='label_jid' AND json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.associated')=1 AND json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.chatId')='text' AND json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.labelId')='text'").get();
+  if (chatLabelAssociations.records > 0) contextualKinds.push({
+    kind: 'label_chat_association',
+    records: chatLabelAssociations.records,
+    field_counts: ['chatId', 'labelId'].map(field => ({ field, records: chatLabelAssociations.records, snapshot_updated_at: chatLabelAssociations.updated_at })),
+  });
   const latestMessageColumns = ['wa_message_id', 'type', 'created_at', 'delivery_status', 'direction', 'body'];
   const messageColumns = new Set(db.prepare('PRAGMA table_info("messages")').all().map(row => row.name));
   const conversationColumns = new Set(db.prepare('PRAGMA table_info("conversations")').all().map(row => row.name));

@@ -444,3 +444,7 @@ El turno `account_limits` se encoló a las 23:59:21 UTC y posteriormente figuró
 ### Lectura programada de Username, 2026-10-01 00:15 UTC
 
 El turno `account_username` se encoló a las 00:14:21 UTC y posteriormente figuró como `done`. `Get account username` permanece en 0/3 rutas y la matriz global en 157/44.628 (14 exactas, 143 equivalencias revisadas, 44.471 sin observar); este resultado no demuestra que la cuenta carezca de username. Próxima ruta: `contact_profiles`, prevista para las 00:29 UTC. Esta nota no incluye valores de perfil.
+
+### Asociaciones de etiquetas por chat
+
+La pestaña de asociaciones muestra únicamente asociaciones de chat (`label_jid`) activas que hayan llegado como eventos de Baileys y sigan vigentes en el último snapshot. Excluye eventos de etiquetas de mensajes y asociaciones retiradas. La API requiere autenticación de lectura. La cobertura agrega el conteo y la fecha de escritura del snapshot para `chatId` y `labelId`, sin devolver sus valores. Esta evidencia permite comparar `chats[].id` de WHAPI con IDs de chats observados, pero no recupera el estado anterior al enlace, no demuestra que se hayan recibido todos los eventos y no equivale a `getlabelassociations` completo.
