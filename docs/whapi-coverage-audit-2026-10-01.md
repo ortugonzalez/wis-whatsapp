@@ -367,3 +367,9 @@ La configuración reportó `account_limits` `done`, worker activo y lease vigent
 La configuración confirmó `account_username` `done`, con lease vigente y próxima ruta `contact_profiles` a las 20:50. El catálogo permanece en 161/44.628 rutas de respuesta observadas (14 exactas, 147 semánticas; 44.467 sin observar; 4 métodos completos), por lo que esta ejecución no añadió cobertura WHAPI. No se leyó ni registró ningún valor de username; `done` describe la terminación de la tarea programada y no implica que WhatsApp entregara un campo verificable.
 
 **Próxima ruta:** observar el lote programado de hasta tres perfiles de contactos ya conocidos a las 20:50; revisar únicamente estado y contadores agregados, sin copiar identidades ni contenido personal.
+
+### Resultado automático de contact_profiles - 2026-10-01 20:50
+
+El ciclo de hasta tres perfiles conocidos terminó `done`; el worker conserva lease vigente y la siguiente ruta configurada es `group_requests` a las 21:05. El resumen de campos WHAPI sigue en 161/44.628 rutas (14 exactas y 147 semánticas; 44.467 sin observar, cuatro métodos completos). No se atribuye nueva cobertura al lote y no se registraron identidades, estados ni contenido de contactos.
+
+**Próxima ruta:** observar únicamente el estado agregado del turno `group_requests` a las 21:05. No elegir grupos ni copiar nombres o participantes.
