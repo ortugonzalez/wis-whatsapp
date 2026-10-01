@@ -361,3 +361,9 @@ El commit `ff65155` quedó desplegado manualmente en EasyPanel. La página de pr
 La configuración reportó `account_limits` `done`, worker activo y lease vigente; siguiente ruta `account_username` a las 20:35. La cobertura de WHAPI se recalculó en 161/44.628 rutas (14 exactas, 147 semánticas), con 44.467 pendientes y cuatro métodos completos. No se observó una ruta de respuesta nueva. `getlimits` continúa descrito como responsabilidad local, porque esos límites locales no equivalen a cuotas del plan WHAPI.
 
 **Próxima ruta:** observar el resultado agregado de `account_username` a las 20:35. No inferir campos de username si WhatsApp no entrega una respuesta correlacionada y verificable.
+
+### Resultado automático de account_username - 2026-10-01 20:35
+
+La configuración confirmó `account_username` `done`, con lease vigente y próxima ruta `contact_profiles` a las 20:50. El catálogo permanece en 161/44.628 rutas de respuesta observadas (14 exactas, 147 semánticas; 44.467 sin observar; 4 métodos completos), por lo que esta ejecución no añadió cobertura WHAPI. No se leyó ni registró ningún valor de username; `done` describe la terminación de la tarea programada y no implica que WhatsApp entregara un campo verificable.
+
+**Próxima ruta:** observar el lote programado de hasta tres perfiles de contactos ya conocidos a las 20:50; revisar únicamente estado y contadores agregados, sin copiar identidades ni contenido personal.
