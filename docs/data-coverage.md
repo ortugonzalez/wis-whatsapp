@@ -436,3 +436,7 @@ El turno `collections` se encoló a las 23:29:21 UTC y posteriormente figuró co
 ### Lectura programada de Newsletters/Canales, 2026-09-30 23:45 UTC
 
 El turno `newsletters` se encoló a las 23:44:21 UTC y posteriormente figuró como `done`. La cobertura global sigue en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar); `Get newsletters` muestra 1/666 rutas. No hubo aumento global atribuible a este turno. Próxima ruta: `account_limits`, prevista para las 23:59 UTC. Esta nota no incluye nombres ni identificadores de canales.
+
+### Lectura programada de límites de cuenta, 2026-10-01 00:00 UTC
+
+El turno `account_limits` se encoló a las 23:59:21 UTC y posteriormente figuró como `done`. La matriz recalculada a las 23:59 UTC permanece en 157/44.628 rutas (14 exactas, 143 equivalencias revisadas y 44.471 sin observar), sin aumento global atribuible al turno. Los límites locales de WIS no equivalen a cuotas ni a un volumen seguro de WhatsApp. Próxima ruta: `account_username`, prevista para las 00:14 UTC.
