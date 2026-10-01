@@ -5,6 +5,7 @@ Actualizado: **2026-09-30 11:38 (Buenos Aires)**. Estado integral: **PARCIAL**. 
 ## Verificado en producción
 
 - URL: `https://wis-whatsapp-wis.xbgh9n.easypanel.host/`.
+- Verificación de continuidad, 2026-10-01 00:59 UTC (2026-09-30 21:59 Buenos Aires): `GET /api/local-status` respondió `connected` con `error: null`. La ruta pública confirma el estado básico de conexión, no identidad ni ingestión reciente. Chrome conserva el panel productivo, pero muestra el acceso de administrador; sin autenticación no se inspeccionaron métricas, lease del worker ni lecturas programadas en esta verificación.
 - El panel reportó `Conectada · identidad verificada`; la identidad vinculada coincide con la esperada. El QR está deshabilitado mientras la sesión está conectada; no se solicitó otro enlace.
 - El resumen de producción muestra 866 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos. No se anotan nombres, números ni contenido de conversaciones. Estos conteos describen lo persistido localmente, no una exportación completa garantizada de WhatsApp.
 - La última observación de producción consultada en Chrome fue el 30/9/2026 a las 11:02 (Buenos Aires): 931 eventos, 0 operaciones pendientes y 0 operaciones fallidas en el resumen; 378 campos en 27 tipos de datos. A las 11:06 la sesión seguía conectada e identidad verificada. La próxima lectura programada vence a las 11:12, por lo que el recolector estaba dentro del intervalo al verificarlo.
