@@ -1,6 +1,6 @@
 import {LOCAL_LIMITS} from './limits.mjs';
 import {projectAccountLimits} from './account-limits-projection.mjs';
-import {buildDataCoverage} from './data-coverage.mjs';
+import {buildDataCoverage,deriveChatMute} from './data-coverage.mjs';
 import {listCapabilityFields,searchCapabilityFields} from './capability-fields.mjs';
 import {summarizeCapabilityFieldCoverage} from './whapi-field-coverage.mjs';
 import {getScheduledReadSettings,getScheduledReadStatus,queueScheduledReadIfDue,updateScheduledReadSettings} from './scheduled-reads.mjs';
@@ -41,7 +41,7 @@ const eligible=c=>Boolean(c?.consent_at&&c.consent_source?.trim()&&c.consent_sco
 const phone=x=>typeof x==='string'&&/^\+[1-9]\d{6,14}$/.test(x);
 function conversationSnapshot(row){
  const raw=JSON.parse(row.payload)||{},scalar=(value,keys)=>Object.fromEntries(keys.filter(key=>typeof value?.[key]==='boolean'||typeof value?.[key]==='string'&&value[key].length<=8192||typeof value?.[key]==='number'&&Number.isFinite(value[key])).map(key=>[key,value[key]]));
- let data={};if(row.kind==='chat')data=scalar(raw,['id','name','displayName','unreadCount','archived','pinned','muteEndTime','conversationTimestamp','lastMessageRecvTimestamp','readOnly','ephemeralExpiration','markedAsUnread']);
+ let data={};if(row.kind==='chat'){data=scalar(raw,['id','name','displayName','unreadCount','archived','pinned','muteEndTime','conversationTimestamp','lastMessageRecvTimestamp','readOnly','ephemeralExpiration','markedAsUnread']);const mute=deriveChatMute(raw);if(mute!==null)data.mute=mute;}
  if(row.kind==='disappearing_mode')data=scalar(raw,['available','response_verified','stale','scope','duration_seconds','set_at','observed_at','error','last_attempt_at']);
  if(row.kind==='group'){data=scalar(raw,['id','subject','owner','ownerPn','subjectOwner','subjectTime','creation','desc','descOwner','descTime','linkedParent','restrict','announce','memberAddMode','joinApprovalMode','isCommunity','isCommunityAnnounce','size','ephemeralDuration','addressingMode']);data.participants=(Array.isArray(raw.participants)?raw.participants:[]).slice(0,4096).map(p=>scalar(p,['id','lid','phoneNumber','name','notify','admin','isAdmin','isSuperAdmin']));}
   if(row.kind==='presence'){const entries=Object.entries(raw.presences??{});data.presences_truncated=entries.length>256;data.presences={};for(const [jid,value] of entries.slice(0,256))if(/^\d+(?::\d+)?@(s\.whatsapp\.net|lid)$/.test(jid)){const item={};if(['available','unavailable','composing','recording','paused'].includes(value?.lastKnownPresence))item.lastKnownPresence=value.lastKnownPresence;for(const key of ['lastSeen','groupOnlineCount'])if(Number.isSafeInteger(value?.[key])&&value[key]>=0)item[key]=value[key];if(typeof value?.observed_at==='string'&&value.observed_at.length<=40&&Number.isFinite(Date.parse(value.observed_at)))item.observed_at=value.observed_at;data.presences[jid]=item;}}

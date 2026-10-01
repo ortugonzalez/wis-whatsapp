@@ -1,12 +1,19 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {buildDataCoverage} from './data-coverage.mjs';
+import {buildDataCoverage,deriveChatMute} from './data-coverage.mjs';
 
 test('coverage keeps explicit successful observation time separate from snapshot write time',()=>{
  const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
  db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('account','self',JSON.stringify({status:'connected',last_success_at:'2026-01-01T00:00:00.000Z'}),'2026-01-02T00:00:00.000Z');db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('profile','unmarked',JSON.stringify({status:'unknown'}),'2026-01-02T00:00:00.000Z');
  try{const coverage=buildDataCoverage(db),fields=coverage.snapshot_kinds.find(row=>row.kind==='account').field_counts,status=fields.find(row=>row.field==='$.status'),unmarked=coverage.snapshot_kinds.find(row=>row.kind==='profile').field_counts.find(row=>row.field==='$.status');assert.equal(status.snapshot_updated_at,'2026-01-02T00:00:00.000Z');assert.equal(status.snapshot_last_success_at,'2026-01-01T00:00:00.000Z');assert.equal(unmarked.snapshot_last_success_at??null,null);}finally{db.close();}
+});
+
+test('coverage derives chat and group mute evidence in milliseconds without leaking direct chats into group results',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const insert=db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)');insert.run('chat','active@s.whatsapp.net',JSON.stringify({muteEndTime:1767229200000}),'2026-01-01T00:00:00.000Z');insert.run('chat','expired@s.whatsapp.net',JSON.stringify({muteEndTime:1767225600000}),'2026-01-01T00:00:00.000Z');insert.run('chat','unknown@s.whatsapp.net',JSON.stringify({name:'No mute observation'}),'2026-01-01T00:00:00.000Z');
+ try{const now=Date.parse('2026-01-01T00:00:00.000Z'),chat=buildDataCoverage(db,now).snapshot_kinds.find(row=>row.kind==='chat'),mute=chat.field_counts.find(row=>row.field==='$.whapi_derived.all_mute_from_mute_end_time');assert.equal(mute.records,2);assert.equal(mute.derived_true_records,1);assert.equal(mute.derived_false_records,1);assert.equal(mute.snapshot_updated_at,null);assert.equal(chat.fields.includes('$.whapi_derived.all_mute_from_mute_end_time'),true);assert.equal(chat.fields.includes('$.whapi_derived.group_mute_from_mute_end_time'),false);assert.equal(deriveChatMute({muteEndTime:now+1},now),true);assert.equal(deriveChatMute({muteEndTime:now-1},now),false);assert.equal(deriveChatMute({muteEndTime:null},now),false);assert.equal(deriveChatMute({},now),null);assert.equal(deriveChatMute({muteEndTime:'1767229200000'},now),null);assert.equal(deriveChatMute({muteEndTime:1767229200},now),null);
+ insert.run('chat','group@g.us',JSON.stringify({muteEndTime:1767229200000}),'2026-01-01T00:00:00.000Z');const withGroup=buildDataCoverage(db,now).snapshot_kinds.find(row=>row.kind==='chat'),groupMute=withGroup.field_counts.find(row=>row.field==='$.whapi_derived.group_mute_from_mute_end_time');assert.equal(groupMute.records,1);assert.equal(groupMute.derived_true_records,1);assert.equal(withGroup.field_counts.find(row=>row.field==='$.whapi_derived.all_mute_from_mute_end_time').records,3);}finally{db.close();}
 });
 
 test('expired group and community invite codes do not count as current field evidence',()=>{

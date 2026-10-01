@@ -31,6 +31,9 @@ test('group aliases use known group metadata and leave unsupported message prove
   assert.equal(aliases.getgroup.fields.name[0].field,'subject');
   assert.equal(aliases.getgroup.fields.created_by[0].field,'owner');
   assert.equal(aliases.getgroups.fields['groups[].created_by'][0].field,'owner');
+  assert.equal(aliases.getgroup.fields.mute[0].field,'whapi_derived.group_mute_from_mute_end_time');
+  assert.equal(aliases.getgroups.fields['groups[].mute'][0].field,'whapi_derived.group_mute_from_mute_end_time');
+  assert.match(aliases.getgroups.fields['groups[].mute'][0].note,/filtrado a JID grupales/);
   assert.match(aliases.getgroup.fields.created_by[0].note,/group\.attrs\.creator/);
   assert.equal(aliases.getgroup.fields.invite_code[0].field,'code');
   assert.equal(aliases.getgroup.fields.invite_code[0].requires_non_empty_text,true);

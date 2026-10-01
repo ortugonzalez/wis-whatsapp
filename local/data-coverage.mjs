@@ -5,6 +5,13 @@ import { classifyWhatsAppChatType } from './wa-chat-type.mjs';
 const SECRET_FIELD = /(token|secret|password|cookie|qr|credential|authorization|private.?key)/i;
 const SAFE_READ_ERROR_CODES = ['read_timeout','read_pending','disconnected','method_missing','identity_unavailable','invalid_target','unknown_target','not_found','order_message_unavailable','order_credential_unavailable','public_catalog_unavailable','graphql_error','access_denied','rate_limited','transport_failed','public_catalog_config_unavailable','provider_error','read_failed','worker_interrupted','read_unavailable_or_disconnected','invalid_response','avatar_unavailable','avatar_destination_rejected','avatar_download_failed','avatar_timeout','avatar_too_large','invalid_avatar_media'];
 
+export function deriveChatMute(chat, now = Date.now()) {
+  if (!chat || !Object.hasOwn(chat, 'muteEndTime')) return null;
+  if (chat.muteEndTime === null) return false;
+  if (!Number.isSafeInteger(chat.muteEndTime) || chat.muteEndTime < 100_000_000_000 || !Number.isFinite(now)) return null;
+  return chat.muteEndTime > now;
+}
+
 function normalizeArrayIndexes(path) {
   let result = '', quoted = false, escaped = false;
   for (let i = 0; i < path.length; i++) {
@@ -73,6 +80,26 @@ export function buildDataCoverage(db, now = Date.now()) {
   flushFields();
   const chatKind = byKind.get('chat');
   if (chatKind) {
+    const muteEvidence = db.prepare("SELECT resource_id,json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.muteEndTime') AS value_type,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.muteEndTime') AS mute_end_time FROM snapshots WHERE kind='chat'").all();
+    const muteCounts = { all: [0, 0], group: [0, 0] };
+    for (const row of muteEvidence) {
+      const mute = row.value_type === 'null' ? false : row.value_type === 'integer' ? deriveChatMute({ muteEndTime: row.mute_end_time }, now) : null;
+      const scopes = classifyWhatsAppChatType(row.resource_id) === 'group' ? ['all', 'group'] : ['all'];
+      for (const scope of scopes) {
+        if (mute === true) muteCounts[scope][0]++;
+        else if (mute === false) muteCounts[scope][1]++;
+      }
+    }
+    for (const [scope, [mutedRecords, unmutedRecords]] of Object.entries(muteCounts)) {
+      const knownMuteStates = mutedRecords + unmutedRecords;
+      if (knownMuteStates > 0) chatKind.fields.set(`$.whapi_derived.${scope}_mute_from_mute_end_time`, {
+        records: knownMuteStates,
+        non_empty_text_records: 0,
+        snapshot_updated_at: null,
+        derived_true_records: mutedRecords,
+        derived_false_records: unmutedRecords,
+      });
+    }
     let recognizedChatTypes = 0;
     for (const row of db.prepare("SELECT resource_id FROM snapshots WHERE kind='chat'").iterate()) {
       if (classifyWhatsAppChatType(row.resource_id)) recognizedChatTypes++;
@@ -114,6 +141,8 @@ export function buildDataCoverage(db, now = Date.now()) {
       field_counts: visibleFields.slice(0, 100).map(([field, value]) => {
         const fieldCount = { field, records: value.records, non_empty_text_records: value.non_empty_text_records, snapshot_updated_at: value.snapshot_updated_at };
         if (value.last_success_at) fieldCount.snapshot_last_success_at = value.last_success_at;
+        if (Number.isInteger(value.derived_true_records)) fieldCount.derived_true_records = value.derived_true_records;
+        if (Number.isInteger(value.derived_false_records)) fieldCount.derived_false_records = value.derived_false_records;
         return fieldCount;
       }),
       omitted_fields: item.omittedFieldNames.size + Math.max(0, visibleFields.length - 100),
