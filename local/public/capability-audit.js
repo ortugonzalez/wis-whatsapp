@@ -12,7 +12,7 @@ function observedVariableEvidence(row){
  if(row.direction!=='response')return 'No aplica: parámetro o campo de entrada';
  if(!window.WIS_COVERAGE_AVAILABLE)return 'Cobertura local no disponible';
  const alias=window.WIS_WHAPI_FIELD_ALIASES?.[row.capability_id]||{},path=row.field_path;
- if((alias.non_equivalent_fields||[]).includes(path))return 'Marcado como no equivalente por semántica';
+  if((alias.non_equivalent_fields||[]).includes(path))return `Sin equivalencia local: ${alias.non_equivalent_notes?.[path]||'marcado por diferencias semánticas'}`;
  const observed=window.WIS_OBSERVED_FIELD_MAP||new Map(),sources=Array.isArray(alias.source_kinds)?alias.source_kinds:[];
  const candidates=alias.fields?.[path]||[];
  const exact=observed.get(path)||[],exactMatches=exact.filter(item=>sources.includes(item.kind)&&!candidates.some(candidate=>candidate.kind===item.kind&&exactObservedPath(candidate.field)===path&&candidate.requires_non_empty_text&&(item.non_empty_text_records||0)===0));

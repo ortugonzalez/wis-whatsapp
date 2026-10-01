@@ -198,6 +198,11 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
   }),
   getcontactprofile: Object.freeze({
     source_kinds: Object.freeze(['contact']),
+    non_equivalent_fields: Object.freeze(['icon', 'icon_full']),
+    non_equivalent_notes: Object.freeze({
+      icon: 'La lectura Baileys obtiene una URL temporal de miniatura que WIS cachea como archivo privado; el panel sirve una URL autenticada y no conserva la URL remota de WHAPI.',
+      icon_full: 'La lectura local solicita solo la miniatura preview; no solicita ni conserva la imagen completa.',
+    }),
     fields: Object.freeze({
       name: Object.freeze([{ kind: 'contact', field: 'name', note: 'nombre de contacto recibido de WhatsApp', requires_non_empty_text: true }]),
       push_name: Object.freeze([{ kind: 'contact', field: 'notify', note: 'nombre push observado en la libreta de WhatsApp' }]),

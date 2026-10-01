@@ -50,8 +50,17 @@ test('field timestamp labels describe snapshot writes rather than confirmed obse
 });
 
 test('a field value itself is never included in availability evidence',()=>{
- const result=evidence({textCount:1});
- assert.doesNotMatch(result,/valor privado/);
+  const result=evidence({textCount:1});
+  assert.doesNotMatch(result,/valor privado/);
+});
+
+test('non-equivalent image fields show the documented contract gap without claiming observation',()=>{
+  const aliasesContext={window:{}};
+  runInNewContext(readFileSync(new URL('./public/whapi-field-aliases.js',import.meta.url),'utf8'),aliasesContext);
+  context.window={WIS_COVERAGE_AVAILABLE:true,WIS_WHAPI_FIELD_ALIASES:aliasesContext.window.WIS_WHAPI_FIELD_ALIASES,WIS_OBSERVED_FIELD_MAP:new Map([['filename',[{kind:'avatar',records:2,total:2}] ]])};
+  const result=getEvidence({capability_id:'getcontactprofile',direction:'response',field_path:'icon'});
+  assert.match(result,/Sin equivalencia local: La lectura Baileys obtiene una URL temporal de miniatura que WIS cachea/);
+  assert.doesNotMatch(result,/Equivalencia observada/);
 });
 
 test('WHAPI label association evidence uses only observed active chat associations',async()=>{

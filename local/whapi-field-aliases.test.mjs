@@ -78,6 +78,12 @@ test('profile aliases preserve separately observed business and public identity 
   assert.deepEqual(Array.from(aliases.getusername.source_kinds),['account_username']);
 });
 
+test('contact profile image fields stay uncovered when the local protected thumbnail differs from WHAPI URLs',()=>{
+  assert.deepEqual(Array.from(aliases.getcontactprofile.non_equivalent_fields),['icon','icon_full']);
+  assert.match(aliases.getcontactprofile.non_equivalent_notes.icon,/WIS cachea como archivo privado/);
+  assert.match(aliases.getcontactprofile.non_equivalent_notes.icon_full,/solo la miniatura preview/);
+});
+
 test('identity aliases do not infer mappings when only a metadata method is documented',()=>{
   assert.equal(aliases.getlidbyid.fields.lid[0].field,'lid');
   assert.equal(aliases.getidbylid.fields.id[0].field,'pn');
