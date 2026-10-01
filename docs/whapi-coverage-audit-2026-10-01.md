@@ -51,3 +51,9 @@ El explorador autenticado de producción volvió a mostrar 182 métodos, 44.628 
 ### Asociaciones de etiquetas: límite del getter
 
 La dependencia fijada es `baileys@7.0.0-rc14`. Su interfaz tipa `labels.edit` y `labels.association` como eventos, que el worker persiste. No se encontró un getter público para pedir un inventario histórico completo; los eventos recibidos también podrían incluir asociaciones sincronizadas por WhatsApp. Por tanto, WIS muestra lo recibido durante la sesión, pero no promete reconstruir el historial completo. Una lista vacía no demuestra ausencia de etiquetas; las asociaciones de mensajes y la cobertura íntegra de WHAPI siguen siendo brechas explícitas.
+
+### Aviso transitorio del resumen y diagnóstico seguro — 2026-10-01
+
+Tras el despliegue anterior, la primera carga de Chrome mostró que el resumen no podía interpretar una respuesta del servicio. Una recarga posterior recuperó el panel y sus agregados (907 contactos, 567 conversaciones, 1.512 mensajes y 18 grupos); la tarjeta de conexión seguía verificada. No se pudo atribuir aquella respuesta a una ruta concreta antes de corregir el diagnóstico, así que no se registra como causa resuelta. El cliente ahora identifica el prefijo controlado del endpoint y el estado HTTP, omite queries e IDs dinámicos y mantiene una lista permitida para las dos rutas fijas de diagnóstico. Las pruebas cubren 503 HTML, query/ID privados, esas rutas fijas y respuestas JSON válidas. Desplegado en EasyPanel y revisado por QA independiente (3/3 pruebas enfocadas; suite completa 226/226).
+
+**Próxima ruta:** si el aviso reaparece, usar el endpoint y estado visibles para rastrear el fallo concreto. En paralelo, continuar el inventario de getters públicos de solo lectura por una ruta distinta; no repetir el getter del catálogo después de su `read_timeout` sin un cambio verificable en lector o transporte.
