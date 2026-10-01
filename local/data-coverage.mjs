@@ -31,17 +31,18 @@ function normalizeArrayIndexes(path) {
 export function buildDataCoverage(db, now = Date.now()) {
   const count = (sql) => db.prepare(sql).get().count;
   const byKind = new Map(db.prepare('SELECT kind,count(*) AS records,max(updated_at) AS last_updated_at FROM snapshots GROUP BY kind ORDER BY kind').all().map(row => [row.kind, { kind: row.kind, records: row.records, last_updated_at: row.last_updated_at, fields: new Map(), omittedFieldNames: new Set(), fieldInventoryTruncated: false }]));
-  const fieldStatement = db.prepare("SELECT s.kind,s.resource_id,s.updated_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.expires_at') AS expires_at,j.fullkey AS field,j.key AS key_type,j.type AS value_type,CASE WHEN j.type='text' THEN length(j.value) ELSE NULL END AS text_length FROM snapshots s JOIN json_tree(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END) j WHERE json_type(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END)='object' AND j.key IS NOT NULL ORDER BY s.kind,s.resource_id");
-  let activeKind = null, activeResource = null, activeSnapshotUpdatedAt = null, activeFields = new Map();
+  const fieldStatement = db.prepare("SELECT s.kind,s.resource_id,s.updated_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.expires_at') AS expires_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.last_success_at') AS last_success_at,j.fullkey AS field,j.key AS key_type,j.type AS value_type,CASE WHEN j.type='text' THEN length(j.value) ELSE NULL END AS text_length FROM snapshots s JOIN json_tree(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END) j WHERE json_type(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END)='object' AND j.key IS NOT NULL ORDER BY s.kind,s.resource_id");
+  let activeKind = null, activeResource = null, activeSnapshotUpdatedAt = null, activeSnapshotSuccessAt = null, activeFields = new Map();
   const flushFields = () => {
     const entry = byKind.get(activeKind);
     if (!entry) return;
     for (const [field, nonEmptyText] of activeFields) {
       if (!entry.fields.has(field) && entry.fields.size >= 10000) { entry.fieldInventoryTruncated = true; continue; }
-      const prior = entry.fields.get(field) || { records: 0, non_empty_text_records: 0, snapshot_updated_at: null };
+      const prior = entry.fields.get(field) || { records: 0, non_empty_text_records: 0, snapshot_updated_at: null, last_success_at: null };
       prior.records++;
       if (nonEmptyText) prior.non_empty_text_records++;
       if (activeSnapshotUpdatedAt && (!prior.snapshot_updated_at || activeSnapshotUpdatedAt > prior.snapshot_updated_at)) prior.snapshot_updated_at = activeSnapshotUpdatedAt;
+      if (activeSnapshotSuccessAt && (!prior.last_success_at || activeSnapshotSuccessAt > prior.last_success_at)) prior.last_success_at = activeSnapshotSuccessAt;
       entry.fields.set(field, prior);
     }
     activeFields = new Map();
@@ -51,6 +52,8 @@ export function buildDataCoverage(db, now = Date.now()) {
       flushFields(); activeKind = row.kind; activeResource = row.resource_id;
       const parsedAt = typeof row.updated_at === 'string' ? Date.parse(row.updated_at) : NaN;
       activeSnapshotUpdatedAt = Number.isFinite(parsedAt) ? new Date(parsedAt).toISOString() : null;
+      const parsedSuccessAt = typeof row.last_success_at === 'string' ? Date.parse(row.last_success_at) : NaN;
+      activeSnapshotSuccessAt = Number.isFinite(parsedSuccessAt) ? new Date(parsedSuccessAt).toISOString() : null;
     }
     const entry = byKind.get(row.kind);
     const scalarArrayItem = Number.isInteger(row.key_type) && typeof row.field === 'string' && /\[\d+\]$/.test(row.field) && ['text','integer','real','true','false','null'].includes(row.value_type);
@@ -90,10 +93,12 @@ export function buildDataCoverage(db, now = Date.now()) {
         for (const [name, value] of Object.entries(result.fields)) {
           if (value === null) continue;
           const field = `$.whapi_projection.${method}.fields.${name}`;
-          const prior = accountLimitsKind.fields.get(field) || { records: 0, non_empty_text_records: 0, snapshot_updated_at: null };
+          const prior = accountLimitsKind.fields.get(field) || { records: 0, non_empty_text_records: 0, snapshot_updated_at: null, last_success_at: null };
           prior.records++;
           if (typeof value === 'string' && value.length > 0) prior.non_empty_text_records++;
           if (typeof row.updated_at === 'string' && (!prior.snapshot_updated_at || row.updated_at > prior.snapshot_updated_at)) prior.snapshot_updated_at = row.updated_at;
+          const successAt = typeof raw.last_success_at === 'string' && Number.isFinite(Date.parse(raw.last_success_at)) ? new Date(Date.parse(raw.last_success_at)).toISOString() : null;
+          if (successAt && (!prior.last_success_at || successAt > prior.last_success_at)) prior.last_success_at = successAt;
           accountLimitsKind.fields.set(field, prior);
         }
       }
@@ -106,7 +111,11 @@ export function buildDataCoverage(db, now = Date.now()) {
       records: item.records,
       last_updated_at: item.last_updated_at,
       fields: visibleFields.slice(0, 100).map(([field]) => field),
-      field_counts: visibleFields.slice(0, 100).map(([field, value]) => ({ field, records: value.records, non_empty_text_records: value.non_empty_text_records, snapshot_updated_at: value.snapshot_updated_at })),
+      field_counts: visibleFields.slice(0, 100).map(([field, value]) => {
+        const fieldCount = { field, records: value.records, non_empty_text_records: value.non_empty_text_records, snapshot_updated_at: value.snapshot_updated_at };
+        if (value.last_success_at) fieldCount.snapshot_last_success_at = value.last_success_at;
+        return fieldCount;
+      }),
       omitted_fields: item.omittedFieldNames.size + Math.max(0, visibleFields.length - 100),
       field_inventory_truncated: item.fieldInventoryTruncated,
     };
