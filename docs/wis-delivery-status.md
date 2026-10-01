@@ -73,3 +73,8 @@ La relectura pública de WHAPI de las 03:25 UTC conservó los 182 métodos y las
 ### Estado operativo confirmado, 2026-10-01 03:34 UTC
 
 EasyPanel muestra el servicio activo y el último build visible como Success; la lectura de recursos del contenedor fue CPU 0,3 % y memoria 99,6 MB en ese instante. GET /api/local-status volvió a responder connected y rror: null; el last_disconnect con 503 sigue siendo histórico. No se reinició el contenedor, para preservar la sesión Baileys. La pantalla productiva sigue en login y la cobertura protegida no es accesible sin sesión admin. El catálogo público no reveló nuevas definiciones y la revisión estática no halló un getter pasivo adicional habilitable. Próxima ruta: volver a comprobar datos productivos después de autenticación; hasta entonces, no hay base para ejecutar consultas ni afirmar frescura.
+
+### Separación del proceso local y producción, 2026-10-01 03:38 UTC
+
+La inspección no invasiva de 
+pm run local:status confirma que la copia local no tiene HTTP disponible ni lease vigente y conserva session_revoked; sus lecturas programadas están vencidas y bloqueadas por connection_required. No se inició un worker local ni se intentó reusar esa sesión antigua. Esto no contradice el connected público de EasyPanel: son instancias y estados separados. La única fuente válida para la siguiente revisión de snapshots es la base productiva, accesible desde el dashboard tras iniciar sesión como administrador.
