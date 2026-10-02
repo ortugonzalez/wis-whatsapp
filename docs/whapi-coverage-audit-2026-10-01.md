@@ -373,3 +373,9 @@ La configuración confirmó `account_username` `done`, con lease vigente y próx
 El ciclo de hasta tres perfiles conocidos terminó `done`; el worker conserva lease vigente y la siguiente ruta configurada es `group_requests` a las 21:05. El resumen de campos WHAPI sigue en 161/44.628 rutas (14 exactas y 147 semánticas; 44.467 sin observar, cuatro métodos completos). No se atribuye nueva cobertura al lote y no se registraron identidades, estados ni contenido de contactos.
 
 **Próxima ruta:** observar únicamente el estado agregado del turno `group_requests` a las 21:05. No elegir grupos ni copiar nombres o participantes.
+
+### Resultado automático de group_requests - 2026-10-01 21:05
+
+El turno terminó `failed` con `provider_error`; el worker sigue activo y el lease es vigente. No se muestra un status HTTP u otra causa más específica, así que no atribuyo el fallo a grupo inexistente, permiso o transporte. El total de cobertura WHAPI continúa en 161/44.628 (14 exactas, 147 semánticas; 44.467 sin observar; 4 métodos completos). La ruta siguiente es `avatars` a las 21:20. No se eligió grupo ni se repitió el intento.
+
+**Próxima ruta:** revisar solo el estado agregado del turno `avatars`; no abrir ni descargar imágenes.
