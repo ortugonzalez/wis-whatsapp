@@ -541,3 +541,8 @@ En la ficha de Inicio, la lectura programada `account_limits` aparece como compl
 ### Lectura automática de account_username, 2026-10-02 06:20 UTC
 
 El comando programado `account_username` figura completado a las 06:20 UTC y su contador agregado avanzó de 17 a 18. El snapshot global alcanzó esa hora, se mantuvo en 410 rutas de campos listadas y el total acumulado de fallos siguió en 65. La ficha registra metadatos de error, pero no una marca explícita de éxito del snapshot ni texto de respuesta verificado; por lo tanto, no se obtuvo un username verificable. Esto tampoco prueba que la cuenta carezca de username. La identidad continúa verificada y el worker activo; los envíos siguen pausados. La agenda pasó a `contact_profiles` para las 06:35 UTC. No se consultaron valores del perfil ni se inició una lectura manual.
+
+
+### Lectura automática de contact_profiles, 2026-10-02 06:35 UTC
+
+El turno programado de contact_profiles figura completado y su contador agregado aumentó de 15 a 16. La escritura global del snapshot avanzó a las 06:35 UTC; el inventario local permaneció en 410 rutas y el acumulado de lecturas fallidas siguió en 65. Esto confirma la ejecución registrada, pero no valida valores individuales del perfil ni demuestra que todos los campos se hayan actualizado. La conexión mantuvo identidad verificada y worker activo; los envíos siguieron pausados. La agenda avanzó a solicitudes de grupos para las 06:50 UTC. La verificación se limitó a conteos y estado; no se leyeron datos personales ni se disparó una consulta manual.
