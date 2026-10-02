@@ -1188,6 +1188,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     const contact=db.prepare('SELECT * FROM contacts WHERE phone_e164=?').get(row.to_e164);
     if(!contact || contact.opted_out_at || !contact.consent_at || !contact.consent_source || !contact.consent_scope) throw new Error('verified_consent_required');
   }
+  let activeSendId=null;
   async function drain() {
     if(processing || process.env.WIS_OUTBOUND_ENABLED!=='true' || !owns() || !sock) return;
     processing=true;
@@ -1206,7 +1207,10 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       if(!db.prepare("UPDATE operations SET status='sending',updated_at=? WHERE id=? AND status='pending'").run(new Date().toISOString(),row.id).changes)return;
       canSend(row);
       attempted=true;
-      const sent=await sock.sendMessage(row.to_e164.slice(1)+'@s.whatsapp.net',content);
+      activeSendId=row.id;
+      const sendingSocket=sock;
+      const sent=await sendingSocket.sendMessage(row.to_e164.slice(1)+'@s.whatsapp.net',content);
+      if(!owns()||sock!==sendingSocket)throw new Error('send_owner_changed');
       if(!sent?.key?.id)throw new Error('missing_result');
       if(sent.message)cache.set(sent.key.id,sent.message);
       db.exec('BEGIN IMMEDIATE');
@@ -1220,8 +1224,8 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         db.exec('COMMIT');
       } catch(error) { db.exec('ROLLBACK');throw error; }
     } catch {
-      if(row)db.prepare('UPDATE operations SET status=?,last_error=?,updated_at=? WHERE id=?').run(attempted?'outcome_unknown':'failed',attempted?'reconciliation_required':'outbound_policy_or_validation_failed',new Date().toISOString(),row.id);
-    } finally {processing=false;}
+      if(row&&!stopping)db.prepare("UPDATE operations SET status=?,last_error=?,updated_at=? WHERE id=? AND status IN('pending','sending')").run(attempted?'outcome_unknown':'failed',attempted?'reconciliation_required':'outbound_policy_or_validation_failed',new Date().toISOString(),row.id);
+    } finally {activeSendId=null;processing=false;}
   }
 
   if(!acquireLease(db,owner)) throw new Error('another_worker_owns_connection');
@@ -1297,7 +1301,9 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   const watchdog=setInterval(()=>{if(!owns())closeSocket();},500);
   let stopPromise;
   const stop=()=>stopPromise || (stopPromise=(async()=>{
-    stopping=true;clearInterval(timer);clearInterval(watchdog);closeSocket();
+    stopping=true;clearInterval(timer);clearInterval(watchdog);
+    if(activeSendId)db.prepare("UPDATE operations SET status='outcome_unknown',last_error='reconciliation_required',updated_at=? WHERE id=? AND status='sending'").run(new Date().toISOString(),activeSendId);
+    closeSocket();
     await webhookDispatcher.stop();
     process.removeListener('SIGINT',onSignal);process.removeListener('SIGTERM',onSignal);
     let timeout;
