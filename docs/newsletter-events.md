@@ -9,3 +9,9 @@ La API autenticada permite consultar `/api/v1/snapshots?kind=newsletter_view` y 
 Evidencia técnica: `node_modules/baileys/lib/Types/Events.d.ts` y `lib/Socket/messages-recv.js`, handler `handleNewsletterNotification`. La referencia [WHAPI getmessagesnewsletter](https://whapi.readme.io/reference/getmessagesnewsletter), consultada el 2026-10-02, describe historial con paginación. Estas notificaciones no equivalen a dicho historial ni acreditan cobertura total. No se añade una equivalencia WHAPI hasta verificar su contrato por campo.
 
 La ausencia de notificaciones no significa cero visualizaciones o reacciones. No se fabrican registros para mostrar actividad. Las pruebas usan eventos ficticios; observar datos de una cuenta real requiere que WhatsApp efectivamente emita el evento.
+
+## Verificación de entrega
+
+2026-10-02 13:56 UTC: EasyPanel informó despliegue exitoso. El panel conservó la sesión conectada y mostró un evento posterior al reinicio a las 13:57 UTC. Actividad con filtro `newsletter.view` devolvió cero eventos; no se afirma observación real de estas nuevas variables. La navegación directa al JSON autenticado fue bloqueada por el cliente de Chrome; no se usó ese intento como evidencia de la API. Suite completa 264/264 y prueba adicional de persistencia real en el worker 1/1 aprobadas, junto con build y QA independiente. La prueba adicional verifica que una reacción parcial borra campos anteriores mediante el merge real de SQLite y que no se envía ni suscribe nada.
+
+Próxima ruta: revisar otros eventos pasivos aún no persistidos (por ejemplo ajustes o bloqueo de chats), validando el contrato del paquete instalado antes de incorporarlos. No repetir catálogo fallido ni atribuir a estas notificaciones el contrato paginado de WHAPI.
