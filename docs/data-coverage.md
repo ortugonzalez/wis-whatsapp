@@ -566,3 +566,8 @@ El turno automático de `bot_list` quedó registrado como fallido a las 07:20 UT
 ### Alcance de la auditoría local WHAPI, 2026-10-02 07:23 UTC
 
 La ejecución de solo lectura `npm run audit:whapi-fields -- --summary` usó `repository_local_default`, no la base de EasyPanel. Su último snapshot local es del 2026-09-28 23:43 UTC. El informe local cuenta 182 métodos, 44.628 campos de respuesta, 14 coincidencias exactas y 125 semánticas; 23 de 177 métodos con respuesta tienen alguna observación y cuatro aparecen completos en esa base. Por su antigüedad, estos números no describen la cobertura de producción al 2026-10-02 ni se deben comparar como si ambas bases estuvieran sincronizadas. La interfaz autenticada de producción se comprobó por separado y muestra agregados propios; no se transfirieron payloads ni valores privados a este informe.
+
+
+### Auditoría autenticada de cobertura WHAPI en producción, 2026-10-02 07:23 UTC
+
+El panel de capacidades de EasyPanel indicó `182` métodos y `44.628` rutas de respuesta documentadas. El resumen actual cuenta `161` rutas con alguna observación local (14 coincidencias exactas y 147 equivalencias revisadas), `161` con evidencia no marcada obsoleta, cero rutas solo-obsoletas y `44.467` sin observar. Por método, `23/177` tienen alguna ruta observada y `4` tienen todas sus rutas documentadas observadas. El cálculo se mostró a las 07:23 UTC y la referencia pública del esquema estaba fechada el 2026-10-01. Estos agregados no equivalen a implementación completa ni paridad; la fecha de snapshot no confirma frescura de cada campo. Se consultaron solo conteos y nombres públicos de funciones, sin abrir valores privados.
