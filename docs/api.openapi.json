@@ -1892,7 +1892,33 @@
                   "type": "object",
                   "properties": {
                     "data": {
-                      "type": "object"
+                      "type": "object",
+                      "properties": {
+                        "last_inbound_notification_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Server observation time of the last inbound notify batch since instrumentation. May include repeats or delayed synchronization; not unique-message or persistence evidence."
+                        },
+                        "last_inbound_append_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Server observation time of last inbound append batch; separate from history import and notify."
+                        },
+                        "last_inbound_message_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Latest stored inbound message timestamp, possibly imported. Not server reception time."
+                        },
+                        "account_updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Own profile snapshot write time only."
+                        }
+                      }
                     }
                   }
                 }

@@ -1,6 +1,7 @@
 import { createBlocklistInvalidation } from './blocklist-invalidation.mjs';
 import { attachGroupMemberTags } from './group-member-tags.mjs';
 import { attachAccountSettings } from './account-settings.mjs';
+import { attachReceiveActivity } from './receive-activity.mjs';
 import { attachNewsletterEvents } from './newsletter-events.mjs';
 import { randomUUID } from 'node:crypto';
 import { LOCAL_LIMITS } from './limits.mjs';
@@ -1021,6 +1022,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       };
       attachNewsletterEvents(current.ev,{guarded,snapshot,event});
       attachAccountSettings(current.ev,{guarded,snapshot});
+      attachReceiveActivity(current.ev,{guarded,snapshot});
       attachGroupMemberTags(current.ev,{guarded,snapshot});
       current.ev.on('blocklist.update',guarded(value=>blocklistInvalidation.observe(value)));
       current.ev.on('messaging-history.set', guarded(({messages,contacts,chats,progress,isLatest,syncType,lidPnMappings,peerDataRequestSessionId}) => {
