@@ -774,6 +774,24 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "sending",
+                "sent",
+                "delivered",
+                "read",
+                "failed",
+                "outcome_unknown"
+              ]
+            },
+            "description": "Exact processing/delivery state filter; acceptance does not prove delivery."
           }
         ]
       }

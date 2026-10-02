@@ -1,12 +1,13 @@
 'use strict';
+paths.operations=['Operaciones','Historial de procesamiento y entrega'];
 paths.workspace=['Mi espacio','Configuración del negocio y acceso'];
 Object.assign(errorCopy,{invalid_workspace_profile:'Revisá los nombres (hasta 80 caracteres) y el correo de soporte.',invalid_password_change:'La contraseña nueva debe tener entre 12 y 256 caracteres.',invalid_current_password:'La contraseña actual no coincide.',password_change_rate_limited:'Demasiados intentos. Esperá 15 minutos.',password_unchanged:'Elegí una contraseña distinta de la actual.',expected_line_suffix_required:'El número debe terminar en los cuatro dígitos configurados para este espacio.',expected_line_5679_required:'El número debe terminar en los cuatro dígitos configurados para este espacio.'});
 const workspaceShell=shell;
 shell=function(){
  workspaceShell();
  const nav=document.querySelector('.nav');
- nav.insertAdjacentHTML('beforeend',`<a href="#workspace" data-nav="workspace">${icon('grid')}Mi espacio</a>`);
- const groups=[['OPERACIÓN',['overview','inbox','contacts','connection']],['NEGOCIO',['groups','labels','business','campaigns']],['INTEGRACIONES Y ACCESO',['integrations','workspace','settings']],['Más herramientas',['account','activity','capabilities','communities','channels','messages','media','calls','identities','stories']]];
+ nav.insertAdjacentHTML('beforeend',`<a href="#workspace" data-nav="workspace">${icon('grid')}Mi espacio</a><a href="#operations" data-nav="operations">${icon('send')}Operaciones</a>`);
+ const groups=[['OPERACIÓN',['overview','inbox','contacts','connection']],['NEGOCIO',['groups','labels','business','campaigns']],['INTEGRACIONES Y ACCESO',['integrations','operations','workspace','settings']],['Más herramientas',['account','activity','capabilities','communities','channels','messages','media','calls','identities','stories']]];
  for(const [label,ids] of groups){const section=document.createElement(label==='Más herramientas'?'details':'section');section.className='nav-group';const heading=document.createElement(label==='Más herramientas'?'summary':'p');heading.className='nav-caption';heading.textContent=label;section.append(heading);for(const id of ids){const link=nav.querySelector(`[data-nav="${id}"]`);if(link)section.append(link);}nav.append(section);}
  const brand=document.querySelector('.sidebar .brand>div');if(brand){brand.replaceChildren(document.createTextNode(state.workspace?.name||'WIS'));const small=document.createElement('small');small.textContent='WHATSAPP WORKSPACE';brand.append(small);}
  nav.addEventListener('click',e=>{const link=e.target.closest('[data-nav]');if(link)nav.querySelectorAll('[data-nav]').forEach(a=>a.removeAttribute('aria-current'));if(link)link.setAttribute('aria-current','page');});
