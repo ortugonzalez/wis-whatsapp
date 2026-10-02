@@ -4,12 +4,26 @@ import {DatabaseSync} from 'node:sqlite';
 import {mkdtempSync,readFileSync,writeFileSync,readdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {resolve} from 'node:path';
-import {verifyBackup} from './backup-check.mjs';
+import {verifyBackup,databaseContentDigest} from './backup-check.mjs';
+test('content comparison detects same-count changes and preserves SQLite types without insertion-order dependence',()=>{
+ const a=new DatabaseSync(':memory:'),b=new DatabaseSync(':memory:');
+ try{
+  for(const db of [a,b])db.exec('CREATE TABLE sample(k TEXT,v);');
+  const rows=[['integer',9223372036854775807n],['blob',Buffer.from([0,255])],['null',null],['text','PRIVATE'],['real',1.5]];
+  for(const row of rows)a.prepare('INSERT INTO sample VALUES(?,?)').run(...row);
+  for(const row of [...rows].reverse())b.prepare('INSERT INTO sample VALUES(?,?)').run(...row);
+  assert.equal(databaseContentDigest(a),databaseContentDigest(b));
+  b.prepare('UPDATE sample SET v=? WHERE k=?').run('CHANGED','text');assert.notEqual(databaseContentDigest(a),databaseContentDigest(b));
+  b.prepare('UPDATE sample SET v=? WHERE k=?').run('PRIVATE','text');
+  b.prepare('UPDATE sample SET v=? WHERE k=?').run('9223372036854775807','integer');assert.notEqual(databaseContentDigest(a),databaseContentDigest(b));
+ }finally{a.close();b.close();}
+});
 test('backup restore validates schema/integrity and never changes source bytes',async()=>{
  const root=mkdtempSync(resolve(tmpdir(),'wis-backup-')),source=resolve(root,'backup.sqlite'),tempRoot=resolve(root,'verify');
  const db=new DatabaseSync(source);db.exec(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));db.prepare('INSERT INTO settings VALUES(?,?)').run('test','PRIVATE');db.close();
  const original=readFileSync(source);const report=await verifyBackup(source,{tempRoot});
  assert.equal(report.status,'verified');assert.equal(report.counts.settings,1);assert.equal(JSON.stringify(report).includes('PRIVATE'),false);assert.deepEqual(readFileSync(source),original);assert.deepEqual(readdirSync(tempRoot),[]);
+ assert.equal(report.content_verified,true);assert.equal(report.content_digest,undefined);assert.equal(report.session_included,false);
 });
 test('corrupt, incomplete and incompatible version backups fail safely',async()=>{
  const root=mkdtempSync(resolve(tmpdir(),'wis-invalid-backup-')),tempRoot=resolve(root,'verify');

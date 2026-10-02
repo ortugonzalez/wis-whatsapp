@@ -46,6 +46,12 @@ Los envíos están deshabilitados por defecto. Requieren consentimiento registra
 
 `rtk npm run local:backup` genera una copia consistente de SQLite en `.local/backups/`. Esa copia no incluye archivos de sesión ni multimedia. Para una copia integral, detener panel y worker y proteger conjuntamente la base, la sesión y los archivos privados. Restaurar con ambos procesos detenidos; nunca iniciar simultáneamente la sesión original y su copia. La documentación de SQLite local describe la validación y recuperación de backups.
 
+### Verificación de restauración
+
+`rtk proxy node local/backup-check.mjs .local/backups/ARCHIVO.sqlite` restaura una copia temporal aislada y compara integridad, esquema, relaciones, cantidades y contenido tipado de todas las tablas. La fuente se abre en modo lectura y la copia temporal se elimina al finalizar. Los fingerprints usados para comparar contenido no se imprimen. Un resultado `content_verified: true` prueba esa copia de SQLite; `session_included: false` y `media_included: false` mantienen explícito su alcance.
+
+La prueba local del 2 de octubre de 2026 verificó la base actual con 17 tablas. Una copia local anterior falló con `backup_schema_missing` y se conservó intacta: no debe emplearse como restauración de esta versión. Esta prueba no corresponde a la base de EasyPanel. Sigue pendiente probar el respaldo integral de producción, cifrado fuera del servidor, incluyendo sesión y archivos privados sin iniciar un segundo worker.
+
 ## Cobertura
 
 El inventario fechado de 182 métodos WHAPI está en `public/whapi-capabilities.json`; los campos y sus evidencias se describen en `docs/whapi-reference-fields.md`. `partial` indica soporte limitado y no equivale a paridad. Las funciones pendientes o no soportadas no deben presentarse como disponibles.

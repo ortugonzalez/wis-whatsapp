@@ -2,6 +2,33 @@ import {DatabaseSync,backup} from 'node:sqlite';
 import {readFileSync,mkdirSync,realpathSync,mkdtempSync,unlinkSync,rmdirSync} from 'node:fs';
 import {resolve,relative,isAbsolute,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
+
+const quoted=name=>'"'+name.replaceAll('"','""')+'"';
+export function databaseContentDigest(db) {
+ const hash=createHash('sha256');
+ const add=(tag,value)=>{const bytes=Buffer.isBuffer(value)?value:Buffer.from(value);hash.update(tag+bytes.length+':');hash.update(bytes);};
+ for(const {name} of db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name COLLATE BINARY").all()) {
+  add('T',name);
+  const columns=db.prepare(`PRAGMA table_xinfo(${quoted(name)})`).all().filter(column=>column.hidden!==1).map(column=>column.name);
+  columns.forEach(column=>add('C',column));
+  const order=columns.flatMap(column=>[`typeof(${quoted(column)})`,`${quoted(column)} COLLATE BINARY`]).join(',');
+  const statement=db.prepare(`SELECT ${columns.map(quoted).join(',')} FROM ${quoted(name)} ORDER BY ${order}`);
+  statement.setReadBigInts(true);
+  for(const row of statement.iterate()) {
+   hash.update('ROW:');
+   for(const column of columns){const value=row[column];
+    if(value===null)add('N','');
+    else if(typeof value==='bigint')add('I',String(value));
+    else if(typeof value==='number')add('R',Object.is(value,-0)?'-0':String(value));
+    else if(typeof value==='string')add('S',value);
+    else if(value instanceof Uint8Array)add('B',Buffer.from(value));
+    else throw Error('backup_content_unsupported');
+   }
+  }
+ }
+ return hash.digest('hex');
+}
 
 const schema=readFileSync(new URL('./schema.sql',import.meta.url),'utf8');
 function inspect(db) {
@@ -31,7 +58,7 @@ function inspect(db) {
    const actual=db.prepare('SELECT sql FROM sqlite_schema WHERE type=? AND name=?').get(object.type,object.name);
    if(!actual?.sql||normalize(actual.sql)!==normalize(object.sql))throw Error('backup_schema_incompatible');
   }
-  return {user_version:version,counts};
+  return {user_version:version,counts,content_digest:databaseContentDigest(db)};
  } finally{expected.close();}
 }
 export async function verifyBackup(source,{tempRoot}={}) {
@@ -45,9 +72,10 @@ export async function verifyBackup(source,{tempRoot}={}) {
   await backup(sourceDb,copy);
   restoredDb=new DatabaseSync(copy,{readOnly:true});const restored=inspect(restoredDb);
   if(JSON.stringify(original)!==JSON.stringify(restored))throw Error('backup_restore_mismatch');
-  return {status:'verified',...restored};
+  // Never expose fingerprints of private data or credentials in reports.
+  return {status:'verified',user_version:restored.user_version,counts:restored.counts,content_verified:true,scope:'sqlite_only',session_included:false,media_included:false};
  } catch(error) {
-  const safe=new Set(['backup_temp_root_required','backup_integrity_failed','backup_foreign_keys_failed','backup_version_unsupported','backup_schema_missing','backup_schema_incompatible','backup_restore_mismatch']);
+  const safe=new Set(['backup_temp_root_required','backup_integrity_failed','backup_foreign_keys_failed','backup_version_unsupported','backup_schema_missing','backup_schema_incompatible','backup_restore_mismatch','backup_content_unsupported']);
   throw Error(safe.has(error?.message)?error.message:'backup_unreadable');
  } finally {
   restoredDb?.close();sourceDb?.close();
