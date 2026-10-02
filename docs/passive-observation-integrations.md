@@ -31,3 +31,5 @@ for snapshot in client.snapshots('newsletter_reaction'):
 Importar `examples/n8n-read-channel-observations.json`. Permanece desactivado y solo tiene disparador manual. Cada HTTP Request necesita una credencial Header Auth seleccionada dentro de n8n y un host accesible desde esa instalación. No incluye secretos ni modifica workflows existentes.
 
 El ejemplo obtiene únicamente la primera página de 50 registros de visualizaciones y reacciones. Revisar `meta.has_more` y `meta.total`; no se presenta como lectura completa. No envía mensajes, crea suscripciones ni consulta remotamente WhatsApp. No se ejecutó contra una instalación real de n8n en esta entrega; las verificaciones son de estructura y contrato.
+
+Validación 2026-10-02: suite local 269/269, Python 8/8 y contratos n8n 4/4, con revisión independiente aprobada. EasyPanel desplegó `1718db6` correctamente a las 14:19 UTC. El workflow queda como archivo importable, sin activarse ni registrar credenciales. Próxima ruta: seguir contrastando eventos o campos faltantes con la referencia WHAPI; esta entrega documenta datos ya implementados, no acredita nuevas variables remotas.
