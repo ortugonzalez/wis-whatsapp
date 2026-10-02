@@ -403,3 +403,9 @@ El turno automático `disappearing_mode` terminó `done`; el worker y su lease s
 El scheduler omitió de forma segura `community_subgroups` por `known_community_required`; no hizo una lectura sin una comunidad conocida elegible. El worker mantiene lease y la agenda avanzó a `all` a las 22:20. No se eligieron comunidades ni se leyeron identificadores.
 
 **Próxima ruta:** observar `all` a las 22:20 y comparar estado/conteos agregados; mantener la omisión por elegibilidad, sin forzar el objetivo.
+
+### Resultado automático de all - 2026-10-01 22:20
+
+La programación avanzó a `blocklist` a las 22:35; el turno `all` terminó `done` con el worker activo. El catálogo WHAPI sigue en 161/44.628 rutas observadas (14 exactas, 147 semánticas y 44.467 sin observar), 23/177 métodos con alguna observación y 4 completos. La lectura de cuenta y grupos no añadió una nueva ruta de respuesta observada. Se conservaron solo agregados; no se copiaron mensajes, grupos, contactos ni identificadores.
+
+**Próxima ruta:** esperar `blocklist` a las 22:35 y verificar únicamente estado y cobertura agregada.
