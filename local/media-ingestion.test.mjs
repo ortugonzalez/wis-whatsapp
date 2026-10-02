@@ -8,8 +8,11 @@ test('stalled media cannot block later text ingestion or start parallel unresolv
  ev.emit('messages.upsert',{type:'notify',messages:[msg('image-a',{imageMessage:{caption:'fixture'}}),msg('image-b',{imageMessage:{caption:'fixture'}}),msg('text',{conversation:'after-media'})]});
  const until=Date.now()+1500;while(db.prepare('SELECT count(*) n FROM messages').get().n<3&&Date.now()<until)await new Promise(r=>setTimeout(r,10));
  assert.equal(db.prepare('SELECT count(*) n FROM messages').get().n,3);assert.equal(db.prepare("SELECT body FROM messages WHERE wa_message_id='text'").get().body,'after-media');assert.equal(downloads,1);assert.equal(db.prepare('SELECT count(*) n FROM messages WHERE media_path IS NOT NULL').get().n,0);
+ const outcome=id=>JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='message' AND resource_id=?").get(id).payload).media_download;
+ assert.equal(outcome('image-a').status,'interrupted');assert.equal(outcome('image-b').status,'busy');assert.equal(outcome('text'),undefined);
  const late=Readable.from([Buffer.from('late-fixture')]);complete(late);await new Promise(r=>setImmediate(r));assert.equal(readdirSync(resolve(dir,'media')).length,0);assert.equal(late.destroyed,true);
  ev.emit('messages.upsert',{type:'notify',messages:[msg('image-recovered',{imageMessage:{caption:'fixture'}})]});const recoveryDeadline=Date.now()+1500;while(db.prepare('SELECT count(*) n FROM messages').get().n<4&&Date.now()<recoveryDeadline)await new Promise(r=>setTimeout(r,10));
  const recovered=db.prepare("SELECT media_path FROM messages WHERE wa_message_id='image-recovered'").get();assert.ok(recovered?.media_path);assert.equal(readFileSync(resolve(dir,'media',recovered.media_path)).toString(),'fixture-media');assert.equal(downloads,2);
+ assert.equal(outcome('image-recovered').status,'saved');assert.equal(outcome('image-recovered').bytes,13);
  }finally{complete?.(Buffer.from('cleanup'));await worker?.stop();db.close();rmSync(dir,{recursive:true,force:true});}
 });

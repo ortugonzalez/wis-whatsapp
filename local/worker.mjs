@@ -987,6 +987,8 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           db.prepare('INSERT INTO conversations(id,contact_id,wa_chat_id,last_message_preview,last_message_at) VALUES(?,?,?,?,?)').run(chat.id,contact?.id || null,jid,body || `[${type}]`,at);
         }
         let media = null;
+        let media_download = ['image','audio','document','video','sticker'].includes(type)
+          ? {status:'history_not_requested',observed_at:new Date().toISOString()} : null;
         // History persistence never triggers a media reupload request or other WA write.
         if (source === 'live' && ['image','audio','document','video','sticker'].includes(type)) {
           try {
@@ -994,13 +996,18 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
             if (owns() && Buffer.isBuffer(data) && data.length <= 25*1024*1024) {
               media = randomUUID() + '.' + ({image:'jpg',audio:'ogg',document:'bin',video:'mp4',sticker:'webp'}[type]);
               writeFileSync(mediaFile(mediaDir, media),data,{mode:0o600});
+              media_download = {status:'saved',bytes:data.length,observed_at:new Date().toISOString()};
             }
-          } catch { /* Keep readable message when media has expired. */ }
+          } catch (error) {
+            media = null;
+            const reasons = {media_download_aborted:'interrupted',media_download_unresolved:'busy',media_too_large:'too_large'};
+            media_download = {status:Object.hasOwn(reasons,error?.message)?reasons[error.message]:'failed',observed_at:new Date().toISOString()};
+          }
         }
         if (!owns()) return;
         db.prepare(`INSERT OR IGNORE INTO messages(id,conversation_id,wa_message_id,direction,type,body,media_path,delivery_status,source,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)`)
           .run(randomUUID(),chat.id,waId,msg.key.fromMe?'out':'in',type,body,media,msg.key.fromMe?'sent':'delivered',source,at);
-        const stubType=safeMessageStubType(msg);snapshot('message',waId,{type,details,...messageContext(m),...(stubType!==null?{messageStubType:stubType}:{}),participant:msg.key.participant || null,push_name:msg.pushName || null,source,timestamp:at});
+        const stubType=safeMessageStubType(msg);snapshot('message',waId,{type,details,...messageContext(m),...(media_download?{media_download}:{}),...(stubType!==null?{messageStubType:stubType}:{}),participant:msg.key.participant || null,push_name:msg.pushName || null,source,timestamp:at});
         db.prepare('UPDATE conversations SET last_message_preview=?,last_message_at=? WHERE id=? AND (last_message_at IS NULL OR last_message_at<=?)').run(body || `[${type}]`,at,chat.id,at);
         if (msg.message) { cache.set(waId,msg.message); if(cache.size>1000) cache.delete(cache.keys().next().value); }
       } catch { console.error('message_persistence_failed'); }
