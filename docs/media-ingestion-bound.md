@@ -10,4 +10,6 @@ Prueba con worker y SQLite en memoria: imagen bloqueada, segunda imagen y texto 
 
 Límite operativo: mientras una descarga subyacente siga sin terminar se omiten archivos nuevos, pero continúa la información textual. No garantiza recuperación de archivos omitidos ni corrige otros posibles bloqueos de red. No cambia el límite existente de tamaño de archivo: los 25 MiB se comprueban después de descargar y no limitan memoria en tránsito.
 
-Próxima ruta: registrar resultados agregados de descarga para diferenciar ausencia de multimedia de una cola de recepción detenida, sin registrar URLs ni claves de cifrado.
+Producción: EasyPanel Success 2026-10-02 23:12:21 UTC. Cola sin operaciones pendientes ni procesándose antes de publicar. No se envió multimedia real para forzar el fallo; su reproducción sigue siendo sintética. Panel recargado después del despliegue.
+
+Próxima ruta: registrar resultados agregados de descarga para diferenciar ausencia de multimedia de una cola de recepción detenida, sin registrar URLs ni claves de cifrado; evaluar límite durante streaming para reducir memoria en tránsito.
