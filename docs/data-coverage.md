@@ -551,3 +551,8 @@ El turno programado de contact_profiles figura completado y su contador agregado
 ### Fallo de la lectura programada group_requests, 2026-10-02 06:50 UTC
 
 El turno automático de group_requests quedó registrado como fallido a las 06:50 UTC con el código agregado y sanitizado provider_error; el total acumulado de lecturas fallidas subió de 65 a 66. La escritura global del snapshot avanzó a las 06:50 UTC y el inventario siguió en 410 rutas. La última respuesta verificada de esa ruta permanece en una ejecución anterior; el nuevo intento no acredita datos actuales de solicitudes. No se inspeccionaron solicitudes, destinos ni errores originales, y no se reintentó manualmente. WhatsApp conserva identidad verificada y worker activo; los envíos siguen pausados. Próxima ruta programada: fotos de perfil a las 07:05 UTC.
+
+
+### Lectura automática de avatars, 2026-10-02 07:05 UTC
+
+El turno programado de vatars figura completado y su contador agregado aumentó de 8 a 9. La escritura global avanzó a las 07:05 UTC, el inventario de rutas permaneció en 410 y el total de fallos siguió en 66. No se observaron rutas nuevas en el inventario; el estado del comando no se toma como validación del contenido de las imágenes ni de cada campo individual. La conexión mantuvo identidad verificada y worker activo; los envíos siguieron pausados. Próxima ruta automática: ot_list, prevista para las 07:20 UTC. No se descargaron ni inspeccionaron imágenes y no se inició una consulta manual.
