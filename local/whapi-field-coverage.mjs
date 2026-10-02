@@ -30,27 +30,36 @@ const localOnlyPaths=new Set(['source','last_message.source','messages[].source'
 
 export function summarizeCapabilityFieldCoverage(reference,coverage,aliases={}){
   const observed=new Map();
-  const add=(kind,rows)=>{for(const row of rows||[]){if(typeof row.field!=='string')continue;const key=`${kind}\0${exactObservedPath(row.field)}`;const prior=observed.get(key)||{records:0,non_empty_text_records:0};prior.records=Math.max(prior.records,row.records||0);prior.non_empty_text_records=Math.max(prior.non_empty_text_records,row.non_empty_text_records||0);observed.set(key,prior);}};
+  const add=(kind,rows)=>{for(const row of rows||[]){if(typeof row.field!=='string')continue;const key=`${kind}\0${exactObservedPath(row.field)}`;const prior=observed.get(key)||{records:0,non_empty_text_records:0,stale_records:0,stale_non_empty_text_records:0};prior.records=Math.max(prior.records,row.records||0);prior.non_empty_text_records=Math.max(prior.non_empty_text_records,row.non_empty_text_records||0);prior.stale_records=Math.max(prior.stale_records,row.stale_records||0);prior.stale_non_empty_text_records=Math.max(prior.stale_non_empty_text_records,row.stale_non_empty_text_records||0);observed.set(key,prior);}};
   for(const section of ['snapshot_kinds','storage_kinds','contextual_kinds'])for(const row of coverage?.[section]||[])add(row.kind,row.field_counts);
   const methods=(reference?.methods||[]).map(method=>{
     const seen=new Set(),definitionRows=inventoryRows(method).filter(row=>{const key=`${row.operation_key}\0${row.direction}\0${row.path}`;if(seen.has(key))return false;seen.add(key);return Boolean(row.path);}),responseRows=definitionRows.filter(row=>row.direction==='response'),alias=aliases[method.id]||{};
     const sourceKinds=Array.isArray(alias.source_kinds)?alias.source_kinds:[];
-    let exact=0,semantic=0;
+    let exact=0,semantic=0,fresh=0,staleOnly=0;
     for(const row of responseRows){
       const path=exactObservedPath(row.path);
       if(localOnlyPaths.has(path)||(alias.non_equivalent_fields||[]).some(value=>exactObservedPath(value)===path))continue;
       const candidates=alias.fields?.[row.path]||[];
-      if(candidates.some(candidate=>{
+      const qualifies=(value,requiresText=false)=>Boolean(value)&&value.records>0&&(!requiresText||value.non_empty_text_records>0);
+      const qualifiesWithoutExplicitStale=(value,requiresText=false)=>Boolean(value)&&Math.max(0,value.records-value.stale_records)>0&&(!requiresText||Math.max(0,value.non_empty_text_records-value.stale_non_empty_text_records)>0);
+      const semanticCandidates=candidates.filter(candidate=>{
         const value=observed.get(`${candidate.kind}\0${exactObservedPath(candidate.field)}`);
-        return !localOnlyPaths.has(exactObservedPath(candidate.field))&&Boolean(value)&&value.records>0&&(!candidate.requires_non_empty_text||value.non_empty_text_records>0);
-      })){semantic++;continue;}
+        return !localOnlyPaths.has(exactObservedPath(candidate.field))&&qualifies(value,candidate.requires_non_empty_text);
+      });
+      const hasSemantic=semanticCandidates.length>0;
+      if(hasSemantic)semantic++;
       const exactRows=sourceKinds.map(kind=>({kind,value:observed.get(`${kind}\0${path}`)})).filter(item=>item.value&&item.value.records>0);
-      const hasExact=exactRows.some(item=>!((alias.fields?.[row.path]||[]).some(candidate=>candidate.kind===item.kind&&exactObservedPath(candidate.field)===path&&candidate.requires_non_empty_text)&&item.value.non_empty_text_records<=0));
-      if(hasExact){exact++;continue;}
+      const allowedExact=item=>!candidates.some(candidate=>candidate.kind===item.kind&&exactObservedPath(candidate.field)===path&&candidate.requires_non_empty_text&&item.value.non_empty_text_records<=0);
+      const hasExact=exactRows.some(allowedExact);
+      if(hasExact&&!hasSemantic)exact++;
+      const freshSemantic=semanticCandidates.some(candidate=>qualifiesWithoutExplicitStale(observed.get(`${candidate.kind}\0${exactObservedPath(candidate.field)}`),candidate.requires_non_empty_text));
+      const freshExact=exactRows.some(item=>allowedExact(item)&&qualifiesWithoutExplicitStale(item.value,candidates.some(candidate=>candidate.kind===item.kind&&exactObservedPath(candidate.field)===path&&candidate.requires_non_empty_text)));
+      if(freshSemantic||freshExact)fresh++;
+      else if(hasSemantic||hasExact)staleOnly++;
     }
-    return {id:method.id,parameter_fields:definitionRows.filter(row=>row.direction==='parameter').length,request_fields:definitionRows.filter(row=>row.direction==='request').length,response_fields:responseRows.length,exact_response_fields_observed:exact,semantic_response_fields_observed:semantic,response_fields_without_observation:Math.max(0,responseRows.length-exact-semantic)};
+    return {id:method.id,parameter_fields:definitionRows.filter(row=>row.direction==='parameter').length,request_fields:definitionRows.filter(row=>row.direction==='request').length,response_fields:responseRows.length,exact_response_fields_observed:exact,semantic_response_fields_observed:semantic,fresh_response_fields_observed:fresh,stale_only_response_fields:staleOnly,response_fields_without_observation:Math.max(0,responseRows.length-exact-semantic)};
   });
   const responseMethods=methods.filter(row=>row.response_fields>0),hasObservedResponse=row=>row.exact_response_fields_observed+row.semantic_response_fields_observed>0;
   const methodCoverage={response_methods:responseMethods.length,methods_with_any_observed_response:responseMethods.filter(hasObservedResponse).length,methods_without_observed_response:responseMethods.filter(row=>!hasObservedResponse(row)).length,methods_with_all_response_fields_observed:responseMethods.filter(row=>row.response_fields_without_observation===0).length};
-  return {captured_at:reference?.captured_at??null,observed_at:new Date().toISOString(),method_count:methods.length,method_coverage:methodCoverage,totals:methods.reduce((sum,row)=>({parameter_fields:sum.parameter_fields+row.parameter_fields,request_fields:sum.request_fields+row.request_fields,response_fields:sum.response_fields+row.response_fields,exact_response_fields_observed:sum.exact_response_fields_observed+row.exact_response_fields_observed,semantic_response_fields_observed:sum.semantic_response_fields_observed+row.semantic_response_fields_observed,response_fields_without_observation:sum.response_fields_without_observation+row.response_fields_without_observation}),{parameter_fields:0,request_fields:0,response_fields:0,exact_response_fields_observed:0,semantic_response_fields_observed:0,response_fields_without_observation:0}),methods};
+  return {captured_at:reference?.captured_at??null,observed_at:new Date().toISOString(),method_count:methods.length,method_coverage:methodCoverage,totals:methods.reduce((sum,row)=>({parameter_fields:sum.parameter_fields+row.parameter_fields,request_fields:sum.request_fields+row.request_fields,response_fields:sum.response_fields+row.response_fields,exact_response_fields_observed:sum.exact_response_fields_observed+row.exact_response_fields_observed,semantic_response_fields_observed:sum.semantic_response_fields_observed+row.semantic_response_fields_observed,fresh_response_fields_observed:sum.fresh_response_fields_observed+row.fresh_response_fields_observed,stale_only_response_fields:sum.stale_only_response_fields+row.stale_only_response_fields,response_fields_without_observation:sum.response_fields_without_observation+row.response_fields_without_observation}),{parameter_fields:0,request_fields:0,response_fields:0,exact_response_fields_observed:0,semantic_response_fields_observed:0,fresh_response_fields_observed:0,stale_only_response_fields:0,response_fields_without_observation:0}),methods};
 }

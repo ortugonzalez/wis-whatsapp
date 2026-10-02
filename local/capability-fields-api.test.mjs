@@ -54,6 +54,8 @@ test('capability field search requires authentication and returns bounded metada
     const coverageBody = await coverage.json();
     assert.equal(coverageBody.data.method_count, 182);
     assert.ok(coverageBody.data.totals.response_fields > 0);
+    assert.ok(Number.isInteger(coverageBody.data.totals.fresh_response_fields_observed));
+    assert.ok(Number.isInteger(coverageBody.data.totals.stale_only_response_fields));
     assert.ok(coverageBody.data.methods.every(row => Number.isInteger(row.response_fields_without_observation)));
     assert.equal(JSON.stringify(coverageBody).includes('should-not-leak'), false);
   } finally {

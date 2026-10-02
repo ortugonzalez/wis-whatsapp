@@ -7,9 +7,25 @@ test('field audit separates exact observations, reviewed aliases, and unobserved
   const coverage={snapshot_kinds:[{kind:'chat',field_counts:[{field:'$.messages[0].id',records:2},{field:'$.messages[0].body',records:1,non_empty_text_records:1}]}],storage_kinds:[],contextual_kinds:[]};
   const aliases={getchat:{source_kinds:['chat'],fields:{'messages[].text':[{kind:'chat',field:'messages[].body',note:'reviewed'}]},non_equivalent_fields:['messages[].secret']}};
   const report=summarizeCapabilityFieldCoverage(reference,coverage,aliases);
-  assert.deepEqual(report.totals,{parameter_fields:1,request_fields:1,response_fields:3,exact_response_fields_observed:1,semantic_response_fields_observed:1,response_fields_without_observation:1});
+  assert.deepEqual(report.totals,{parameter_fields:1,request_fields:1,response_fields:3,exact_response_fields_observed:1,semantic_response_fields_observed:1,fresh_response_fields_observed:2,stale_only_response_fields:0,response_fields_without_observation:1});
   assert.deepEqual(report.method_coverage,{response_methods:1,methods_with_any_observed_response:1,methods_without_observed_response:0,methods_with_all_response_fields_observed:0});
   assert.equal(report.methods[0].id,'getchat');assert.equal(JSON.stringify(report).includes('secret-value'),false);
+});
+
+test('field audit reports observed routes backed only by explicitly stale evidence separately',()=>{
+  const reference={methods:[{id:'getcontactprofile',operations:[{response_fields:{200:[{path:'id'},{path:'name'},{path:'about'}]}}]}]};
+  const coverage={snapshot_kinds:[{kind:'contact',field_counts:[
+    {field:'$.id',records:2,stale_records:1},
+    {field:'$.about',records:1,non_empty_text_records:1,stale_records:1,stale_non_empty_text_records:1},
+    {field:'$.name',records:2,non_empty_text_records:2,stale_records:2,stale_non_empty_text_records:2},
+  ]}],storage_kinds:[],contextual_kinds:[]};
+  const aliases={getcontactprofile:{source_kinds:['contact'],fields:{name:[{kind:'contact',field:'name',requires_non_empty_text:true}]}}};
+  const report=summarizeCapabilityFieldCoverage(reference,coverage,aliases);
+  assert.deepEqual(report.methods[0],{id:'getcontactprofile',parameter_fields:0,request_fields:0,response_fields:3,exact_response_fields_observed:2,semantic_response_fields_observed:1,fresh_response_fields_observed:1,stale_only_response_fields:2,response_fields_without_observation:0});
+  assert.equal(report.totals.fresh_response_fields_observed,1);
+  assert.equal(report.totals.stale_only_response_fields,2);
+  assert.equal(report.totals.response_fields_without_observation,0);
+  assert.equal(JSON.stringify(report).includes('old value'),false);
 });
 
 test('field audit requires positive and meaningful evidence and excludes local provenance fields',()=>{

@@ -57,12 +57,15 @@ export function buildDataCoverage(db, now = Date.now()) {
   const flushFields = () => {
     const entry = byKind.get(activeKind);
     if (!entry) return;
-    for (const [field, nonEmptyText] of activeFields) {
+    for (const [field, evidence] of activeFields) {
       if (!entry.fields.has(field) && entry.fields.size >= 10000) { entry.fieldInventoryTruncated = true; continue; }
-      const prior = entry.fields.get(field) || { records: 0, non_empty_text_records: 0, stale_records: 0, snapshot_updated_at: null, last_success_at: null };
+      const prior = entry.fields.get(field) || { records: 0, non_empty_text_records: 0, stale_records: 0, stale_non_empty_text_records: 0, snapshot_updated_at: null, last_success_at: null };
       prior.records++;
-      if (nonEmptyText) prior.non_empty_text_records++;
-      if (activeSnapshotStale) prior.stale_records++;
+      if (evidence.non_empty_text) prior.non_empty_text_records++;
+      if (activeSnapshotStale) {
+        prior.stale_records++;
+        if (evidence.non_empty_text) prior.stale_non_empty_text_records++;
+      }
       if (activeSnapshotUpdatedAt && (!prior.snapshot_updated_at || activeSnapshotUpdatedAt > prior.snapshot_updated_at)) prior.snapshot_updated_at = activeSnapshotUpdatedAt;
       if (activeSnapshotSuccessAt && (!prior.last_success_at || activeSnapshotSuccessAt > prior.last_success_at)) prior.last_success_at = activeSnapshotSuccessAt;
       entry.fields.set(field, prior);
@@ -89,35 +92,41 @@ export function buildDataCoverage(db, now = Date.now()) {
     }
     if (field.length > 100) { if (entry.omittedFieldNames.size < 1000) entry.omittedFieldNames.add(createHash('sha256').update(field).digest('hex')); else entry.fieldInventoryTruncated = true; continue; }
     const nonEmptyText = row.value_type === 'text' && Number(row.text_length) > 0;
-    if (activeFields.has(field)) { if (nonEmptyText) activeFields.set(field, true); continue; }
-    if (activeFields.size < 10000) activeFields.set(field, nonEmptyText);
+    if (activeFields.has(field)) {
+      const prior = activeFields.get(field);
+      prior.non_empty_text ||= nonEmptyText;
+      continue;
+    }
+    if (activeFields.size < 10000) activeFields.set(field, { non_empty_text: nonEmptyText });
     else entry.fieldInventoryTruncated = true;
   }
   flushFields();
   const chatKind = byKind.get('chat');
   if (chatKind) {
-    const muteEvidence = db.prepare("SELECT resource_id,json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.muteEndTime') AS value_type,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.muteEndTime') AS mute_end_time FROM snapshots WHERE kind='chat'").all();
-    const muteCounts = { all: [0, 0], group: [0, 0] };
+    const muteEvidence = db.prepare("SELECT resource_id,json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.muteEndTime') AS value_type,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.muteEndTime') AS mute_end_time,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.stale') AS stale FROM snapshots WHERE kind='chat'").all();
+    const muteCounts = { all: [0, 0, 0], group: [0, 0, 0] };
     for (const row of muteEvidence) {
       const mute = row.value_type === 'null' ? false : row.value_type === 'integer' ? deriveChatMute({ muteEndTime: row.mute_end_time }, now) : null;
       const scopes = classifyWhatsAppChatType(row.resource_id) === 'group' ? ['all', 'group'] : ['all'];
       for (const scope of scopes) {
         if (mute === true) muteCounts[scope][0]++;
         else if (mute === false) muteCounts[scope][1]++;
+        if (mute !== null && row.stale === 1) muteCounts[scope][2]++;
       }
     }
-    for (const [scope, [mutedRecords, unmutedRecords]] of Object.entries(muteCounts)) {
+    for (const [scope, [mutedRecords, unmutedRecords, staleRecords]] of Object.entries(muteCounts)) {
       const knownMuteStates = mutedRecords + unmutedRecords;
       if (knownMuteStates > 0) chatKind.fields.set(`$.whapi_derived.${scope}_mute_from_mute_end_time`, {
         records: knownMuteStates,
         non_empty_text_records: 0,
+        stale_records: staleRecords,
         snapshot_updated_at: null,
         derived_true_records: mutedRecords,
         derived_false_records: unmutedRecords,
       });
     }
-    const mentionEvidence = db.prepare("SELECT resource_id,json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.unreadMentionCount') AS value_type,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.unreadMentionCount') AS mention_count FROM snapshots WHERE kind='chat'").all();
-    const mentionCounts = { all: [0, 0], group: [0, 0] };
+    const mentionEvidence = db.prepare("SELECT resource_id,json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.unreadMentionCount') AS value_type,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.unreadMentionCount') AS mention_count,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.stale') AS stale FROM snapshots WHERE kind='chat'").all();
+    const mentionCounts = { all: [0, 0, 0], group: [0, 0, 0] };
     for (const row of mentionEvidence) {
       if (row.value_type !== 'integer') continue;
       const unread = deriveUnreadMention({ unreadMentionCount: row.mention_count });
@@ -126,62 +135,66 @@ export function buildDataCoverage(db, now = Date.now()) {
       for (const scope of scopes) {
         if (unread) mentionCounts[scope][0]++;
         else mentionCounts[scope][1]++;
+        if (row.stale === 1) mentionCounts[scope][2]++;
       }
     }
-    for (const [scope, [unreadRecords, clearRecords]] of Object.entries(mentionCounts)) {
+    for (const [scope, [unreadRecords, clearRecords, staleRecords]] of Object.entries(mentionCounts)) {
       const knownMentionStates = unreadRecords + clearRecords;
       if (knownMentionStates > 0) chatKind.fields.set(`$.whapi_derived.${scope}_unread_mention_from_unread_mention_count`, {
         records: knownMentionStates,
         non_empty_text_records: 0,
+        stale_records: staleRecords,
         snapshot_updated_at: null,
         derived_true_records: unreadRecords,
         derived_false_records: clearRecords,
       });
     }
-    const spamEvidence = db.prepare("SELECT resource_id,json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.notSpam') AS value_type,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.notSpam') AS not_spam FROM snapshots WHERE kind='chat'").all();
-    const groupSpamCounts = [0, 0];
+    const spamEvidence = db.prepare("SELECT resource_id,json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.notSpam') AS value_type,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.notSpam') AS not_spam,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.stale') AS stale FROM snapshots WHERE kind='chat'").all();
+    const groupSpamCounts = [0, 0, 0];
     for (const row of spamEvidence) {
       if (classifyWhatsAppChatType(row.resource_id) !== 'group') continue;
       if (row.value_type === 'true') groupSpamCounts[0]++;
       else if (row.value_type === 'false') groupSpamCounts[1]++;
+      if (['true', 'false'].includes(row.value_type) && row.stale === 1) groupSpamCounts[2]++;
     }
     const knownGroupSpamStates = groupSpamCounts[0] + groupSpamCounts[1];
     if (knownGroupSpamStates > 0) chatKind.fields.set('$.whapi_derived.group_not_spam_from_not_spam', {
       records: knownGroupSpamStates,
       non_empty_text_records: 0,
+      stale_records: groupSpamCounts[2],
       snapshot_updated_at: null,
       derived_true_records: groupSpamCounts[0],
       derived_false_records: groupSpamCounts[1],
     });
     const groupChatFields = {
-      pin: [0, 0],
-      archive: [0, 0],
-      read_only: [0, 0],
-      unread: 0,
-      timestamp: 0,
-      mute_until: 0,
+      pin: [0, 0, 0],
+      archive: [0, 0, 0],
+      read_only: [0, 0, 0],
+      unread: [0, 0],
+      timestamp: [0, 0],
+      mute_until: [0, 0],
     };
-    for (const row of db.prepare("SELECT resource_id,payload FROM snapshots WHERE kind='chat'").iterate()) {
+    for (const row of db.prepare("SELECT resource_id,payload,json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.stale') AS stale FROM snapshots WHERE kind='chat'").iterate()) {
       if (classifyWhatsAppChatType(row.resource_id) !== 'group') continue;
       let payload = {};
       try { payload = JSON.parse(row.payload) || {}; } catch { /* malformed snapshots add no evidence */ }
       const pinState = deriveChatPinned(payload);
-      if (pinState !== null) groupChatFields.pin[pinState ? 0 : 1]++;
+      if (pinState !== null) { groupChatFields.pin[pinState ? 0 : 1]++; if (row.stale === 1) groupChatFields.pin[2]++; }
       for (const [field, key] of [['archive', 'archived'], ['read_only', 'readOnly']]) {
-        if (typeof payload[key] === 'boolean') groupChatFields[field][payload[key] ? 0 : 1]++;
+        if (typeof payload[key] === 'boolean') { groupChatFields[field][payload[key] ? 0 : 1]++; if (row.stale === 1) groupChatFields[field][2]++; }
       }
-      if (Number.isSafeInteger(payload.unreadCount) && payload.unreadCount >= 0) groupChatFields.unread++;
-      if (Number.isSafeInteger(payload.conversationTimestamp) && payload.conversationTimestamp >= 0) groupChatFields.timestamp++;
-      if (deriveChatMute(payload, now) !== null) groupChatFields.mute_until++;
+      if (Number.isSafeInteger(payload.unreadCount) && payload.unreadCount >= 0) { groupChatFields.unread[0]++; if (row.stale === 1) groupChatFields.unread[1]++; }
+      if (Number.isSafeInteger(payload.conversationTimestamp) && payload.conversationTimestamp >= 0) { groupChatFields.timestamp[0]++; if (row.stale === 1) groupChatFields.timestamp[1]++; }
+      if (deriveChatMute(payload, now) !== null) { groupChatFields.mute_until[0]++; if (row.stale === 1) groupChatFields.mute_until[1]++; }
     }
     for (const field of ['pin', 'archive', 'read_only']) {
-      const [trueRecords, falseRecords] = groupChatFields[field];
+      const [trueRecords, falseRecords, staleRecords] = groupChatFields[field];
       const records = trueRecords + falseRecords;
-      if (records > 0) chatKind.fields.set(`$.whapi_derived.group_${field}_from_chat`, { records, non_empty_text_records: 0, snapshot_updated_at: null, derived_true_records: trueRecords, derived_false_records: falseRecords });
+      if (records > 0) chatKind.fields.set(`$.whapi_derived.group_${field}_from_chat`, { records, non_empty_text_records: 0, stale_records: staleRecords, snapshot_updated_at: null, derived_true_records: trueRecords, derived_false_records: falseRecords });
     }
     for (const field of ['unread', 'timestamp', 'mute_until']) {
-      const records = groupChatFields[field];
-      if (records > 0) chatKind.fields.set(`$.whapi_derived.group_${field}_from_chat`, { records, non_empty_text_records: 0, snapshot_updated_at: null });
+      const [records, staleRecords] = groupChatFields[field];
+      if (records > 0) chatKind.fields.set(`$.whapi_derived.group_${field}_from_chat`, { records, non_empty_text_records: 0, stale_records: staleRecords, snapshot_updated_at: null });
     }
     let recognizedChatTypes = 0;
     for (const row of db.prepare("SELECT resource_id FROM snapshots WHERE kind='chat'").iterate()) {
@@ -224,6 +237,7 @@ export function buildDataCoverage(db, now = Date.now()) {
       field_counts: visibleFields.slice(0, 100).map(([field, value]) => {
         const fieldCount = { field, records: value.records, non_empty_text_records: value.non_empty_text_records, snapshot_updated_at: value.snapshot_updated_at };
         if (value.stale_records > 0) fieldCount.stale_records = value.stale_records;
+        if (value.stale_non_empty_text_records > 0) fieldCount.stale_non_empty_text_records = value.stale_non_empty_text_records;
         if (value.last_success_at) fieldCount.snapshot_last_success_at = value.last_success_at;
         if (Number.isInteger(value.derived_true_records)) fieldCount.derived_true_records = value.derived_true_records;
         if (Number.isInteger(value.derived_false_records)) fieldCount.derived_false_records = value.derived_false_records;

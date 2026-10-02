@@ -5028,7 +5028,7 @@
     "/capability-field-coverage": {
       "get": {
         "summary": "Live aggregate coverage of documented WHAPI response fields",
-        "description": "Compares unique documented response paths per operation with local snapshot and storage field availability. Returns counts and capability ids only; a match is evidence of an observed path, not feature support or protocol parity.",
+        "description": "Compares unique documented response paths per operation with local snapshot and storage field availability. Returns counts and capability ids only, including routes with evidence not explicitly marked stale and routes supported only by explicitly stale evidence. A non-stale flag does not confirm freshness; field timestamps and source scope must be reviewed. A match is evidence of an observed path, not feature support or protocol parity.",
         "security": [
           {
             "BearerAuth": [
@@ -5038,7 +5038,36 @@
         ],
         "responses": {
           "200": {
-            "description": "Current local observation counts and public reference timestamp"
+            "description": "Current local observation counts (exact, semantic, non-explicitly-stale, stale-only, and unobserved) and public reference timestamp",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["captured_at", "observed_at", "method_count", "method_coverage", "totals", "methods"],
+                  "properties": {
+                    "captured_at": {"type": ["string", "null"], "format": "date-time"},
+                    "observed_at": {"type": "string", "format": "date-time"},
+                    "method_count": {"type": "integer"},
+                    "method_coverage": {"type": "object", "additionalProperties": {"type": "integer"}},
+                    "totals": {
+                      "type": "object",
+                      "required": ["response_fields", "exact_response_fields_observed", "semantic_response_fields_observed", "fresh_response_fields_observed", "stale_only_response_fields", "response_fields_without_observation"],
+                      "properties": {
+                        "parameter_fields": {"type": "integer"},
+                        "request_fields": {"type": "integer"},
+                        "response_fields": {"type": "integer"},
+                        "exact_response_fields_observed": {"type": "integer"},
+                        "semantic_response_fields_observed": {"type": "integer"},
+                        "fresh_response_fields_observed": {"type": "integer", "description": "Routes with at least one eligible source record not explicitly marked stale; this does not prove current freshness."},
+                        "stale_only_response_fields": {"type": "integer", "description": "Observed response routes whose eligible evidence is only from records explicitly marked stale."},
+                        "response_fields_without_observation": {"type": "integer"}
+                      }
+                    },
+                    "methods": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "response_fields": {"type": "integer"}, "exact_response_fields_observed": {"type": "integer"}, "semantic_response_fields_observed": {"type": "integer"}, "fresh_response_fields_observed": {"type": "integer"}, "stale_only_response_fields": {"type": "integer"}, "response_fields_without_observation": {"type": "integer"}}}}
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Authentication required"

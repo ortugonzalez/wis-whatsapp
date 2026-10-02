@@ -505,3 +505,13 @@ La lectura automática `communities` terminó `done`; worker activo y lease vige
 La ejecución programada terminó `failed`. El diagnóstico sanitizado del panel identificó el alcance `own_account`: la consulta pública informó `public_catalog_unavailable` y la alternativa Baileys IQ agotó el tiempo de lectura (`read_timeout`). Por lo tanto, no hay evidencia de que el catálogo esté vacío, ni se observaron productos nuevos. El resumen WHAPI permanece en 161/44.628 (14 exactas, 147 semánticas, 44.467 sin observar; cuatro métodos completos). Worker activo, lease vigente y siguiente ruta `collections` a las 02:35. No se inició un nuevo intento.
 
 **Próxima ruta:** revisar el turno automático `collections` y solo sus conteos/estado; mantener `catalog` sin reintentos manuales hasta un cambio técnico verificable en el lector.
+
+### Resultado automático de collections - 2026-10-02 02:35
+
+La lectura programada `collections` terminó `done`, con worker activo y lease vigente; el siguiente recurso en la rotación es `newsletters` a las 02:50. El resumen WHAPI se mantiene en 161/44.628 (14 exactas, 147 semánticas, 44.467 sin observar; cuatro métodos completos), sin nueva cobertura tras este ciclo. Se revisaron solo estado y conteos, no nombres ni contenido de colecciones.
+
+**Próxima ruta:** observar el resultado agregado de `newsletters`; conservar separado su alcance de canales conocidos del directorio completo de WHAPI.
+
+### Mejora de visibilidad de obsolescencia - 2026-10-02
+
+El explorador ahora separa por función y en los totales las rutas que tienen evidencia no marcada `stale` de aquellas respaldadas solo por snapshots explícitamente obsoletos. El cálculo sigue calificando campos `requires_non_empty_text` solo con registros que contienen texto no vacío y conserva `stale_non_empty_text_records` para no atribuir contenido antiguo a evidencia vigente. “No marcado `stale`” no se presenta como fresco: la fecha y alcance deben verificarse por campo. El total histórico de observaciones se conserva sin degradarlo ni llamarlo disponibilidad. Pruebas focalizadas: 35/35; suite completa: 237/237; build validado; lint sin errores y con 20 avisos preexistentes. QA independiente aprobó la propagación de stale_records a los agregados derivados de chats; no encontró hallazgos P0–P2.
