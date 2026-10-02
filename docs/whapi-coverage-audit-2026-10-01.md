@@ -427,3 +427,9 @@ La configuración confirmó `blocklist` `done`, worker activo y lease vigente; l
 El turno `collections` terminó `done`; la agenda omitió `catalog` por `recent_read_timeout` y continuó con `newsletters` a las 23:20. La cobertura se mantiene en 161/44.628 rutas (14 exactas, 147 semánticas, 44.467 sin observar; 4 métodos completos). No se repitió el catálogo comercial ni se produjo una nueva ruta WHAPI observada.
 
 **Próxima ruta:** esperar `newsletters` a las 23:20. El catálogo sigue en enfriamiento tras sus timeouts; no forzar una lectura paralela.
+
+### Resultado automático de newsletters - 2026-10-01 23:20
+
+El turno `newsletters` terminó `done`; worker y lease vigentes. La cobertura sigue en 161/44.628 rutas de respuesta (14 exactas, 147 semánticas; 44.467 sin observar y cuatro métodos completos); no se acreditó ninguna ruta nueva. El cooldown mantuvo `catalog` fuera del ciclo. La siguiente ruta es `account_limits` a las 23:35.
+
+**Próxima ruta:** verificar el estado agregado de `account_limits` a las 23:35; no repetir `catalog`.
