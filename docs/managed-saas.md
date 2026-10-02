@@ -35,3 +35,7 @@ Actualizar el servicio WIS existente usando la misma rama, dominio, volumen y va
 ## Validación de esta entrega
 
 Suite completa: 262 pruebas aprobadas. Build sintáctico aprobado. Revisión independiente de autenticación, aislamiento y preservación de sesión sin bloqueantes. Chrome: guardado del perfil en una base efímera, navegación agrupada y pantalla Mi espacio comprobados en escritorio y viewport móvil de 390 × 844. Las pruebas no enviaron mensajes ni cambiaron la cuenta vinculada. La entrega real se verifica después del despliegue; estas pruebas no acreditan paridad WHAPI ni aislamiento de infraestructura entre clientes aún no creados.
+
+### Producción, 2026-10-02
+
+EasyPanel completó correctamente el despliegue de `e959258` a las 13:47 UTC en el servicio existente. Chrome confirmó Mi espacio, navegación agrupada, diagnóstico colapsado e Integraciones. Se conservó la sesión del panel y WhatsApp volvió conectado con identidad verificada y un evento posterior al reinicio. Los contadores de contactos, conversaciones, mensajes y grupos coincidieron antes/después. No se enviaron mensajes, no se generó otro QR ni se duplicó el servicio. La configuración de recuperación aparece detectada; esta entrega no realizó un envío de correo ni cambió la contraseña real. Se cerró el servidor efímero de QA.
