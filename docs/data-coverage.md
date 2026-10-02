@@ -571,3 +571,8 @@ La ejecución de solo lectura `npm run audit:whapi-fields -- --summary` usó `re
 ### Auditoría autenticada de cobertura WHAPI en producción, 2026-10-02 07:23 UTC
 
 El panel de capacidades de EasyPanel indicó `182` métodos y `44.628` rutas de respuesta documentadas. El resumen actual cuenta `161` rutas con alguna observación local (14 coincidencias exactas y 147 equivalencias revisadas), `161` con evidencia no marcada obsoleta, cero rutas solo-obsoletas y `44.467` sin observar. Por método, `23/177` tienen alguna ruta observada y `4` tienen todas sus rutas documentadas observadas. El cálculo se mostró a las 07:23 UTC y la referencia pública del esquema estaba fechada el 2026-10-01. Estos agregados no equivalen a implementación completa ni paridad; la fecha de snapshot no confirma frescura de cada campo. Se consultaron solo conteos y nombres públicos de funciones, sin abrir valores privados.
+
+
+### Lectura automática de disappearing_mode, 2026-10-02 07:35 UTC
+
+El turno programado de `disappearing_mode` figura completado y su contador agregado avanzó de 11 a 12. La escritura global del snapshot llegó a las 07:35 UTC; el inventario quedó en 410 rutas y el total de fallos permaneció en 67. El registro de ejecución no demuestra actualización de cada campo, y no se inspeccionaron valores del temporizador. La identidad siguió verificada, el worker activo y los envíos pausados. Próxima ruta automática: `community_subgroups` a las 07:50 UTC. No se inició una lectura manual ni se cambió el modo de expiración.
