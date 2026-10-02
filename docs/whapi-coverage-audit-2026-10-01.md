@@ -469,3 +469,9 @@ La lectura de avatars terminó `done`; no se abrieron ni descargaron imágenes. 
 La consulta automática volvió a terminar `failed` con `provider_error`; `status_code` sigue `No disponible`. No hay evidencia para atribuir causa HTTP, ni para concluir que no existan bots. No se repitió. El worker conserva lease y la próxima ruta es `disappearing_mode` a la 01:05.
 
 **Próxima ruta:** observar el turno automático de `disappearing_mode` a la 01:05; mantener `bot_list` como brecha pendiente de evidencia técnica nueva.
+
+### Resultado automático de disappearing_mode - 2026-10-02 01:05
+
+`disappearing_mode` terminó `done`; no cambió la cobertura WHAPI (161/44.628; 14 exactas, 147 semánticas, 44.467 sin observar y cuatro métodos completos). El worker sigue activo con lease vigente. Próxima ruta `community_subgroups` a la 01:20; si no hay una comunidad conocida elegible, respetar el `skipped` y avanzar.
+
+**Próxima ruta:** comprobar estado de `community_subgroups` a la 01:20; no descubrir ni seleccionar grupos manualmente.
