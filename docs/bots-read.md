@@ -13,3 +13,7 @@ Prueba real del 2026-09-27: una consulta manual desde Chrome terminó en `provid
 Pruebas del lector y API aprobadas, con revisión independiente. La cobertura permanece parcial por indisponibilidad de la respuesta real del proveedor.
 
 Seguimiento programado de producción, 2026-09-30 18:30 UTC: el turno `bot_list` se encoló a las 18:29:14 UTC y terminó con `provider_error`; no se aceptó una lista vacía como respuesta verificada. La sesión siguió conectada/verificada, el worker conservó su lease y los envíos permanecieron pausados. La vista de capacidades no registró rutas nuevas; la próxima lectura es `disappearing_mode` a las 18:44 UTC. El resultado no demuestra que la cuenta carezca de bots.
+
+### Validación de respuesta explícita, 2026-10-02
+
+La revisión de Baileys 7.0.0-rc14 confirmó que `getBotListV2()` convierte tanto un contenedor de bots ausente como un contenedor realmente vacío en `[]`. WIS consulta el mismo IQ de solo lectura `bot` v2 y valida el `iq` de resultado, el contenedor y la sección `all` antes de guardar datos. Solo una sección `all` presente y vacía se registra como una lista vacía verificada; una respuesta sin contenedor, una sección ausente o un error del proveedor se conserva como fallo, nunca como “sin bots”. El lector conserva solo JID y persona, limita la lista a 1000 y registra el código numérico del proveedor cuando está disponible. La prueba usa respuestas simuladas; no ejecuta una consulta adicional en producción.

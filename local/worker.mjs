@@ -213,11 +213,29 @@ export async function checkedNewsletterMessages(socket,target) {
   return {messages,count:messages.length,truncated:entries.length>=50,partial:true,complete:false,limit:50};
 }
 export async function checkedBotList(socket) {
-  if(typeof socket?.getBotListV2!=='function')throw Error('capability_unavailable');
-  const result=await socket.getBotListV2();
-  // Baileys maps a missing bot container/section to [], so that value cannot
-  // prove an empty list. Keep it unknown instead of claiming verified absence.
-  if(!Array.isArray(result)||result.length===0)throw Error('invalid_bot_response');
+  if(typeof socket?.query!=='function')throw Error('capability_unavailable');
+  const reply=await socket.query({tag:'iq',attrs:{xmlns:'bot',to:'s.whatsapp.net',type:'get'},content:[{tag:'bot',attrs:{v:'2'}}]},10000);
+  if(!reply)throw Error('read_timeout');
+  const contents=Array.isArray(reply.content)?reply.content:[];
+  const providerError=contents.find(node=>node?.tag==='error');
+  if(reply.attrs?.type==='error'||providerError) {
+    const candidate=Number(providerError?.attrs?.code??reply.attrs?.code);
+    throw Object.assign(Error('provider_error'),{statusCode:Number.isInteger(candidate)&&candidate>=100&&candidate<=599?candidate:undefined});
+  }
+  const botNodes=contents.filter(node=>node?.tag==='bot');
+  if(reply.tag!=='iq'||reply.attrs?.type!=='result'||botNodes.length!==1||!Array.isArray(botNodes[0].content))throw Error('invalid_bot_response');
+  const sections=botNodes[0].content.filter(node=>node?.tag==='section');
+  if(sections.length!==botNodes[0].content.length)throw Error('invalid_bot_response');
+  const allSections=sections.filter(section=>section.attrs?.type==='all');
+  if(!allSections.length)throw Error('invalid_bot_response');
+  const result=[];
+  for(const section of allSections) {
+    if(section.content!==undefined&&section.content!==null&&!Array.isArray(section.content))throw Error('invalid_bot_response');
+    for(const value of section.content||[]) {
+      if(value?.tag!=='bot'||typeof value.attrs?.jid!=='string')throw Error('invalid_bot_response');
+      result.push({jid:value.attrs.jid,personaId:value.attrs.persona_id});
+    }
+  }
   const bots=[];
   for(const value of result) {
     if(!value||typeof value.jid!=='string'||!/^\d{1,40}@(s\.whatsapp\.net|lid|bot)$/.test(value.jid))throw Error('invalid_bot_response');
@@ -225,7 +243,7 @@ export async function checkedBotList(socket) {
     if(persona!==undefined&&(typeof persona!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(persona)))throw Error('invalid_bot_response');
     if(bots.length<1000)bots.push({jid:value.jid,persona_id:persona??null});
   }
-  return {bots,truncated:result.length>1000,partial:true,complete:false,limit:1000};
+  return {bots,truncated:result.length>1000,response_verified:true,partial:true,complete:false,limit:1000};
 }
 export async function checkedBusinessRead(socket,method,args) {
   if(typeof socket.query!=='function')throw new Error('capability_unavailable');
@@ -457,7 +475,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
     const newsletterRead=name==='newsletter_messages';
     const botRead=name==='bot_list';
     const list=['fetchBlocklist','groupFetchAllParticipating','communityFetchAllParticipating'].includes(name);
-    if(botRead&&typeof current.getBotListV2!=='function')throw new Error('capability_unavailable');
+    if(botRead&&typeof current.query!=='function')throw new Error('capability_unavailable');
     if(!publicRead&&!communityInviteRead&&!botRead&&typeof current[business||list||groupRead||limitsRead||newsletterRead?'query':name]!=='function')throw new Error('capability_unavailable');
     if(communityInviteRead&&typeof current.communityInviteCode!=='function')throw new Error('capability_unavailable');
     let timer,timedOut=false;
@@ -609,7 +627,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       } else if(command.kind==='bot_list') {
         if(command.target)throw Error('invalid_target');
         const result=await readCall(current,'bot_list');
-        snapshot('bot_list','wis-5679',{...result,available:true,response_verified:true,error:null,source:'baileys_getBotListV2'});
+        snapshot('bot_list','wis-5679',{...result,available:true,response_verified:true,error:null,source:'checked_baileys_bot_v2_iq'});
       } else if(command.kind==='newsletter_messages') {
         if(!/^\d{1,40}@newsletter$/.test(command.target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='newsletter' AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('unknown_newsletter');
         const result=await readCall(current,'newsletter_messages',[command.target]);

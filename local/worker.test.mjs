@@ -26,17 +26,34 @@ test('account limits require actual objects and never default missing restrictio
  const quality=await checkedAccountLimits(socket({enforcement_type:'BIZ_QUALITY'}),'timelock');assert.equal(quality.enforcement_type,'BIZ_QUALITY');assert.equal(quality.is_active,null);
 });
 
-test('bot list uses Baileys getter, validates identities and bounds retained metadata',async()=>{
- let reads=0,writes=0;
- const socket={getBotListV2:async()=>{reads++;return [{jid:'123@s.whatsapp.net',personaId:'helpful_bot'},{jid:'456@lid',personaId:undefined}];},query:async()=>{writes++;throw Error('unexpected raw query');}};
+test('bot list validates the raw Baileys response and distinguishes a real empty list from a missing container',async()=>{
+ const response=bots=>({tag:'iq',attrs:{type:'result',secret:'DO_NOT_RETAIN'},content:[{tag:'bot',attrs:{secret:'DO_NOT_RETAIN'},content:[{tag:'section',attrs:{type:'all'},content:bots.map(({jid,persona_id})=>({tag:'bot',attrs:{jid,secret:'DO_NOT_RETAIN',...(persona_id?{persona_id}:{})}}))}]}]});
+ let request,timeout;
+ const socket={query:async(node,ms)=>{request=node;timeout=ms;return response([{jid:'123@s.whatsapp.net',persona_id:'helpful_bot'},{jid:'456@lid'}]);}};
  const result=await checkedBotList(socket);
- assert.deepEqual(result,{bots:[{jid:'123@s.whatsapp.net',persona_id:'helpful_bot'},{jid:'456@lid',persona_id:null}],truncated:false,partial:true,complete:false,limit:1000});
- assert.equal(reads,1);assert.equal(writes,0);
- await assert.rejects(checkedBotList({getBotListV2:async()=>[]}),/invalid_bot_response/);
- await assert.rejects(checkedBotList({getBotListV2:async()=>[{jid:'not-an-identity'}]}),/invalid_bot_response/);
- await assert.rejects(checkedBotList({getBotListV2:async()=>[{jid:'123@bot',personaId:'bad value'}]}),/invalid_bot_response/);
- assert.equal((await checkedBotList({getBotListV2:async()=>Array.from({length:1001},(_,index)=>({jid:`${index+1}@bot`,personaId:'bot'}))})).bots.length,1000);
+ assert.deepEqual(result,{bots:[{jid:'123@s.whatsapp.net',persona_id:'helpful_bot'},{jid:'456@lid',persona_id:null}],truncated:false,response_verified:true,partial:true,complete:false,limit:1000});
+ assert.equal(JSON.stringify(result).includes('DO_NOT_RETAIN'),false);
+ assert.deepEqual(request,{tag:'iq',attrs:{xmlns:'bot',to:'s.whatsapp.net',type:'get'},content:[{tag:'bot',attrs:{v:'2'}}]});assert.equal(timeout,10000);
+ const empty=await checkedBotList({query:async()=>response([])});assert.deepEqual(empty.bots,[]);assert.equal(empty.response_verified,true);
+ const emptyWithoutChildArray=await checkedBotList({query:async()=>({tag:'iq',attrs:{type:'result'},content:[{tag:'bot',content:[{tag:'section',attrs:{type:'all'}}]}]})});assert.deepEqual(emptyWithoutChildArray.bots,[]);assert.equal(emptyWithoutChildArray.response_verified,true);
+ await assert.rejects(checkedBotList({query:async()=>({tag:'iq',attrs:{type:'result'},content:[]})}),/invalid_bot_response/);
+ await assert.rejects(checkedBotList({query:async()=>({tag:'iq',attrs:{type:'result'},content:[{tag:'bot',content:[]}]})}),/invalid_bot_response/);
+ await assert.rejects(checkedBotList({query:async()=>response([{jid:'not-an-identity'}])}),/invalid_bot_response/);
+ await assert.rejects(checkedBotList({query:async()=>response([{jid:'123@bot',persona_id:'bad value'}])}),/invalid_bot_response/);
+ const truncated=await checkedBotList({query:async()=>response(Array.from({length:1001},(_,index)=>({jid:`${index+1}@bot`,persona_id:'bot'})))});assert.equal(truncated.bots.length,1000);assert.equal(truncated.truncated,true);
+ await assert.rejects(checkedBotList({query:async()=>({tag:'iq',attrs:{type:'error'},content:[{tag:'error',attrs:{code:'500'}}]})}),error=>error.message==='provider_error'&&error.statusCode===500);
+ await assert.rejects(checkedBotList({query:async()=>undefined}),/read_timeout/);
  await assert.rejects(checkedBotList({}),/capability_unavailable/);
+});
+
+test('bot list read command uses the checked IQ on sockets without Baileys convenience getter',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect' WHERE id='wis-5679'").run();
+ const dir=mkdtempSync(resolve(tmpdir(),'wis-bot-list-iq-')),ev=new EventEmitter();let queries=0,writes=0;const methods=[];
+ const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},sendMessage(){writes++;},query:async(node,timeout)=>{queries++;methods.push(node.content?.[0]?.tag);assert.equal(timeout,10000);if(node.attrs.xmlns==='w:g2')return {tag:'iq',attrs:{type:'result'},content:[{tag:'groups',attrs:{},content:[]}]};assert.equal(node.attrs.xmlns,'bot');assert.deepEqual(node.content,[{tag:'bot',attrs:{v:'2'}}]);return {tag:'iq',attrs:{type:'result'},content:[{tag:'bot',attrs:{},content:[{tag:'section',attrs:{type:'all'},content:[{tag:'bot',attrs:{jid:'123@bot',persona_id:'assistant'}}]}]}]};}};
+ const fake={default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),readIntervalMs:0});
+ try{ev.emit('connection.update',{connection:'open'});await worker.drainReads();db.prepare('DELETE FROM read_commands').run();const at=new Date().toISOString();db.prepare("INSERT INTO read_commands(id,kind,status,created_at,updated_at) VALUES('bot-iq','bot_list','pending',?,?)").run(at,at);await worker.drainReads();const command=db.prepare("SELECT status,error FROM read_commands WHERE id='bot-iq'").get();assert.equal(command.status,'done',command.error);const snapshot=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='bot_list' AND resource_id='wis-5679'").get().payload);assert.equal(snapshot.response_verified,true);assert.equal(snapshot.source,'checked_baileys_bot_v2_iq');assert.deepEqual(snapshot.bots,[{jid:'123@bot',persona_id:'assistant'}]);assert.equal(queries,2,JSON.stringify(methods));assert.deepEqual(methods,['participating','bot']);assert.equal(writes,0);}
+ finally{await worker.stop();db.close();}
 });
 
 test('checked group lists require verified container and never turn timeout into empty data',async()=>{
