@@ -591,3 +591,8 @@ La página de Comunidades muestra como última respuesta una consulta vacía de 
 ### Lectura automática all, 2026-10-02 08:05 UTC
 
 El barrido programado `all` figura completado y su contador agregado avanzó de 204 a 205. La escritura global del snapshot alcanzó las 08:05 UTC; el inventario continuó en 410 rutas y las lecturas fallidas acumuladas permanecieron en 67. El estado del comando no demuestra que todos los recursos o campos se hayan actualizado; los conteos no revelaron rutas nuevas. La identidad siguió verificada, el worker activo y los envíos pausados. Próxima ruta automática: `blocklist` a las 08:20 UTC. No se inspeccionaron payloads ni se inició una consulta manual.
+
+
+### Lectura automática blocklist, 2026-10-02 08:20 UTC
+
+El turno programado de `blocklist` figura completado y su contador agregado avanzó de 27 a 28. La escritura global llegó a las 08:20 UTC; el inventario de rutas siguió en 410 y los fallos acumulados permanecieron en 67. Esto confirma el comando registrado, no la actualización de cada campo. La conexión se mantuvo verificada, el worker activo y los envíos pausados. Próxima ruta automática: `communities` a las 08:35 UTC. No se inspeccionó la lista de bloqueos ni se hizo una consulta manual.
