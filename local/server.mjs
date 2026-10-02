@@ -266,6 +266,7 @@ export function makeServer(database=db,options={}){
     if(resource==='account'&&method==='GET'){
      auth('read',true);const account={};
      for(const kind of ['profile','status','privacy','business','history','connection'])account[kind]=parseSnapshot(database.prepare("SELECT * FROM snapshots WHERE kind=? AND resource_id='wis-5679'").get(kind));
+     account.observed_settings=database.prepare("SELECT * FROM snapshots WHERE kind='account_setting' ORDER BY resource_id").all().map(parseSnapshot);
      account.username=parseSnapshot(database.prepare("SELECT * FROM snapshots WHERE kind='account_username' AND resource_id='wis-5679'").get());
      if(account.profile?.data&&account.username?.data)account.profile.data={...account.profile.data,username:account.username.data.username??null,username_available:account.username.data.available===true};
      account.avatar=avatarMetadata(ownAvatarTarget());account.updated_at=database.prepare("SELECT max(updated_at) AS value FROM snapshots WHERE resource_id='wis-5679'").get().value;return send(account);

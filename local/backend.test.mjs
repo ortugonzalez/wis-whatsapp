@@ -56,6 +56,11 @@ test('local HTTP authorization, consent, queue transaction, replay and private Q
   database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('profile','wis-5679',?,?)").run(JSON.stringify({name:'Local account'}),new Date().toISOString());
   database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('account_username','wis-5679',?,?)").run(JSON.stringify({available:true,response_verified:true,username:'wis_owner',source:'usync_username_protocol'}),new Date().toISOString());
   database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('group','1@g.us',?,?)").run(JSON.stringify({subject:'Actual group',participants:[]}),new Date().toISOString());
+  database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('account_setting','timeFormat',?,?)").run(JSON.stringify({setting:'timeFormat',value:false,observed_at:'2026-01-01T00:00:00.000Z'}),'2026-01-01T00:00:00.000Z');
+  assert.equal((await call('/api/v1/account')).json.data.observed_settings[0].data.value,false);
+  const settingReader=(await call('/api/v1/tokens','POST',{name:'settings-isolation',scopes:['read']})).json.data.token;
+  assert.equal((await call('/api/v1/account','GET',null,settingReader)).status,403);
+  assert.equal((await call('/api/v1/snapshots?kind=account_setting','GET',null,settingReader)).status,400);
   const account=(await call('/api/v1/account')).json.data;assert.equal(account.profile.data.name,'Local account');assert.equal(account.username.data.username,'wis_owner');assert.equal(account.profile.data.username,'wis_owner');assert.equal(account.profile.data.username_available,true);assert.equal((await call('/api/v1/groups?q=Actual')).json.meta.total,1);
   assert.equal((await call('/api/v1/groups?id=1%40g.us')).json.data.subject,'Actual group');assert.equal((await call('/api/v1/groups?id=404%40g.us')).status,404);
   database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('contact','12025555679@s.whatsapp.net',?,?)").run(JSON.stringify({name:'Observed contact',status:'Available'}),new Date().toISOString());
