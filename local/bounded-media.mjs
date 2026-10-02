@@ -16,3 +16,23 @@ export function createBoundedMediaDownload({timeoutMs=15000}={}){
   stop(){closed=true;controller?.abort();}
  };
 }
+
+export async function collectBoundedMedia(stream,{signal,maxBytes=25*1024*1024}={}){
+ if(!Number.isSafeInteger(maxBytes)||maxBytes<1)throw Error('invalid_media_size_limit');
+ if(!stream||typeof stream[Symbol.asyncIterator]!=='function')throw Error('invalid_media_stream');
+ const abort=()=>stream.destroy?.();
+ const chunks=[];let size=0;
+ try{
+  if(signal?.aborted){abort();throw Error('media_download_aborted');}
+  signal?.addEventListener('abort',abort,{once:true});
+  for await(const chunk of stream){
+   if(signal?.aborted)throw Error('media_download_aborted');
+   if(!Buffer.isBuffer(chunk)&&!(chunk instanceof Uint8Array))throw Error('invalid_media_chunk');
+   if(chunk.byteLength>maxBytes-size)throw Error('media_too_large');
+   chunks.push(Buffer.from(chunk));size+=chunk.byteLength;
+  }
+  if(signal?.aborted)throw Error('media_download_aborted');
+  return Buffer.concat(chunks,size);
+ }catch(error){stream.destroy?.();throw error;}
+ finally{signal?.removeEventListener('abort',abort);}
+}
