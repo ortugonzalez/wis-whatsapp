@@ -601,3 +601,8 @@ El turno programado de `blocklist` figura completado y su contador agregado avan
 ### Lectura automática communities, 2026-10-02 08:35 UTC
 
 El turno programado de `communities` figura completado y el contador agregado avanzó de 29 a 30. La escritura del snapshot global llegó a las 08:35 UTC; el inventario permaneció en 410 rutas y los fallos acumulados en 67. No aparecieron rutas nuevas. La finalización del comando no acredita por sí sola cambios en las relaciones o campos individuales. La identidad permaneció verificada, el worker activo y los envíos pausados. Próxima ruta automática: `collections` a las 08:50 UTC. No se abrieron nombres, IDs ni payloads, y no se lanzó consulta manual.
+
+
+### Lectura automática collections, 2026-10-02 08:50 UTC
+
+El turno programado de `collections` figura completado y su contador agregado avanzó de 27 a 28. La escritura global llegó a las 08:50 UTC; el inventario permaneció en 410 rutas y los fallos acumulados en 67. No aparecieron rutas nuevas y el estado de ejecución no valida los campos de cada colección. La conexión mantuvo identidad verificada, el worker activo y los envíos pausados. Próxima ruta: `newsletters` a las 09:05 UTC. No se inspeccionaron productos, nombres ni payloads, y no se inició una lectura manual.
