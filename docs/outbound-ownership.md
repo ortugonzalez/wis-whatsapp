@@ -10,4 +10,8 @@ Antes de integrar: endpoint público informa conexión activa; Chrome muestra ce
 
 Producción: EasyPanel confirma Success el 2026-10-02 a las 21:24:35 UTC para `fix: fence late outbound results after worker shutdown`. Después, el endpoint sigue conectado y sin error actual; Chrome vuelve a mostrar el historial con 14 operaciones y cero procesándose. No se enviaron mensajes de prueba. La prueba del comportamiento de apagado sigue siendo sintética: no se provocó un envío real pendiente para interrumpirlo.
 
-Límites: no demuestra entrega real ni paridad WHAPI; queda por ampliar la regresión de reemplazo de socket sin detener el worker. Próxima ruta: frescura y brechas de datos productivos, con conteos agregados y sin repetir consultas de proveedor agotadas.
+Límites: no demuestra entrega real ni paridad WHAPI. Próxima ruta: frescura y brechas de datos productivos, con conteos agregados y sin repetir consultas de proveedor agotadas.
+
+Seguimiento 2026-10-02, 22:21 UTC: nueva regresión de reemplazo del socket sin detener el worker. Usa exclusivamente SQLite en memoria, sockets simulados y directorios temporales. Una respuesta tardía del socket anterior queda como resultado desconocido, sin ID de envío aceptado ni una segunda operación; la conexión simulada nueva sigue activa. Prueba focal 2/2 aprobada. Esta comprobación no fuerza ninguna reconexión productiva y no prueba comportamiento de entrega del proveedor.
+
+Chrome recargado en este seguimiento: indicadores de recepción todavía sin fecha desde su instrumentación; no se infiere ausencia de mensajes ni recepción reciente del estado conectado. Próxima ruta: extender evidencia de funciones y campos disponibles, manteniendo explícitas estas limitaciones. No se requiere despliegue por esta ampliación de pruebas.
