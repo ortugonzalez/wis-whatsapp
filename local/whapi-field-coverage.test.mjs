@@ -12,6 +12,44 @@ test('field audit separates exact observations, reviewed aliases, and unobserved
   assert.equal(report.methods[0].id,'getchat');assert.equal(JSON.stringify(report).includes('secret-value'),false);
 });
 
+test('message media aliases require the matching type-scoped metadata evidence',()=>{
+  const reference={methods:[{id:'getmessage',operations:[{response_fields:{200:[{path:'image.mime_type'},{path:'video.mime_type'},{path:'location.latitude'}]}}]}]};
+  const aliases={getmessage:{source_kinds:['messages'],fields:{
+    'image.mime_type':[{kind:'message_image',field:'details.mimetype',note:'image-scoped'}],
+    'video.mime_type':[{kind:'message_video',field:'details.mimetype',note:'video-scoped'}],
+    'location.latitude':[{kind:'message_location',field:'details.degreesLatitude',note:'location-scoped'}],
+  }}};
+  const coverage={snapshot_kinds:[],storage_kinds:[],contextual_kinds:[
+    {kind:'message_image',field_counts:[{field:'$.details.mimetype',records:3,non_empty_text_records:3}]},
+    {kind:'message_video',field_counts:[{field:'$.details.mimetype',records:2,non_empty_text_records:2}]},
+    {kind:'message_audio',field_counts:[{field:'$.details.mimetype',records:20,non_empty_text_records:20}]},
+  ]};
+  const report=summarizeCapabilityFieldCoverage(reference,coverage,aliases);
+  assert.equal(report.totals.semantic_response_fields_observed,2);
+  assert.equal(report.totals.fresh_response_fields_observed,2);
+  assert.equal(report.totals.response_fields_without_observation,1);
+  assert.equal(JSON.stringify(report).includes('image/jpeg'),false);
+});
+
+test('empty media text metadata does not count as observed while non-empty type-scoped text does',()=>{
+  const reference={methods:[{id:'getmessage',operations:[{response_fields:{200:[{path:'image.mime_type'},{path:'video.mime_type'}]}}]}]};
+  const aliases={getmessage:{source_kinds:['messages'],fields:{
+    'image.mime_type':[{kind:'message_image',field:'details.mimetype',note:'image-scoped',requires_non_empty_text:true}],
+    'video.mime_type':[{kind:'message_video',field:'details.mimetype',note:'video-scoped',requires_non_empty_text:true}],
+  }}};
+  const emptyImage={snapshot_kinds:[],storage_kinds:[],contextual_kinds:[
+    {kind:'message_image',field_counts:[{field:'$.details.mimetype',records:1,non_empty_text_records:0}]},
+    {kind:'message_video',field_counts:[{field:'$.details.mimetype',records:1,non_empty_text_records:1}]},
+  ]};
+  const partiallyObserved=summarizeCapabilityFieldCoverage(reference,emptyImage,aliases);
+  assert.equal(partiallyObserved.totals.semantic_response_fields_observed,1);
+  assert.equal(partiallyObserved.totals.response_fields_without_observation,1);
+  const nonEmptyImage={...emptyImage,contextual_kinds:emptyImage.contextual_kinds.map(item=>item.kind==='message_image'?{...item,field_counts:[{field:'$.details.mimetype',records:1,non_empty_text_records:1}]}:item)};
+  const observed=summarizeCapabilityFieldCoverage(reference,nonEmptyImage,aliases);
+  assert.equal(observed.totals.semantic_response_fields_observed,2);
+  assert.equal(observed.totals.response_fields_without_observation,0);
+});
+
 test('field audit reports observed routes backed only by explicitly stale evidence separately',()=>{
   const reference={methods:[{id:'getcontactprofile',operations:[{response_fields:{200:[{path:'id'},{path:'name'},{path:'about'}]}}]}]};
   const coverage={snapshot_kinds:[{kind:'contact',field_counts:[

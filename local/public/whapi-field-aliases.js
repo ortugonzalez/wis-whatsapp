@@ -1,6 +1,30 @@
 'use strict';
 // Reviewed semantic correspondences for local Baileys snapshots. These entries
 // describe field availability only; they never copy or expose private values.
+const messageMediaAliases = prefix => Object.freeze({
+  [`${prefix}audio.mime_type`]: Object.freeze([{ kind: 'message_audio', field: 'details.mimetype', note: 'tipo MIME observado solo en mensajes de audio recibidos', requires_non_empty_text: true }]),
+  [`${prefix}audio.seconds`]: Object.freeze([{ kind: 'message_audio', field: 'details.seconds', note: 'duración informada por el mensaje de audio Baileys' }]),
+  [`${prefix}document.mime_type`]: Object.freeze([{ kind: 'message_document', field: 'details.mimetype', note: 'tipo MIME observado solo en documentos recibidos', requires_non_empty_text: true }]),
+  [`${prefix}document.file_name`]: Object.freeze([{ kind: 'message_document', field: 'details.fileName', note: 'nombre de archivo informado por el mensaje de documento', requires_non_empty_text: true }]),
+  [`${prefix}document.filename`]: Object.freeze([{ kind: 'message_document', field: 'details.fileName', note: 'nombre de archivo informado por el mensaje de documento', requires_non_empty_text: true }]),
+  [`${prefix}document.caption`]: Object.freeze([{ kind: 'message_document', field: 'details.caption', note: 'caption separado del nombre de archivo; solo cuando Baileys lo informa', requires_non_empty_text: true }]),
+  [`${prefix}document.page_count`]: Object.freeze([{ kind: 'message_document', field: 'details.pageCount', note: 'cantidad de páginas informada por el documento Baileys' }]),
+  [`${prefix}image.mime_type`]: Object.freeze([{ kind: 'message_image', field: 'details.mimetype', note: 'tipo MIME observado solo en imágenes recibidas', requires_non_empty_text: true }]),
+  [`${prefix}image.file_name`]: Object.freeze([{ kind: 'message_image', field: 'details.fileName', note: 'nombre de archivo informado por el mensaje de imagen', requires_non_empty_text: true }]),
+  [`${prefix}image.caption`]: Object.freeze([{ kind: 'message_image', field: 'details.caption', note: 'caption de imagen conservado por Baileys; no se confunde con el cuerpo de otros mensajes', requires_non_empty_text: true }]),
+  [`${prefix}image.width`]: Object.freeze([{ kind: 'message_image', field: 'details.width', note: 'ancho en píxeles informado por el mensaje de imagen' }]),
+  [`${prefix}image.height`]: Object.freeze([{ kind: 'message_image', field: 'details.height', note: 'alto en píxeles informado por el mensaje de imagen' }]),
+  [`${prefix}location.latitude`]: Object.freeze([{ kind: 'message_location', field: 'details.degreesLatitude', note: 'latitud en grados informada por un mensaje de ubicación' }]),
+  [`${prefix}location.longitude`]: Object.freeze([{ kind: 'message_location', field: 'details.degreesLongitude', note: 'longitud en grados informada por un mensaje de ubicación' }]),
+  [`${prefix}location.name`]: Object.freeze([{ kind: 'message_location', field: 'details.name', note: 'nombre informado por el mensaje de ubicación', requires_non_empty_text: true }]),
+  [`${prefix}location.address`]: Object.freeze([{ kind: 'message_location', field: 'details.address', note: 'dirección informada por el mensaje de ubicación', requires_non_empty_text: true }]),
+  [`${prefix}video.mime_type`]: Object.freeze([{ kind: 'message_video', field: 'details.mimetype', note: 'tipo MIME observado solo en videos recibidos', requires_non_empty_text: true }]),
+  [`${prefix}video.file_name`]: Object.freeze([{ kind: 'message_video', field: 'details.fileName', note: 'nombre de archivo informado por el mensaje de video', requires_non_empty_text: true }]),
+  [`${prefix}video.caption`]: Object.freeze([{ kind: 'message_video', field: 'details.caption', note: 'caption separado del nombre de archivo; solo cuando Baileys lo informa', requires_non_empty_text: true }]),
+  [`${prefix}video.width`]: Object.freeze([{ kind: 'message_video', field: 'details.width', note: 'ancho en píxeles informado por el mensaje de video' }]),
+  [`${prefix}video.height`]: Object.freeze([{ kind: 'message_video', field: 'details.height', note: 'alto en píxeles informado por el mensaje de video' }]),
+  [`${prefix}video.seconds`]: Object.freeze([{ kind: 'message_video', field: 'details.seconds', note: 'duración informada por el mensaje de video Baileys' }]),
+});
 window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
   getgroup: Object.freeze({
     source_kinds: Object.freeze(['group', 'chat', 'avatar', 'conversations', 'group_invite']),
@@ -52,6 +76,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       timestamp: Object.freeze([{ kind: 'messages', field: 'created_at', note: 'fecha ISO local; WHAPI informa timestamp numerico' }]),
       status: Object.freeze([{ kind: 'messages', field: 'delivery_status', note: 'estado local de entrega' }]),
       'text.body': Object.freeze([{ kind: 'messages', field: 'body', note: 'texto o cuerpo conservado cuando esta disponible' }]),
+      ...messageMediaAliases(''),
     }),
   }),
   getmessages: Object.freeze({
@@ -66,6 +91,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       'messages[].timestamp': Object.freeze([{ kind: 'messages', field: 'created_at', note: 'fecha ISO local; WHAPI informa timestamp numerico' }]),
       'messages[].status': Object.freeze([{ kind: 'messages', field: 'delivery_status', note: 'estado local de entrega' }]),
       'messages[].text.body': Object.freeze([{ kind: 'messages', field: 'body', note: 'texto o cuerpo conservado cuando esta disponible' }]),
+      ...messageMediaAliases('messages[].'),
     }),
   }),
   getmessagesbychatid: Object.freeze({
@@ -80,6 +106,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       'messages[].timestamp': Object.freeze([{ kind: 'messages', field: 'created_at', note: 'fecha ISO local; WHAPI informa timestamp numerico' }]),
       'messages[].status': Object.freeze([{ kind: 'messages', field: 'delivery_status', note: 'estado local de entrega' }]),
       'messages[].text.body': Object.freeze([{ kind: 'messages', field: 'body', note: 'texto o cuerpo conservado cuando esta disponible' }]),
+      ...messageMediaAliases('messages[].'),
     }),
   }),
   getchat: Object.freeze({

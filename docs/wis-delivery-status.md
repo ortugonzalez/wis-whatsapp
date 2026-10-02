@@ -1,6 +1,16 @@
 # Estado de entrega WIS WhatsApp
 
-Actualizado: **2026-09-30 23:44 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+Actualizado: **2026-10-02 07:53 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+
+### Recuperación de arranque y verificación productiva, 2026-10-02 07:53 (Buenos Aires)
+
+EasyPanel desplegó `fix: recover supervisor lock after container restart` (`ecb2c1f`). El bucle de arranque se debía a que un PID persistido podía reutilizarse tras reiniciar el contenedor; ahora la exclusión del supervisor se valida mediante una concesión transaccional en SQLite y la identidad del proceso. QA independiente revisó la exclusión y liberación; la suite completa pasó 253/253, el build y `git diff --check` pasaron.
+
+En Chrome, después del despliegue, el resumen volvió a cargar sin respuestas HTTP 502 y mostró WhatsApp conectada, identidad verificada y envíos pausados. No se tocó el QR ni se envió ningún mensaje. El recolector conserva una concesión activa y la programación sigue habilitada. `bot_list` terminó a las 07:51 con `provider_error` (HTTP 503); la próxima lectura quedó como `disappearing_mode` a las 08:06. El panel registraba 410 campos en 28 tipos de datos y 69 errores históricos de lectura. La cobertura de `bot_list` sigue desconocida; no se repitió manualmente ni se interpreta el error como una lista vacía.
+
+La auditoría pública de capacidades, recalculada a las 07:57, mantiene 182 métodos y 44.628 rutas de respuesta. Hay 161 rutas con observación local (14 exactas y 147 equivalencias revisadas); 23/177 funciones con respuesta tienen alguna ruta observada y 4 tienen todas las rutas documentadas observadas. Las 161 observaciones no marcadas obsoletas no prueban frescura: la fecha de guardado del snapshot no necesariamente es la fecha de observación del campo.
+
+Próxima ruta: determinar si `bot_list` puede entregar una respuesta verificable sin reintentos agresivos; mientras tanto mantener visible la brecha, conservar la sesión y continuar la auditoría de capacidades WHAPI solo con evidencias reales. Las demás capacidades pendientes siguen siendo brechas; no se declara paridad.
 
 ### Fechas de escritura de snapshots en la auditoría WHAPI, 2026-10-01 02:44 UTC
 

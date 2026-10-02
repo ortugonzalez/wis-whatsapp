@@ -60,6 +60,18 @@ test('conversation and message aliases use stable local identifiers',()=>{
   assert.equal(aliases.getmessages.fields['messages[].id'][0].field,'wa_message_id');
 });
 
+test('media response aliases use type-scoped Baileys metadata and safe message paths',()=>{
+  const textFields=['audio.mime_type','document.mime_type','document.file_name','document.filename','document.caption','image.mime_type','image.file_name','image.caption','location.name','location.address','video.mime_type','video.file_name','video.caption'];
+  for(const [method,prefix] of [['getmessage',''],['getmessages','messages[].'],['getmessagesbychatid','messages[].']]){
+    assert.equal(aliases[method].fields[`${prefix}image.mime_type`][0].kind,'message_image');
+    assert.equal(aliases[method].fields[`${prefix}video.seconds`][0].field,'details.seconds');
+    assert.equal(aliases[method].fields[`${prefix}location.latitude`][0].field,'details.degreesLatitude');
+    assert.equal(aliases[method].fields[`${prefix}document.caption`][0].requires_non_empty_text,true);
+    for(const field of textFields)assert.equal(aliases[method].fields[`${prefix}${field}`][0].requires_non_empty_text,true,`${method}.${field} must reject empty text`);
+  }
+  assert.match(aliases.getmessage.fields['image.mime_type'][0].note,/solo en im[aá]genes/);
+});
+
 test('chat and group mention and spam aliases use scoped Baileys evidence',()=>{
   assert.equal(aliases.getchat.fields.unread_mention[0].field,'whapi_derived.all_unread_mention_from_unread_mention_count');
   assert.equal(aliases.getchats.fields['chats[].unread_mention'][0].field,'whapi_derived.all_unread_mention_from_unread_mention_count');

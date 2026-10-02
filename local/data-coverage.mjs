@@ -49,46 +49,65 @@ function normalizeArrayIndexes(path) {
   return result.replace(/(\$\.presences)\."(?:[^"\\]|\\.)*"/g, '$1.*');
 }
 
+const MESSAGE_CONTEXT_FIELDS = Object.freeze({
+  image: ['$.details.mimetype','$.details.fileName','$.details.caption','$.details.width','$.details.height'],
+  audio: ['$.details.mimetype','$.details.fileName','$.details.seconds'],
+  video: ['$.details.mimetype','$.details.fileName','$.details.caption','$.details.width','$.details.height','$.details.seconds'],
+  document: ['$.details.mimetype','$.details.fileName','$.details.caption','$.details.pageCount'],
+  location: ['$.details.name','$.details.address','$.details.degreesLatitude','$.details.degreesLongitude'],
+});
+
 export function buildDataCoverage(db, now = Date.now()) {
   const count = (sql) => db.prepare(sql).get().count;
   const byKind = new Map(db.prepare('SELECT kind,count(*) AS records,max(updated_at) AS last_updated_at FROM snapshots GROUP BY kind ORDER BY kind').all().map(row => [row.kind, { kind: row.kind, records: row.records, last_updated_at: row.last_updated_at, fields: new Map(), omittedFieldNames: new Set(), fieldInventoryTruncated: false }]));
-  const fieldStatement = db.prepare("SELECT s.kind,s.resource_id,s.updated_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.expires_at') AS expires_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.last_success_at') AS last_success_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.stale') AS stale,j.id AS node_id,j.parent AS parent_id,j.fullkey AS field,j.key AS key_type,j.type AS value_type,CASE WHEN j.type='text' THEN length(j.value) ELSE NULL END AS text_length FROM snapshots s JOIN json_tree(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END) j WHERE json_type(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END)='object' ORDER BY s.kind,s.resource_id");
-  let activeKind = null, activeResource = null, activeSnapshotUpdatedAt = null, activeSnapshotSuccessAt = null, activeSnapshotStale = false, activeFields = new Map(), activeParents = new Map(), activeStaleObjects = new Set();
+  const fieldStatement = db.prepare("SELECT s.kind,s.resource_id,s.updated_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.type') AS snapshot_type,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.expires_at') AS expires_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.last_success_at') AS last_success_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.stale') AS stale,j.id AS node_id,j.parent AS parent_id,j.fullkey AS field,j.key AS key_type,j.type AS value_type,CASE WHEN j.type='text' THEN length(j.value) ELSE NULL END AS text_length FROM snapshots s JOIN json_tree(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END) j WHERE json_type(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END)='object' ORDER BY s.kind,s.resource_id");
+  const messageTypeKinds = new Map();
+  let activeKind = null, activeResource = null, activeSnapshotType = null, activeSnapshotUpdatedAt = null, activeSnapshotSuccessAt = null, activeSnapshotStale = false, activeFields = new Map(), activeParents = new Map(), activeStaleObjects = new Set();
   const flushFields = () => {
     const entry = byKind.get(activeKind);
     if (!entry) return;
+    const targets = [entry];
+    const contextFields = MESSAGE_CONTEXT_FIELDS[activeSnapshotType];
+    if (activeKind === 'message' && contextFields) {
+      let context = messageTypeKinds.get(activeSnapshotType);
+      if (!context) {
+        context = { kind: `message_${activeSnapshotType}`, records: 0, last_updated_at: null, fields: new Map() };
+        messageTypeKinds.set(activeSnapshotType, context);
+      }
+      context.records++;
+      if (activeSnapshotUpdatedAt && (!context.last_updated_at || activeSnapshotUpdatedAt > context.last_updated_at)) context.last_updated_at = activeSnapshotUpdatedAt;
+      targets.push(context);
+    }
+    const staleNode = nodeId => {
+      let current = nodeId;
+      while (current !== null && current !== undefined) {
+        if (activeStaleObjects.has(current)) return true;
+        current = activeParents.get(current);
+      }
+      return false;
+    };
     for (const [field, evidence] of activeFields) {
-      if (!entry.fields.has(field) && entry.fields.size >= 10000) { entry.fieldInventoryTruncated = true; continue; }
-      const prior = entry.fields.get(field) || { records: 0, non_empty_text_records: 0, stale_records: 0, stale_non_empty_text_records: 0, snapshot_updated_at: null, last_success_at: null };
-      prior.records++;
-      if (evidence.non_empty_text) prior.non_empty_text_records++;
-      const staleNode = nodeId => {
-        let current = nodeId;
-        while (current !== null && current !== undefined) {
-          if (activeStaleObjects.has(current)) return true;
-          current = activeParents.get(current);
-        }
-        return false;
-      };
-      const occurrenceStale = evidence.occurrences.map(occurrence => activeSnapshotStale || staleNode(occurrence.node_id));
-      const allOccurrencesStale = occurrenceStale.length > 0 && occurrenceStale.every(Boolean);
-      const staleNonEmptyOnly = evidence.occurrences.some((occurrence, index) => occurrenceStale[index] && occurrence.non_empty_text)
-        && !evidence.occurrences.some((occurrence, index) => !occurrenceStale[index] && occurrence.non_empty_text);
-      if (allOccurrencesStale) {
-        prior.stale_records++;
+      for (const target of targets) {
+        if (target.kind.startsWith('message_') && !contextFields?.includes(field)) continue;
+        if (!target.fields.has(field) && target.omittedFieldNames && target.fields.size >= 10000) { target.fieldInventoryTruncated = true; continue; }
+        const prior = target.fields.get(field) || { records: 0, non_empty_text_records: 0, stale_records: 0, stale_non_empty_text_records: 0, snapshot_updated_at: null, last_success_at: null };
+        prior.records++;
+        if (evidence.non_empty_text) prior.non_empty_text_records++;
+        const occurrenceStale = evidence.occurrences.map(occurrence => activeSnapshotStale || staleNode(occurrence.node_id));
+        if (occurrenceStale.length > 0 && occurrenceStale.every(Boolean)) prior.stale_records++;
+        const staleNonEmptyOnly = evidence.occurrences.some((occurrence, index) => occurrenceStale[index] && occurrence.non_empty_text)
+          && !evidence.occurrences.some((occurrence, index) => !occurrenceStale[index] && occurrence.non_empty_text);
+        if (staleNonEmptyOnly) prior.stale_non_empty_text_records++;
+        if (activeSnapshotUpdatedAt && (!prior.snapshot_updated_at || activeSnapshotUpdatedAt > prior.snapshot_updated_at)) prior.snapshot_updated_at = activeSnapshotUpdatedAt;
+        if (activeSnapshotSuccessAt && (!prior.last_success_at || activeSnapshotSuccessAt > prior.last_success_at)) prior.last_success_at = activeSnapshotSuccessAt;
+        target.fields.set(field, prior);
       }
-      if (staleNonEmptyOnly) {
-        prior.stale_non_empty_text_records++;
-      }
-      if (activeSnapshotUpdatedAt && (!prior.snapshot_updated_at || activeSnapshotUpdatedAt > prior.snapshot_updated_at)) prior.snapshot_updated_at = activeSnapshotUpdatedAt;
-      if (activeSnapshotSuccessAt && (!prior.last_success_at || activeSnapshotSuccessAt > prior.last_success_at)) prior.last_success_at = activeSnapshotSuccessAt;
-      entry.fields.set(field, prior);
     }
     activeFields = new Map();
   };
   for (const row of fieldStatement.iterate()) {
     if (row.kind !== activeKind || row.resource_id !== activeResource) {
-      flushFields(); activeKind = row.kind; activeResource = row.resource_id;
+      flushFields(); activeKind = row.kind; activeResource = row.resource_id; activeSnapshotType = row.kind === 'message' && typeof row.snapshot_type === 'string' ? row.snapshot_type : null;
       activeFields = new Map(); activeParents = new Map(); activeStaleObjects = new Set();
       const parsedAt = typeof row.updated_at === 'string' ? Date.parse(row.updated_at) : NaN;
       activeSnapshotUpdatedAt = Number.isFinite(parsedAt) ? new Date(parsedAt).toISOString() : null;
@@ -278,6 +297,15 @@ export function buildDataCoverage(db, now = Date.now()) {
     });
   }
   const contextualKinds = [];
+  for (const item of messageTypeKinds.values()) {
+    const fields = [...item.fields].sort(([a], [b]) => a.localeCompare(b));
+    contextualKinds.push({
+      kind: item.kind,
+      records: item.records,
+      last_updated_at: item.last_updated_at,
+      field_counts: fields.map(([field, value]) => ({ field, records: value.records, non_empty_text_records: value.non_empty_text_records, snapshot_updated_at: value.snapshot_updated_at, ...(value.stale_records > 0 ? { stale_records: value.stale_records } : {}), ...(value.stale_non_empty_text_records > 0 ? { stale_non_empty_text_records: value.stale_non_empty_text_records } : {}), ...(value.last_success_at ? { snapshot_last_success_at: value.last_success_at } : {}) })),
+    });
+  }
   const chatLabelAssociations = db.prepare("SELECT count(*) AS records,max(updated_at) AS updated_at FROM snapshots WHERE kind='label_association' AND json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.type')='label_jid' AND json_extract(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.associated')=1 AND json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.chatId')='text' AND json_type(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END,'$.labelId')='text'").get();
   if (chatLabelAssociations.records > 0) contextualKinds.push({
     kind: 'label_chat_association',

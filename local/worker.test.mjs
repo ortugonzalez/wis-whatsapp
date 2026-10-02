@@ -185,6 +185,7 @@ test('metadata allowlists omit group invites/credentials and retain special mess
  assert.equal(result.descId,'description-id');
  assert.equal(result.authorPn,'789@s.whatsapp.net');
  assert.equal(Object.hasOwn(result,'inviteCode'),false);
+ const image=normalizeContent({imageMessage:{mimetype:'image/jpeg',caption:'caption sample',mediaKey:Buffer.from('never-store')}});assert.equal(image.body,'caption sample');assert.equal(image.details.caption,'caption sample');assert.equal(image.details.mimetype,'image/jpeg');assert.equal(JSON.stringify(image).includes('never-store'),false);
  assert.equal(normalizeContent({locationMessage:{degreesLatitude:-34,degreesLongitude:-58,name:'Lugar',jpegThumbnail:Buffer.from('secret')}}).details.degreesLatitude,-34);
  assert.equal(normalizeContent({pollCreationMessage:{name:'Poll',options:[{optionName:'A'}],encKey:Buffer.from('secret')}}).details.options[0].optionName,'A');
  assert.equal(JSON.stringify(normalizeContent({pollUpdateMessage:{vote:{encPayload:'secret'},pollCreationMessageKey:{id:'poll'}}})).includes('secret'),false);

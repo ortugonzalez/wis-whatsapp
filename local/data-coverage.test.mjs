@@ -10,6 +10,19 @@ test('coverage keeps explicit successful observation time separate from snapshot
  try{const coverage=buildDataCoverage(db),fields=coverage.snapshot_kinds.find(row=>row.kind==='account').field_counts,status=fields.find(row=>row.field==='$.status'),unmarked=coverage.snapshot_kinds.find(row=>row.kind==='profile').field_counts.find(row=>row.field==='$.status');assert.equal(status.snapshot_updated_at,'2026-01-02T00:00:00.000Z');assert.equal(status.snapshot_last_success_at,'2026-01-01T00:00:00.000Z');assert.equal(status.stale_records,1);assert.equal(unmarked.stale_records??0,0);assert.equal(unmarked.snapshot_last_success_at??null,null);}finally{db.close();}
 });
 
+test('message metadata evidence is scoped to its message type and never returns values',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const insert=db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)');
+ insert.run('message','image-id',JSON.stringify({type:'image',details:{mimetype:'image/jpeg',caption:'private sample caption',width:640,height:480}}),'2026-01-02T00:00:00.000Z');
+ insert.run('message','video-id',JSON.stringify({type:'video',details:{mimetype:'video/mp4',seconds:12,width:1280,height:720}}),'2026-01-03T00:00:00.000Z');
+ try{
+  const coverage=buildDataCoverage(db),image=coverage.contextual_kinds.find(row=>row.kind==='message_image'),video=coverage.contextual_kinds.find(row=>row.kind==='message_video');
+  assert.equal(image.records,1);assert.equal(image.field_counts.find(row=>row.field==='$.details.mimetype').records,1);assert.equal(image.field_counts.find(row=>row.field==='$.details.caption').non_empty_text_records,1);
+  assert.equal(video.records,1);assert.equal(video.field_counts.find(row=>row.field==='$.details.seconds').records,1);assert.equal(video.field_counts.some(row=>row.field==='$.details.caption'),false);
+  assert.equal(JSON.stringify(coverage).includes('private sample caption'),false);assert.equal(JSON.stringify(coverage).includes('image/jpeg'),false);assert.equal(JSON.stringify(coverage).includes('video/mp4'),false);
+ }finally{db.close();}
+});
+
 test('coverage separates stale non-empty text from current-looking text records',()=>{
  const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
  const insert=db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)');insert.run('contact','old-contact',JSON.stringify({about:'old value',stale:true}),'2026-01-01T00:00:00.000Z');insert.run('contact','current-contact',JSON.stringify({about:'current value'}),'2026-01-02T00:00:00.000Z');
