@@ -675,3 +675,8 @@ La lectura programada `catalog` inició a las 09:22 (Buenos Aires) y finalizó c
 ### Reconciliación del índice público de WHAPI, 2026-10-02 12:29 UTC
 
 Se compararon los enlaces de referencia publicados en `https://whapi.readme.io/llms.txt` con la captura local `public/whapi-fields.json` (2026-10-01 14:37 UTC). Ambos contienen 182 páginas de métodos; no se encontraron métodos agregados, retirados ni duplicados. Esta comprobación reconcilia el conjunto de métodos únicamente: no prueba que cada esquema de campos siga idéntico, que Baileys implemente esos métodos ni que los datos de la línea estén completos.
+# Seguimiento de cobertura productiva — 2026-10-02 12:39 UTC
+
+Chrome mostró el dashboard autenticado con WhatsApp conectada, identidad verificada, worker activo y envíos pausados. La última lectura programada visible fue `collections` a las 09:37 (Buenos Aires), con 29 ejecuciones completadas; el siguiente recorrido se esperaba para `newsletters` a las 09:52. La recepción entrante en vivo más reciente sigue siendo del 28/9 a las 16:32; conexión activa no prueba recepción posterior.
+
+La petición autenticada del panel a `/api/v1/coverage` muestra HTTP 404 con cuerpo no JSON, mientras las demás tarjetas del dashboard cargan. El checkout actual define la ruta y sus pruebas la ejercitan. Una petición directa sin sesión devuelve 401, como corresponde, y no permite comprobar la respuesta autenticada. Esto apunta a una diferencia de enrutamiento/versión en producción, pero no identifica aún la causa. No se reinició el servicio ni se tocó la sesión. Antes de publicar cambios diagnósticos, revisar logs de la implementación activa y volver a comprobar esa ruta con una sesión autenticada; el siguiente hito funcional es `newsletters` a las 09:52.
