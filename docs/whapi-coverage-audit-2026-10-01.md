@@ -493,3 +493,9 @@ El turno `all` terminó `done`, con worker activo y lease vigente; siguiente rut
 El turno programado `blocklist` terminó `done`; el worker continúa activo con lease vigente y la siguiente ruta es `communities` a las 02:05. La cobertura de respuestas WHAPI sigue en 161/44.628 (14 exactas, 147 semánticas, 44.467 sin observar; cuatro métodos completos), sin nuevas rutas observadas en este ciclo. El resultado no revela identidades ni el contenido del bloqueo y no demuestra una lista vacía.
 
 **Próxima ruta:** observar únicamente estado y cobertura agregada de `communities` a las 02:05; no registrar nombres ni integrantes.
+
+### Resultado automático de communities - 2026-10-02 02:05
+
+La lectura automática `communities` terminó `done`; worker activo y lease vigente. El resumen de respuestas permanece en 161/44.628 (14 exactas, 147 semánticas; 44.467 sin observar y cuatro métodos completos), sin cambios de cobertura atribuibles a este ciclo. No se registraron nombres, integrantes ni identificadores. La agenda avanzó a `catalog` a las 02:20.
+
+**Próxima ruta:** comprobar solo el estado de la ruta automática `catalog` y el motivo de omisión/fallo si lo hubiera; no iniciar un reintento manual tras el timeout conocido.
