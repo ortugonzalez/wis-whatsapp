@@ -14,6 +14,8 @@ Genera `.local/provisioning/cliente-demo/compose.json` y una guía, sin desplega
 
 Cada cliente comienza con base vacía, contraseña aleatoria propia y worker desactivado. Configurar SMTP y recuperación para ese cliente. El correo de soporte editable no modifica el de recuperación. Habilitar worker solo al incorporar su línea. `WIS_EXPECTED_PHONE_SUFFIX` valida cuatro dígitos como ayuda de configuración, pero la autorización de identidad siempre compara el número completo. Si la variable falta, conserva 5679 para no afectar la instalación existente.
 
+La preparación incluye límites iniciales de 1 CPU, 1024 MiB y 256 procesos; concede 45 segundos al cierre. `--cpus` acepta 0.5 o enteros de 1 a 8; `--memory` acepta MiB enteros de 512 a 16384. En EasyPanel aplicar CPU/memoria en Recursos, ya que no importa este Compose. Son límites de contenedor, no cuotas de almacenamiento, garantía de capacidad ni aislamiento de red. Medir carga real por cliente antes de ajustar o comercializar capacidad. La instalación WIS existente no cambia al generar estos archivos. Referencia: [servicios Docker Compose](https://docs.docker.com/reference/compose-file/services/).
+
 El nombre inicial se configura mediante `WIS_WORKSPACE_NAME` y luego se edita en el panel. No copiar `.env`, `.local`, `baileys-auth`, bases, tokens ni credenciales de WIS al cliente.
 
 ## Contrato añadido
@@ -29,6 +31,8 @@ Esta versión es beta administrada, no un SaaS autoservicio terminado. Faltan al
 Para cada cliente: comprobar almacenamiento persistente y exclusivo, backup externo cifrado, restauración probada y acceso privado de operación; configurar límites de recursos; validar recuperación de acceso y recepción real; acordar uso consentido. Las pruebas reales de mensajes requieren destinatario y contenido aprobados. La cobertura WHAPI sigue parcial y Baileys no garantiza evitar suspensiones. No ofrecer números de disponibilidad ni paridad sin evidencia.
 
 ## Despliegue existente
+
+Auditoría de infraestructura del 2 de octubre de 2026: Chrome mostró un volumen persistente `whatsapp-data` montado en `/app/.local`, ninguna copia de seguridad de volumen configurada y únicamente `Local Disk` en el selector de proveedores. No se creó ni activó una programación. El siguiente paso de recuperación requiere un destino externo cifrado, configurar su acceso privado y ensayar una copia consistente de base, sesión y multimedia con propietario único. No considerar el disco local una solución de recuperación ante pérdida del servidor. La prueba de restauración local documentada en el runbook no sustituye esta evidencia de producción.
 
 Actualizar el servicio WIS existente usando la misma rama, dominio, volumen y variables de conexión. No duplicar el worker ni desplegar otro servicio con su volumen. La actualización añade filas de configuración al guardar el perfil; no migra ni renombra las claves de mensajes/conexiones existentes.
 

@@ -54,8 +54,18 @@ test('provisioning uses separate volumes, no inherited secrets and no published 
  const a=deploymentSpec({slug:'client-a',name:'Client A',suffix:'1234',domain:'a.example.com'},'/source');
  const b=deploymentSpec({slug:'client-b',name:'Client B',suffix:'9876',domain:'b.example.com'},'/source');
  assert.notEqual(a.volumes.data.name,b.volumes.data.name);assert.equal(a.services.panel.ports,undefined);
+ assert.equal(a.services.panel.cpus,1);assert.equal(a.services.panel.mem_limit,'1024m');assert.equal(a.services.panel.pids_limit,256);assert.equal(a.services.panel.stop_grace_period,'45s');
  assert.equal(a.services.panel.environment.WIS_WORKER_DISABLED,'true');assert.equal(a.services.panel.environment.WIS_OUTBOUND_ENABLED,'false');
  assert.doesNotMatch(JSON.stringify(a),/SMTP_PASS|admin_password|baileys-auth/);
  assert.throws(()=>deploymentSpec({slug:'../escape',name:'Bad',suffix:'1234',domain:'a.example.com'},'/source'));
  assert.throws(()=>deploymentSpec({slug:'client-a',name:'Bad',suffix:'1234',domain:'https://a.example.com'},'/source'));
+});
+
+test('provisioning rejects unbounded resource settings and accepts explicit bounded sizes',()=>{
+ const base={slug:'client-resources',name:'Client',suffix:'1234',domain:'client.example.com'};
+ const custom=deploymentSpec({...base,cpus:'0.5',memory:'512'},'/source').services.panel;
+ assert.equal(custom.cpus,0.5);assert.equal(custom.mem_limit,'512m');
+ for(const cpus of ['0','-1','9','NaN','1e0','',null])assert.throws(()=>deploymentSpec({...base,cpus},'/source'),/invalid_resource_limits/);
+ for(const memory of ['0','511','16385','1g','Infinity','',null])assert.throws(()=>deploymentSpec({...base,memory},'/source'),/invalid_resource_limits/);
+ assert.equal(deploymentSpec({...base,cpus:'8',memory:'16384'},'/source').services.panel.cpus,8);
 });
