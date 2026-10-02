@@ -529,3 +529,7 @@ En el mismo catálogo de producción filtré `getbusinessprofile` y revisé sus 
 ### Corrección de privacidad del número en Inicio, 2026-10-02 05:59 UTC
 
 El commit 30a09aa enmascara el número de la cuenta vinculada en la tarjeta principal y conserva únicamente los últimos cuatro dígitos para identificar la línea. El despliegue en EasyPanel terminó correctamente; después de recargar Chrome, Inicio muestra Línea ··· 5679, la identidad continúa verificada, el worker está activo y los envíos siguen pausados. No se volvió a vincular la cuenta ni se alteró la sesión. El recolector registró una lectura all completada a las 05:58 UTC; esto acredita esa ruta y no la paridad del catálogo WHAPI. Próxima ruta programada: account_limits, prevista para las 06:05 UTC; esperar su resultado sin forzar una consulta manual.
+
+### Resultado programado de account_limits, 2026-10-02 06:05 UTC
+
+El turno automático de `account_limits` terminó y el agregado de filas de lectura aumentó de 23 a 24. La escritura de snapshot más reciente avanzó a las 06:05 UTC, con 410 rutas de campos listadas; el contador acumulado de fallos siguió en 65. El panel mantuvo la conexión verificada y el worker activo, y los envíos continuaron pausados. La ficha no proporciona una marca explícita de éxito/frescura para los campos de este snapshot, por lo que su escritura no se interpreta como confirmación de valores actuales ni de cuotas. No se expusieron valores privados ni se lanzó una consulta manual. Próxima ruta programada: `account_username`, prevista para las 06:20 UTC; esperar su resultado.
