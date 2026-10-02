@@ -52,6 +52,8 @@ Los envíos están deshabilitados por defecto. Requieren consentimiento registra
 
 La prueba local del 2 de octubre de 2026 verificó la base actual con 17 tablas. Una copia local anterior falló con `backup_schema_missing` y se conservó intacta: no debe emplearse como restauración de esta versión. Esta prueba no corresponde a la base de EasyPanel. Sigue pendiente probar el respaldo integral de producción, cifrado fuera del servidor, incluyendo sesión y archivos privados sin iniciar un segundo worker.
 
+La herramienta pasó 5 pruebas específicas, revisión independiente y la suite de 273 pruebas. Se desplegó en EasyPanel el 2 de octubre de 2026 a las 14:41 UTC; después del despliegue el endpoint de estado y Chrome confirmaron la conexión activa. Próximo frente operativo: respaldo integral externo y ensayo controlado de recuperación; desplegar la herramienta no demuestra que ese respaldo exista.
+
 ## Cobertura
 
 El inventario fechado de 182 métodos WHAPI está en `public/whapi-capabilities.json`; los campos y sus evidencias se describen en `docs/whapi-reference-fields.md`. `partial` indica soporte limitado y no equivale a paridad. Las funciones pendientes o no soportadas no deben presentarse como disponibles.
