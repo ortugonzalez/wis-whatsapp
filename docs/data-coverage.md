@@ -650,3 +650,12 @@ La solicitud quedó `failed` con el código sanitizado `provider_error`; el tota
 ### Validación única de `bot_list` tras corregir la respuesta vacía, 2026-10-02 11:44 UTC
 
 Después del despliegue `25332d4`, se encoló una única consulta de solo lectura desde el panel para probar el lector corregido. El proveedor devolvió `provider_error` con código sanitizado 500. El contador de fallos de `bot_list` avanzó de 17 a 18; no hay una respuesta exitosa nueva ni lista vacía verificada. La corrección separa respuestas vacías válidas de estructuras inválidas, pero no corrige el error remoto. La sesión siguió conectada/verificada, el worker activo, los envíos pausados y sin operaciones de mensajería pendientes ni fallidas. El contador global de fallos de lectura pasó de 69 a 70. Próxima ruta visible: `blocklist` a las 11:52 UTC. No se reintentó.
+### Auditoría actual del catálogo y espera de la ruta programada, 2026-10-02 11:55 UTC
+
+El explorador autenticado de producción recalculó el catálogo a las 08:55 (Buenos Aires): 182 funciones, 44.628 rutas de respuesta documentadas; 188 con observación local (14 exactas y 174 equivalencias revisadas), 0 con evidencia solo marcada obsoleta y 44.440 aún sin observar. Solo 23/177 funciones con respuesta tienen alguna ruta observada y cuatro tienen todas sus rutas observadas. La referencia pública figura capturada el 2026-10-01 11:37 (Buenos Aires). La fecha “no obsoleta” no demuestra frescura ni implementación funcional.
+
+El mismo panel muestra 418 campos en 28 tipos, último snapshot global a las 08:52, conexión e identidad verificadas, worker activo y envíos pausados. El último mensaje entrante en vivo sigue siendo del 2026-09-28 16:32 (Buenos Aires); por tanto, la conexión activa no demuestra recepción actual. El total de fallos de lectura sigue en 70; `bot_list` registra 18 errores de proveedor y no se volvió a solicitar. Próxima ruta programada: `communities`, 09:07 (Buenos Aires), equivalente a 12:07 UTC.
+
+Esta inspección abrió únicamente el catálogo público y sus conteos agregados. No mostró valores privados, no ejecutó lecturas manuales y no cambió la programación. El monitor de seguimiento de esta tarea continúa activo cada 15 minutos y debe elegir una ruta distinta cuando la anterior quede bloqueada.
+
+**Siguiente paso:** esperar la ruta automática `communities`; revisar estado y agregados, y priorizar luego una brecha de lectura distinta de `bot_list`. No contar una ruta completada como respuesta completa ni paridad.
