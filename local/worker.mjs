@@ -2,6 +2,7 @@ import { createBlocklistInvalidation } from './blocklist-invalidation.mjs';
 import { attachGroupMemberTags } from './group-member-tags.mjs';
 import { attachAccountSettings } from './account-settings.mjs';
 import { attachReceiveActivity } from './receive-activity.mjs';
+import { createBoundedMediaDownload } from './bounded-media.mjs';
 import { attachNewsletterEvents } from './newsletter-events.mjs';
 import { randomUUID } from 'node:crypto';
 import { LOCAL_LIMITS } from './limits.mjs';
@@ -371,13 +372,14 @@ export function messageContext(message) {
   return {quote:{...safeFields(ctx,['stanzaId','participant','remoteJid']),...(quoted?{type:quoted.type,body_preview:quoted.body.slice(0,512)}:{})},mentions:(ctx.mentionedJid || []).filter(x=>typeof x==='string').slice(0,100)};
 }
 
-export async function runWorker({ db, baileys, logger, authDir = resolve(root, '.local/baileys-auth'), mediaDir = resolve(root, '.local/media'), readTimeoutMs, catalogCommandTimeoutMs=210000, readIntervalMs = 2000, publicCatalogReaderFactory, avatarCache=cacheAvatar, avatarDir=resolve(root,'.local/avatars') }) {
+export async function runWorker({ db, baileys, logger, authDir = resolve(root, '.local/baileys-auth'), mediaDir = resolve(root, '.local/media'), readTimeoutMs, mediaDownloadTimeoutMs=15000, catalogCommandTimeoutMs=210000, readIntervalMs = 2000, publicCatalogReaderFactory, avatarCache=cacheAvatar, avatarDir=resolve(root,'.local/avatars') }) {
   if(!Number.isFinite(catalogCommandTimeoutMs)||catalogCommandTimeoutMs<=0||catalogCommandTimeoutMs>900000)throw new Error('invalid_catalog_command_timeout');
   mkdirSync(authDir, {recursive:true, mode:0o700});
   mkdirSync(mediaDir, {recursive:true, mode:0o700});
   const owner = randomUUID();
   let sock = null, starting = false, stopping = false, desired = false;
   let deadline = 0, attempts = 0, nextConnect = 0, lastOpenedAt = 0, processing = false;
+  const mediaDownload=createBoundedMediaDownload({timeoutMs:mediaDownloadTimeoutMs});
   let queue = Promise.resolve();
   let credentialsSaved = Promise.resolve();
   const cache = new Map();
@@ -988,7 +990,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         // History persistence never triggers a media reupload request or other WA write.
         if (source === 'live' && ['image','audio','document','video','sticker'].includes(type)) {
           try {
-            const data = await baileys.downloadMediaMessage(msg,'buffer',{}, {logger});
+            const data = await mediaDownload.run(signal=>baileys.downloadMediaMessage(msg,'buffer',{options:{signal}}, {logger}));
             if (owns() && Buffer.isBuffer(data) && data.length <= 25*1024*1024) {
               media = randomUUID() + '.' + ({image:'jpg',audio:'ogg',document:'bin',video:'mp4',sticker:'webp'}[type]);
               writeFileSync(mediaFile(mediaDir, media),data,{mode:0o600});
@@ -1303,7 +1305,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   const watchdog=setInterval(()=>{if(!owns())closeSocket();},500);
   let stopPromise;
   const stop=()=>stopPromise || (stopPromise=(async()=>{
-    stopping=true;clearInterval(timer);clearInterval(watchdog);
+    stopping=true;clearInterval(timer);clearInterval(watchdog);mediaDownload.stop();
     if(activeSendId)db.prepare("UPDATE operations SET status='outcome_unknown',last_error='reconciliation_required',updated_at=? WHERE id=? AND status='sending'").run(new Date().toISOString(),activeSendId);
     closeSocket();
     await webhookDispatcher.stop();
