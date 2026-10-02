@@ -39,8 +39,9 @@ test('local HTTP authorization, consent, queue transaction, replay and private Q
   assert.equal((await call('/api/v1/contacts','GET',null,token)).status,403);
   const contact=(await call('/api/v1/contacts','POST',{phone_e164:'+12025555679',display_name:'Local test',consent_at:new Date().toISOString(),consent_source:'test',consent_scope:'test'})).json.data;
   const payload={to:contact.phone_e164,type:'text',body:'local simulation'};process.env.WIS_OUTBOUND_ENABLED='false';assert.equal((await call('/api/v1/messages','POST',payload,token,{'Idempotency-Key':'one'})).json.error,'outbound_disabled');assert.equal(database.prepare('SELECT count(*) AS n FROM operations').get().n,0);
-  process.env.WIS_OUTBOUND_ENABLED='true';const first=await call('/api/v1/messages','POST',payload,token,{'Idempotency-Key':'one'});assert.equal(first.status,202);assert.ok(first.json.data.message_id);
+  process.env.WIS_OUTBOUND_ENABLED='true';const first=await call('/api/v1/messages','POST',payload,token,{'Idempotency-Key':'one'});assert.equal(first.status,202);assert.ok(first.json.data.message_id);assert.equal(first.json.data.outbound_enabled,true);
   assert.equal((await call('/api/v1/messages','POST',payload,token,{'Idempotency-Key':'one'})).json.data.id,first.json.data.id);assert.equal(database.prepare('SELECT count(*) AS n FROM messages').get().n,1);
+  process.env.WIS_OUTBOUND_ENABLED='false';const pausedReplay=await call('/api/v1/messages','POST',payload,token,{'Idempotency-Key':'one'});assert.equal(pausedReplay.json.data.id,first.json.data.id);assert.equal(pausedReplay.json.data.outbound_enabled,false);assert.equal(database.prepare('SELECT count(*) AS n FROM operations').get().n,1);process.env.WIS_OUTBOUND_ENABLED='true';
   assert.equal((await call('/api/v1/messages','POST',{...payload,body:'changed'},token,{'Idempotency-Key':'one'})).status,409);
   await call('/api/v1/contacts','PATCH',{id:contact.id,opted_out_at:new Date().toISOString()});assert.equal((await call('/api/v1/messages','POST',payload,token,{'Idempotency-Key':'two'})).status,403);
   assert.equal((await call('/api/v1/contacts','PATCH',{id:contact.id,opted_out_at:null})).status,409);
