@@ -463,3 +463,9 @@ En esta vuelta `group_requests` terminó `done`; el worker y su lease siguen act
 La lectura de avatars terminó `done`; no se abrieron ni descargaron imágenes. Worker y lease activos, próxima ruta `bot_list` a las 00:50. No hubo rutas WHAPI nuevas: 161/44.628 (14 exactas, 147 semánticas; 44.467 sin observar; 4 métodos completos).
 
 **Próxima ruta:** revisar el nuevo intento automático de `bot_list` solo por estado y status HTTP permitido; si sigue sin código utilizable, dejarlo como brecha sin reintentar manualmente.
+
+### Resultado automático de bot_list - 2026-10-02 00:50
+
+La consulta automática volvió a terminar `failed` con `provider_error`; `status_code` sigue `No disponible`. No hay evidencia para atribuir causa HTTP, ni para concluir que no existan bots. No se repitió. El worker conserva lease y la próxima ruta es `disappearing_mode` a la 01:05.
+
+**Próxima ruta:** observar el turno automático de `disappearing_mode` a la 01:05; mantener `bot_list` como brecha pendiente de evidencia técnica nueva.
