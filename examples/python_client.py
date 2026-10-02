@@ -15,7 +15,10 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class WISClient:
     LIST_RESOURCES = frozenset({'contacts', 'conversations', 'messages', 'operations',
         'groups', 'events', 'calls', 'identities', 'stories', 'products', 'collections',
-        'labels', 'label-associations', 'communities', 'channels', 'channel-messages', 'collection-products', 'contact-products', 'bots', 'media'})
+        'labels', 'label-associations', 'communities', 'channels', 'channel-messages', 'collection-products', 'contact-products', 'bots', 'media', 'snapshots'})
+
+    SNAPSHOT_KINDS = frozenset({'contact', 'contact_profile', 'contact_profiles', 'chat',
+        'group', 'presence', 'message', 'newsletter_view', 'newsletter_reaction'})
 
     def __init__(self, base=None, token=None, timeout=30):
         self.base = (base or os.environ.get('WIS_API_URL', 'http://localhost:3010/api/v1')).rstrip('/')
@@ -62,6 +65,8 @@ class WISClient:
         """Read every available page. This does not trigger remote sync or send messages."""
         if resource not in self.LIST_RESOURCES or any(key in filters for key in ('id', 'path', 'offset', 'limit')):
             raise ValueError('Use an allowed list resource and list filters')
+        if resource == 'snapshots' and filters.get('kind') not in self.SNAPSHOT_KINDS:
+            raise ValueError('Use an allowed snapshot kind')
         offset = 0
         while True:
             query = urllib.parse.urlencode({**filters, 'limit': 100, 'offset': offset})
@@ -76,6 +81,17 @@ class WISClient:
 
     def overview(self):
         return self.call('/overview')
+
+    def snapshots(self, kind, resource_id=None):
+        """Read stored observations; no remote queries or administrator settings."""
+        if kind not in self.SNAPSHOT_KINDS:
+            raise ValueError('Use an allowed snapshot kind')
+        filters = {'kind': kind}
+        if resource_id is not None:
+            if not isinstance(resource_id, str) or not 1 <= len(resource_id) <= 200:
+                raise ValueError('Invalid snapshot resource identifier')
+            filters['resource_id'] = resource_id
+        return self.iter_records('snapshots', **filters)
 
     def calls(self, **filters):
         return self.iter_records('calls', **filters)

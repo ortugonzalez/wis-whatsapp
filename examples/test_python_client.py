@@ -101,6 +101,27 @@ class ClientTests(unittest.TestCase):
         self.assertIsNone(request.data)
         client._opener.open.assert_called_once()
 
+    def test_snapshot_pagination_is_local_readonly_and_excludes_account_settings(self):
+        client = self.client()
+        client._opener = Mock()
+        client._opener.open.side_effect = [io.BytesIO(json.dumps(value).encode()) for value in
+            [{'data': [{'data': {'reported_event_count': 1}}], 'meta': {'has_more': True}},
+             {'data': [], 'meta': {'has_more': False}}]]
+        identifier = '123@newsletter:42&kind=account_setting'
+        self.assertEqual(len(list(client.snapshots('newsletter_reaction', identifier))), 1)
+        from urllib.parse import urlsplit, parse_qs
+        requests = [call.args[0] for call in client._opener.open.call_args_list]
+        self.assertTrue(all(r.get_method() == 'GET' and r.data is None for r in requests))
+        query = parse_qs(urlsplit(requests[0].full_url).query)
+        self.assertEqual(query['resource_id'], [identifier])
+        self.assertEqual(query['kind'], ['newsletter_reaction'])
+        for kind in ['account_setting', 'privacy', 'blocklist']:
+            with self.assertRaises(ValueError):
+                client.snapshots(kind)
+            with self.assertRaises(ValueError):
+                list(client.iter_records('snapshots', kind=kind))
+        self.assertEqual(client._opener.open.call_count, 2)
+
 
 if __name__ == '__main__':
     unittest.main()

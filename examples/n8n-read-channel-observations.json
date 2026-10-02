@@ -1,0 +1,106 @@
+{
+  "name": "WIS · notificaciones de canales · primera página parcial",
+  "active": false,
+  "nodes": [
+    {
+      "id": "manual",
+      "name": "Manual · solo lectura local",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "guide",
+      "name": "Configuración y alcance parcial",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -300
+      ],
+      "parameters": {
+        "width": 850,
+        "height": 240,
+        "content": "## Lecturas locales · manual y desactivado\nSeleccioná una credencial Header Auth de n8n con Authorization: Bearer y un token WIS read existente. No pegues secretos en el workflow. Adaptá el host para tu instalación: 127.0.0.1 dentro de n8n apunta al propio contenedor.\nSolo primera página de 50 registros: revisá meta.has_more; NO recorre páginas. Son últimas notificaciones persistidas por canal/mensaje, no historial completo. reported_event_count NO es un total de reacciones: Baileys puede generar 1 por notificación. No acumular ni inferir cero cuando no hay eventos. No inicia consultas a WhatsApp ni suscripciones."
+      }
+    },
+    {
+      "id": "newsletter_view",
+      "name": "Visualizaciones recibidas · primera página parcial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:3010/api/v1/snapshots?kind=newsletter_view&limit=50&offset=0",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Solo observaciones persistidas. No prueba estado actual ni totales acumulados. Revisá meta.has_more."
+    },
+    {
+      "id": "newsletter_reaction",
+      "name": "Reacciones recibidas · primera página parcial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        200
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:3010/api/v1/snapshots?kind=newsletter_reaction&limit=50&offset=0",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Solo observaciones persistidas. No prueba estado actual ni totales acumulados. Revisá meta.has_more."
+    }
+  ],
+  "connections": {
+    "Manual · solo lectura local": {
+      "main": [
+        [
+          {
+            "node": "Visualizaciones recibidas · primera página parcial",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reacciones recibidas · primera página parcial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  }
+}

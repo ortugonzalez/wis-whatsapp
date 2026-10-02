@@ -1942,6 +1942,51 @@
                               "format": "date-time"
                             }
                           }
+                        },
+                        "observed_settings": {
+                          "type": "array",
+                          "maxItems": 6,
+                          "description": "Last received setting per key, administrator only. Missing settings are unknown. Receipt does not prove current state.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "data": {
+                                "type": "object",
+                                "properties": {
+                                  "setting": {
+                                    "enum": [
+                                      "locale",
+                                      "timeFormat",
+                                      "privacySettingRelayAllCalls",
+                                      "disableLinkPreviews",
+                                      "channelsPersonalisedRecommendation",
+                                      "unarchiveChats"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": [
+                                      "string",
+                                      "boolean"
+                                    ]
+                                  },
+                                  "observed_at": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "source": {
+                                    "const": "baileys_passive_setting"
+                                  },
+                                  "scope": {
+                                    "const": "last_received_value"
+                                  }
+                                }
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
                         }
                       }
                     }
@@ -1957,7 +2002,12 @@
             "description": "Insufficient scope"
           }
         },
-        "description": " Detail includes safe avatar metadata, or null when no eligible target exists."
+        "description": " Detail includes safe avatar metadata, or null when no eligible target exists.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ]
       }
     },
     "/groups": {
@@ -1972,10 +2022,79 @@
                   "type": "object",
                   "properties": {
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
+                      "oneOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "description": "With id: detail of one known group. Received labels do not prove current membership.",
+                          "properties": {
+                            "observed_member_tags": {
+                              "type": "object",
+                              "properties": {
+                                "items": {
+                                  "type": "array",
+                                  "maxItems": 500,
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "group_id": {
+                                        "type": "string"
+                                      },
+                                      "participant": {
+                                        "type": "string"
+                                      },
+                                      "participant_alt": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "label": {
+                                        "type": "string",
+                                        "maxLength": 256
+                                      },
+                                      "message_timestamp": {
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ]
+                                      },
+                                      "observed_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      "stored_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      "source": {
+                                        "const": "baileys_passive_member_tag"
+                                      },
+                                      "scope": {
+                                        "const": "last_received_label_not_current_membership"
+                                      }
+                                    }
+                                  }
+                                },
+                                "truncated": {
+                                  "type": "boolean"
+                                },
+                                "complete": {
+                                  "const": false
+                                },
+                                "scope": {
+                                  "const": "received_events_only"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
                     },
                     "meta": {
                       "type": "object",
@@ -2798,7 +2917,9 @@
                 "chat",
                 "group",
                 "presence",
-                "message"
+                "message",
+                "newsletter_view",
+                "newsletter_reaction"
               ]
             }
           },
@@ -2830,12 +2951,115 @@
         ],
         "responses": {
           "200": {
-            "description": "data array of kind/resource_id/data/updated_at; top-level pagination meta"
+            "description": "data array of kind/resource_id/data/updated_at; top-level pagination meta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "kind",
+                          "resource_id",
+                          "data",
+                          "updated_at"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "resource_id": {
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "data": {
+                            "type": "object",
+                            "description": "Shape depends on kind. Passive channel properties listed here are not present on all other kinds.",
+                            "properties": {
+                              "channel_id": {
+                                "type": "string"
+                              },
+                              "server_id": {
+                                "type": "string"
+                              },
+                              "observed_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "source": {
+                                "type": "string"
+                              },
+                              "scope": {
+                                "type": "string"
+                              },
+                              "reported_view_count": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "reported_event_count": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "description": "Notification value only; never use as accumulated reaction total."
+                              },
+                              "code": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "removed": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid snapshot kind"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Insufficient scope"
           }
-        }
+        },
+        "description": "Read stored observations only; no subscription, WhatsApp read or message send. newsletter_view reports the last notification count. newsletter_reaction reported_event_count is NOT the total number of reactions; Baileys can synthesize count=1. Duplicate notifications are not accumulated. Account settings and privacy are excluded."
       }
     },
     "/labels": {

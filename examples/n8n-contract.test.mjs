@@ -7,6 +7,15 @@ const workflow=JSON.parse(readFileSync(new URL('./n8n-receive-webhook.json',impo
 const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
 const verify=new AsyncFunction('require','$input','$env','Buffer',workflow.nodes[1].parameters.jsCode);
 const require=createRequire(import.meta.url);
+test('channel observation workflow is inactive, GET-only and cannot forward credentials by redirect',()=>{
+ const flow=JSON.parse(readFileSync(new URL('./n8n-read-channel-observations.json',import.meta.url),'utf8'));
+ assert.equal(flow.active,false);
+ const reads=flow.nodes.filter(n=>n.type==='n8n-nodes-base.httpRequest');assert.equal(reads.length,2);
+ assert.deepEqual(reads.map(n=>new URL(n.parameters.url).searchParams.get('kind')),['newsletter_view','newsletter_reaction']);
+ for(const n of reads){assert.equal(n.parameters.method,'GET');assert.equal(n.parameters.options.redirect.redirect.followRedirects,false);assert.equal(n.credentials,undefined);assert.equal(n.parameters.sendBody,undefined);assert.equal(n.parameters.headerParameters,undefined);assert.equal(new URL(n.parameters.url).pathname,'/api/v1/snapshots');}
+ assert.equal(flow.settings.saveDataSuccessExecution,'none');assert.equal(flow.settings.saveDataErrorExecution,'none');assert.equal(flow.settings.saveManualExecutions,false);
+ assert.ok(flow.nodes.every(n=>['n8n-nodes-base.manualTrigger','n8n-nodes-base.httpRequest','n8n-nodes-base.stickyNote'].includes(n.type)));
+});
 test('inactive n8n receiver accepts original signed bytes and rejects altered or expired payload',async()=>{
   assert.equal(workflow.active,false);
   const secret='offline-test-only', timestamp=String(Math.floor(Date.now()/1000));
