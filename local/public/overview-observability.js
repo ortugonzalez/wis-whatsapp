@@ -27,6 +27,8 @@ async function refreshOverviewObservability(){
  try{
   const [coverage,settings,connection]=await Promise.all([api('/api/v1/coverage'),api('/api/v1/settings'),api('/api/whatsapp/connection')]);
   if(state.page!=='overview'||epoch!==viewEpoch||!section.isConnected)return;
+  const pageError=document.getElementById('page-error');
+  if(pageError?.textContent.includes('/api/v1/coverage')){pageError.textContent='';pageError.classList.add('hidden');}
   const schedule=settings.scheduled_reads||{};
   const failedReads=(coverage.read_commands||[]).filter(row=>row.status==='failed').reduce((sum,row)=>sum+(Number.isInteger(row.count)?row.count:0),0);
   const observedFields=observedFieldCount(coverage);
