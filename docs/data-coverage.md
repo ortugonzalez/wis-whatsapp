@@ -581,3 +581,8 @@ El turno programado de `disappearing_mode` figura completado y su contador agreg
 ### Turno de subgrupos omitido por falta de comunidad conocida, 2026-10-02 07:50 UTC
 
 Configuración registra `community_subgroups` en `last_skipped_kinds` con `last_skip_reason=known_community_required`. No se encoló una lectura ni se escribió un snapshot nuevo para esa ruta; no se trata de una respuesta vacía ni de un fallo de WhatsApp. El worker mantiene el lease y la programación avanzó a `all` para las 08:05 UTC. No se consultaron IDs ni se inició una lectura manual.
+
+
+### Contexto del snapshot de comunidades, 2026-10-02 07:51 UTC
+
+La página de Comunidades muestra como última respuesta una consulta vacía de 0 registros con actualización a las 05:05 UTC. Esa evidencia es anterior al turno omitido de las 07:50 UTC y no demuestra que hoy no existan comunidades; sí coincide con que el planificador no encontró una comunidad conocida elegible en ese momento. No se lanzó otra consulta desde el botón de la página.
