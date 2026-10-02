@@ -409,3 +409,9 @@ El scheduler omitió de forma segura `community_subgroups` por `known_community_
 La programación avanzó a `blocklist` a las 22:35; el turno `all` terminó `done` con el worker activo. El catálogo WHAPI sigue en 161/44.628 rutas observadas (14 exactas, 147 semánticas y 44.467 sin observar), 23/177 métodos con alguna observación y 4 completos. La lectura de cuenta y grupos no añadió una nueva ruta de respuesta observada. Se conservaron solo agregados; no se copiaron mensajes, grupos, contactos ni identificadores.
 
 **Próxima ruta:** esperar `blocklist` a las 22:35 y verificar únicamente estado y cobertura agregada.
+
+### Resultado automático de blocklist - 2026-10-01 22:35
+
+La configuración confirmó `blocklist` `done`, worker activo y lease vigente; la siguiente ruta es `communities` a las 22:50. La cobertura permanece en 161/44.628 rutas observadas/revisadas (14 exactas, 147 semánticas, 44.467 sin observar; 4 métodos completos). No hubo nuevas rutas verificadas ni se inspeccionó el contenido del bloqueo.
+
+**Próxima ruta:** observar el ciclo automático `communities` a las 22:50 y comprobar su estado y cobertura.
