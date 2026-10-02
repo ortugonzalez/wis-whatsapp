@@ -445,3 +445,9 @@ El turno `account_limits` se completó con lease vigente y worker activo; el sig
 La programación confirmó `account_username` `done`, con worker activo y lease vigente; el turno siguiente es `contact_profiles` a las 00:05 del 2 de octubre (03:05 UTC). La cobertura continúa en 161/44.628 (14 exactas, 147 semánticas; 44.467 sin observar y 4 métodos completos). No se inspeccionó el valor de username ni hubo rutas WHAPI nuevas.
 
 **Próxima ruta:** revisar el resultado agregado de `contact_profiles` a las 00:05, sin consultar ni registrar identidades.
+
+### Resultado automático de contact_profiles - 2026-10-02 00:05
+
+El lote programado de perfiles terminó `done`, con lease vigente y worker activo. La cobertura permanece en 161/44.628 rutas (14 exactas, 147 semánticas; 44.467 sin observar y 4 métodos completos); no se atribuyeron nuevas variables al lote. La siguiente ruta es `group_requests` a las 00:20.
+
+**Próxima ruta:** esperar y revisar solo estado agregado de `group_requests`; no abrir conversaciones ni listar participantes.
