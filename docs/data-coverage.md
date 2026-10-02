@@ -543,16 +543,16 @@ En la ficha de Inicio, la lectura programada `account_limits` aparece como compl
 El comando programado `account_username` figura completado a las 06:20 UTC y su contador agregado avanzó de 17 a 18. El snapshot global alcanzó esa hora, se mantuvo en 410 rutas de campos listadas y el total acumulado de fallos siguió en 65. La ficha registra metadatos de error, pero no una marca explícita de éxito del snapshot ni texto de respuesta verificado; por lo tanto, no se obtuvo un username verificable. Esto tampoco prueba que la cuenta carezca de username. La identidad continúa verificada y el worker activo; los envíos siguen pausados. La agenda pasó a `contact_profiles` para las 06:35 UTC. No se consultaron valores del perfil ni se inició una lectura manual.
 
 
-### Lectura automática de contact_profiles, 2026-10-02 06:35 UTC
+### Lectura automática de `contact_profiles`, 2026-10-02 06:35 UTC
 
-El turno programado de contact_profiles figura completado y su contador agregado aumentó de 15 a 16. La escritura global del snapshot avanzó a las 06:35 UTC; el inventario local permaneció en 410 rutas y el acumulado de lecturas fallidas siguió en 65. Esto confirma la ejecución registrada, pero no valida valores individuales del perfil ni demuestra que todos los campos se hayan actualizado. La conexión mantuvo identidad verificada y worker activo; los envíos siguieron pausados. La agenda avanzó a solicitudes de grupos para las 06:50 UTC. La verificación se limitó a conteos y estado; no se leyeron datos personales ni se disparó una consulta manual.
-
-
-### Fallo de la lectura programada group_requests, 2026-10-02 06:50 UTC
-
-El turno automático de group_requests quedó registrado como fallido a las 06:50 UTC con el código agregado y sanitizado provider_error; el total acumulado de lecturas fallidas subió de 65 a 66. La escritura global del snapshot avanzó a las 06:50 UTC y el inventario siguió en 410 rutas. La última respuesta verificada de esa ruta permanece en una ejecución anterior; el nuevo intento no acredita datos actuales de solicitudes. No se inspeccionaron solicitudes, destinos ni errores originales, y no se reintentó manualmente. WhatsApp conserva identidad verificada y worker activo; los envíos siguen pausados. Próxima ruta programada: fotos de perfil a las 07:05 UTC.
+El turno programado de `contact_profiles` figura completado y su contador agregado aumentó de 15 a 16. La escritura global del snapshot avanzó a las 06:35 UTC; el inventario local permaneció en 410 rutas y el acumulado de lecturas fallidas siguió en 65. Esto confirma la ejecución registrada, pero no valida valores individuales del perfil ni demuestra que todos los campos se hayan actualizado. La conexión mantuvo identidad verificada y worker activo; los envíos siguieron pausados. La agenda avanzó a solicitudes de grupos para las 06:50 UTC. La verificación se limitó a conteos y estado; no se leyeron datos personales ni se disparó una consulta manual.
 
 
-### Lectura automática de avatars, 2026-10-02 07:05 UTC
+### Fallo de la lectura programada `group_requests`, 2026-10-02 06:50 UTC
 
-El turno programado de vatars figura completado y su contador agregado aumentó de 8 a 9. La escritura global avanzó a las 07:05 UTC, el inventario de rutas permaneció en 410 y el total de fallos siguió en 66. No se observaron rutas nuevas en el inventario; el estado del comando no se toma como validación del contenido de las imágenes ni de cada campo individual. La conexión mantuvo identidad verificada y worker activo; los envíos siguieron pausados. Próxima ruta automática: ot_list, prevista para las 07:20 UTC. No se descargaron ni inspeccionaron imágenes y no se inició una consulta manual.
+El turno automático de `group_requests` quedó registrado como fallido a las 06:50 UTC con el código agregado y sanitizado provider_error; el total acumulado de lecturas fallidas subió de 65 a 66. La escritura global del snapshot avanzó a las 06:50 UTC y el inventario siguió en 410 rutas. La última respuesta verificada de esa ruta permanece en una ejecución anterior; el nuevo intento no acredita datos actuales de solicitudes. No se inspeccionaron solicitudes, destinos ni errores originales, y no se reintentó manualmente. WhatsApp conserva identidad verificada y worker activo; los envíos siguen pausados. Próxima ruta programada: fotos de perfil a las 07:05 UTC.
+
+
+### Lectura automática de `avatars`, 2026-10-02 07:05 UTC
+
+El turno programado de `avatars` figura completado y su contador agregado aumentó de 8 a 9. La escritura global avanzó a las 07:05 UTC, el inventario de rutas permaneció en 410 y el total de fallos siguió en 66. No se observaron rutas nuevas en el inventario; el estado del comando no se toma como validación del contenido de las imágenes ni de cada campo individual. La conexión mantuvo identidad verificada y worker activo; los envíos siguieron pausados. Próxima ruta automática: `bot_list`, prevista para las 07:20 UTC. No se descargaron ni inspeccionaron imágenes y no se inició una consulta manual.
