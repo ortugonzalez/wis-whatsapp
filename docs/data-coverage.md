@@ -586,3 +586,8 @@ Configuración registra `community_subgroups` en `last_skipped_kinds` con `last_
 ### Contexto del snapshot de comunidades, 2026-10-02 07:51 UTC
 
 La página de Comunidades muestra como última respuesta una consulta vacía de 0 registros con actualización a las 05:05 UTC. Esa evidencia es anterior al turno omitido de las 07:50 UTC y no demuestra que hoy no existan comunidades; sí coincide con que el planificador no encontró una comunidad conocida elegible en ese momento. No se lanzó otra consulta desde el botón de la página.
+
+
+### Lectura automática all, 2026-10-02 08:05 UTC
+
+El barrido programado `all` figura completado y su contador agregado avanzó de 204 a 205. La escritura global del snapshot alcanzó las 08:05 UTC; el inventario continuó en 410 rutas y las lecturas fallidas acumuladas permanecieron en 67. El estado del comando no demuestra que todos los recursos o campos se hayan actualizado; los conteos no revelaron rutas nuevas. La identidad siguió verificada, el worker activo y los envíos pausados. Próxima ruta automática: `blocklist` a las 08:20 UTC. No se inspeccionaron payloads ni se inició una consulta manual.
