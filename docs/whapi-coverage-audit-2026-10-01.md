@@ -379,3 +379,9 @@ El ciclo de hasta tres perfiles conocidos terminó `done`; el worker conserva le
 El turno terminó `failed` con `provider_error`; el worker sigue activo y el lease es vigente. No se muestra un status HTTP u otra causa más específica, así que no atribuyo el fallo a grupo inexistente, permiso o transporte. El total de cobertura WHAPI continúa en 161/44.628 (14 exactas, 147 semánticas; 44.467 sin observar; 4 métodos completos). La ruta siguiente es `avatars` a las 21:20. No se eligió grupo ni se repitió el intento.
 
 **Próxima ruta:** revisar solo el estado agregado del turno `avatars`; no abrir ni descargar imágenes.
+
+### Resultado automático de avatars - 2026-10-01 21:20
+
+La lectura programada `avatars` terminó `done`, con worker activo y lease vigente; no se abrieron ni descargaron imágenes. La cobertura WHAPI continúa en 161/44.628 rutas de respuesta (14 exactas, 147 semánticas y 44.467 sin observar). El próximo turno es `bot_list` a las 21:35; será la primera lectura automática después de desplegar el diagnóstico acotado a códigos HTTP, por lo que se revisará solo si la respuesta ofrece un estado verificable.
+
+**Próxima ruta:** esperar `bot_list` y comprobar estado/código permitido; si vuelve `provider_error` sin código, no repetirlo ni inferir una lista vacía.
