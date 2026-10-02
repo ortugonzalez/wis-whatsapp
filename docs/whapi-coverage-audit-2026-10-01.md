@@ -487,3 +487,9 @@ La agenda omitió `community_subgroups` con `known_community_required`: no habí
 El turno `all` terminó `done`, con worker activo y lease vigente; siguiente ruta `blocklist` a la 01:50. El catálogo de campos continúa en 161/44.628 (14 exactas, 147 semánticas, 44.467 sin observar, cuatro métodos completos). No se observaron nuevas rutas WHAPI en esta lectura ni se copiaron datos personales.
 
 **Próxima ruta:** observar `blocklist` a la 01:50 y volver a comparar solo agregados.
+
+### Resultado automático de blocklist - 2026-10-02 01:50
+
+El turno programado `blocklist` terminó `done`; el worker continúa activo con lease vigente y la siguiente ruta es `communities` a las 02:05. La cobertura de respuestas WHAPI sigue en 161/44.628 (14 exactas, 147 semánticas, 44.467 sin observar; cuatro métodos completos), sin nuevas rutas observadas en este ciclo. El resultado no revela identidades ni el contenido del bloqueo y no demuestra una lista vacía.
+
+**Próxima ruta:** observar únicamente estado y cobertura agregada de `communities` a las 02:05; no registrar nombres ni integrantes.
