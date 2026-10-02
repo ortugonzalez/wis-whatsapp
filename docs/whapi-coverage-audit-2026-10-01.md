@@ -397,3 +397,9 @@ La consulta programada posterior al despliegue terminó `failed` con `provider_e
 El turno automático `disappearing_mode` terminó `done`; el worker y su lease siguen activos. No hubo nuevas rutas WHAPI observadas: cobertura 161/44.628 (14 exactas, 147 semánticas; 44.467 pendientes; cuatro métodos completos). La configuración avanzó a `community_subgroups` para las 22:05. No se registraron nombres ni contenido de conversaciones.
 
 **Próxima ruta:** comprobar si `community_subgroups` puede ejecutarse con metadatos ya conocidos; aceptar un `skipped` si falta una comunidad elegible y continuar la rotación sin forzar una consulta.
+
+### Resultado automático de community_subgroups - 2026-10-01 22:05
+
+El scheduler omitió de forma segura `community_subgroups` por `known_community_required`; no hizo una lectura sin una comunidad conocida elegible. El worker mantiene lease y la agenda avanzó a `all` a las 22:20. No se eligieron comunidades ni se leyeron identificadores.
+
+**Próxima ruta:** observar `all` a las 22:20 y comparar estado/conteos agregados; mantener la omisión por elegibilidad, sin forzar el objetivo.
