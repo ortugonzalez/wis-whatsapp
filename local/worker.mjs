@@ -1,3 +1,4 @@
+import { createBlocklistInvalidation } from './blocklist-invalidation.mjs';
 import { attachGroupMemberTags } from './group-member-tags.mjs';
 import { attachAccountSettings } from './account-settings.mjs';
 import { attachNewsletterEvents } from './newsletter-events.mjs';
@@ -380,6 +381,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
   let credentialsSaved = Promise.resolve();
   const cache = new Map();
   const receipts = new Map();
+  const blocklistInvalidation=createBlocklistInvalidation(db);
   let readBusy = false, lastReadAt = 0, unresolvedRead = null, activeReadCommand = null;
   const connection = () => db.prepare("SELECT * FROM connections WHERE id='wis-5679'").get();
   const owns = () => !stopping && Date.now() < deadline;
@@ -777,10 +779,12 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           } catch(error) {try{db.exec('ROLLBACK');}catch{}throw error;}
         }
       } else if(command.kind==='blocklist') {
+        const revision=blocklistInvalidation.revision;
         const values=await readCall(current,'fetchBlocklist');
         if(!Array.isArray(values))throw new Error('invalid_blocklist_response');
         const ids=values.filter(x=>typeof x==='string' && /^\d+@(s\.whatsapp\.net|lid)$/.test(x));
-        snapshot('blocklist','wis-5679',{response_verified:true,ids:ids.slice(0,10000),count:ids.length,truncated:ids.length>10000,available:true,error:null});
+        if(revision!==blocklistInvalidation.revision)snapshot('blocklist','wis-5679',{available:false,response_verified:false,stale:true,stale_reason:'change_during_read',last_attempt_at:new Date().toISOString(),error:null});
+        else snapshot('blocklist','wis-5679',{response_verified:true,ids:ids.slice(0,10000),count:ids.length,truncated:ids.length>10000,available:true,error:null,stale_reason:null});
       } else if(command.kind==='communities' || command.kind==='community') {
         if(command.kind==='communities') {
           const groups=await readCall(current,'communityFetchAllParticipating');
@@ -1018,6 +1022,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       attachNewsletterEvents(current.ev,{guarded,snapshot,event});
       attachAccountSettings(current.ev,{guarded,snapshot});
       attachGroupMemberTags(current.ev,{guarded,snapshot});
+      current.ev.on('blocklist.update',guarded(value=>blocklistInvalidation.observe(value)));
       current.ev.on('messaging-history.set', guarded(({messages,contacts,chats,progress,isLatest,syncType,lidPnMappings,peerDataRequestSessionId}) => {
         if(contacts?.length)saveContacts(contacts);
         if(lidPnMappings?.length)for(const mapping of lidPnMappings.slice(0,10000))saveIdentity(mapping,'messaging-history.set');

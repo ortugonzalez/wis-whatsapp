@@ -639,6 +639,22 @@ test('late provider failure is correlated and sanitized after local read timeout
  } finally {await worker.stop();db.close();}
 });
 
+test('blocklist change during a read cannot overwrite the verified list as fresh',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();const ev=new EventEmitter(),dir=mkdtempSync(resolve(tmpdir(),'wis-blocklist-race-'));let concurrent=true;
+ const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},fetchBlocklist:async()=>{if(concurrent)ev.emit('blocklist.update',{type:'add',blocklist:['222@lid']});return ['333@lid'];}};
+ const fake={default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth'),readIntervalMs:0});
+ try{
+  ev.emit('connection.update',{connection:'open'});db.prepare('DELETE FROM read_commands').run();
+  db.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('blocklist','wis-5679',?,'old')").run(JSON.stringify({ids:['111@lid'],available:true,response_verified:true,last_success_at:'2026-01-01T00:00:00Z'}));
+  const read=async id=>{const now=new Date().toISOString();db.prepare("INSERT INTO read_commands(id,kind,status,created_at,updated_at) VALUES(?,'blocklist','pending',?,?)").run(id,now,now);await worker.drainReads();};
+  await read('race');let data=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='blocklist'").get().payload);
+  assert.deepEqual(data.ids,['111@lid']);assert.equal(data.stale,true);assert.equal(data.response_verified,false);assert.equal(data.stale_reason,'change_during_read');assert.equal(data.last_success_at,'2026-01-01T00:00:00Z');
+  concurrent=false;await read('clean');data=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='blocklist'").get().payload);
+  assert.deepEqual(data.ids,['333@lid']);assert.equal(data.stale,false);assert.equal(data.response_verified,true);assert.equal(data.stale_reason,null);
+ }finally{await worker.stop();db.close();}
+});
+
 test('Business, privacy, community and known-newsletter reads are bounded and strip secrets',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();
  const dir=mkdtempSync(resolve(tmpdir(),'wis-catalog-test-'));const ev=new EventEmitter();

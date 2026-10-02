@@ -3693,7 +3693,7 @@
     "/blocklist": {
       "get": {
         "summary": "Read persisted blocklist; administrator cookie only",
-        "description": "Administrator-only persisted blocklist. A failed refresh preserves earlier rows: stale marks retained information, last_success_at dates its last successful read, last_attempt_at dates the latest attempt, and error is a sanitized code. Retained rows do not prove current blocking state. GET performs no provider request or account mutation.",
+        "description": "Administrator-only persisted blocklist. A failed refresh preserves earlier rows: stale marks retained information, last_success_at dates its last successful read, last_attempt_at dates the latest attempt, and error is a sanitized code. Retained rows do not prove current blocking state. GET performs no provider request or account mutation. Passive blocklist notifications invalidate the prior list without modifying identifiers. meta.collection_status=stale takes precedence over complete; stale_reason is passive_blocklist_change or change_during_read when known. last_invalidated_at records receipt time, not a successful list read. A later verified read clears stale. Missing observations never imply an empty current list.",
         "parameters": [
           {
             "name": "q",
