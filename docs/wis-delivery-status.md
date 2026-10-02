@@ -116,3 +116,8 @@ EasyPanel muestra el servicio activo y el último build visible como Success; la
 
 La inspección no invasiva de 
 pm run local:status confirma que la copia local no tiene HTTP disponible ni lease vigente y conserva session_revoked; sus lecturas programadas están vencidas y bloqueadas por connection_required. No se inició un worker local ni se intentó reusar esa sesión antigua. Esto no contradice el connected público de EasyPanel: son instancias y estados separados. La única fuente válida para la siguiente revisión de snapshots es la base productiva, accesible desde el dashboard tras iniciar sesión como administrador.
+### Lectura automática `blocklist` — 2026-10-02 08:52 (Buenos Aires)
+
+El dashboard muestra que el ciclo de solo lectura avanzó el contador de rutas completadas de 28 a 29 y actualizó la marca global de snapshot a las 08:52. La conexión de WhatsApp continúa verificada y el worker está activo; los envíos siguen pausados. La siguiente ruta programada es `communities`, a las 09:07.
+
+Esta evidencia confirma el avance del ciclo, pero no demuestra por sí sola qué campos devolvió el proveedor ni que todos los valores individuales se hayan actualizado. No se inspeccionaron registros personales. El panel sigue mostrando 70 fallos de lectura y el último evento entrante en vivo data del 2026-09-28 16:32; por tanto, la recepción en tiempo real aún no está demostrada. La consulta `bot_list` sigue con su error 500 conocido y no se reintentó.
