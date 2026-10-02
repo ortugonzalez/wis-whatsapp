@@ -659,3 +659,9 @@ El mismo panel muestra 418 campos en 28 tipos, último snapshot global a las 08:
 Esta inspección abrió únicamente el catálogo público y sus conteos agregados. No mostró valores privados, no ejecutó lecturas manuales y no cambió la programación. El monitor de seguimiento de esta tarea continúa activo cada 15 minutos y debe elegir una ruta distinta cuando la anterior quede bloqueada.
 
 **Siguiente paso:** esperar la ruta automática `communities`; revisar estado y agregados, y priorizar luego una brecha de lectura distinta de `bot_list`. No contar una ruta completada como respuesta completa ni paridad.
+
+### Resultado del ciclo `communities`, 2026-10-02 12:07 UTC
+
+La ruta programada `communities` figura completada; su contador agregado avanzó de 30 a 31 y el snapshot global se escribió a las 09:07 (Buenos Aires). No se detectó cambio en las rutas de respuesta observadas ni en los agregados de mensajes/contactos/grupos. La conexión y la identidad siguen verificadas, el worker activo y los envíos pausados. El último mensaje entrante en vivo permanece en 2026-09-28 16:32 (Buenos Aires), así que la sesión conectada no acredita recepción actual. Los fallos de lectura continúan en 70.
+
+El siguiente ciclo visible es `catalog`, a las 09:22 (Buenos Aires). Se dejará correr el turno programado y se revisará su estado; los errores anteriores del catálogo público no se reintentarán manualmente. Esta comprobación solo usó conteos agregados y estados sanitizados, sin mostrar valores privados ni iniciar lecturas manuales.
