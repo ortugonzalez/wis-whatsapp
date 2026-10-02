@@ -391,3 +391,9 @@ La lectura programada `avatars` terminó `done`, con worker activo y lease vigen
 La consulta programada posterior al despliegue terminó `failed` con `provider_error`. La vista de diagnóstico marca `status_code` como no disponible, así que la instrumentación acotada confirma que no hubo un status HTTP utilizable. No se obtuvo una lista verificable ni se puede concluir que esté vacía; no se repitió. Worker activo, lease vigente y próxima ruta `disappearing_mode` a las 21:50. La brecha de bots sigue abierta.
 
 **Próxima ruta:** observar el estado agregado de `disappearing_mode` a las 21:50; no volver a consultar `bot_list` sin evidencia técnica nueva.
+
+### Resultado automático de disappearing_mode - 2026-10-01 21:50
+
+El turno automático `disappearing_mode` terminó `done`; el worker y su lease siguen activos. No hubo nuevas rutas WHAPI observadas: cobertura 161/44.628 (14 exactas, 147 semánticas; 44.467 pendientes; cuatro métodos completos). La configuración avanzó a `community_subgroups` para las 22:05. No se registraron nombres ni contenido de conversaciones.
+
+**Próxima ruta:** comprobar si `community_subgroups` puede ejecutarse con metadatos ya conocidos; aceptar un `skipped` si falta una comunidad elegible y continuar la rotación sin forzar una consulta.
