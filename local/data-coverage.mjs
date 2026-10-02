@@ -52,8 +52,8 @@ function normalizeArrayIndexes(path) {
 export function buildDataCoverage(db, now = Date.now()) {
   const count = (sql) => db.prepare(sql).get().count;
   const byKind = new Map(db.prepare('SELECT kind,count(*) AS records,max(updated_at) AS last_updated_at FROM snapshots GROUP BY kind ORDER BY kind').all().map(row => [row.kind, { kind: row.kind, records: row.records, last_updated_at: row.last_updated_at, fields: new Map(), omittedFieldNames: new Set(), fieldInventoryTruncated: false }]));
-  const fieldStatement = db.prepare("SELECT s.kind,s.resource_id,s.updated_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.expires_at') AS expires_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.last_success_at') AS last_success_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.stale') AS stale,j.fullkey AS field,j.key AS key_type,j.type AS value_type,CASE WHEN j.type='text' THEN length(j.value) ELSE NULL END AS text_length FROM snapshots s JOIN json_tree(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END) j WHERE json_type(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END)='object' AND j.key IS NOT NULL ORDER BY s.kind,s.resource_id");
-  let activeKind = null, activeResource = null, activeSnapshotUpdatedAt = null, activeSnapshotSuccessAt = null, activeSnapshotStale = false, activeFields = new Map();
+  const fieldStatement = db.prepare("SELECT s.kind,s.resource_id,s.updated_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.expires_at') AS expires_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.last_success_at') AS last_success_at,json_extract(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END,'$.stale') AS stale,j.id AS node_id,j.parent AS parent_id,j.fullkey AS field,j.key AS key_type,j.type AS value_type,CASE WHEN j.type='text' THEN length(j.value) ELSE NULL END AS text_length FROM snapshots s JOIN json_tree(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END) j WHERE json_type(CASE WHEN json_valid(s.payload) THEN s.payload ELSE '{}' END)='object' ORDER BY s.kind,s.resource_id");
+  let activeKind = null, activeResource = null, activeSnapshotUpdatedAt = null, activeSnapshotSuccessAt = null, activeSnapshotStale = false, activeFields = new Map(), activeParents = new Map(), activeStaleObjects = new Set();
   const flushFields = () => {
     const entry = byKind.get(activeKind);
     if (!entry) return;
@@ -62,9 +62,23 @@ export function buildDataCoverage(db, now = Date.now()) {
       const prior = entry.fields.get(field) || { records: 0, non_empty_text_records: 0, stale_records: 0, stale_non_empty_text_records: 0, snapshot_updated_at: null, last_success_at: null };
       prior.records++;
       if (evidence.non_empty_text) prior.non_empty_text_records++;
-      if (activeSnapshotStale) {
+      const staleNode = nodeId => {
+        let current = nodeId;
+        while (current !== null && current !== undefined) {
+          if (activeStaleObjects.has(current)) return true;
+          current = activeParents.get(current);
+        }
+        return false;
+      };
+      const occurrenceStale = evidence.occurrences.map(occurrence => activeSnapshotStale || staleNode(occurrence.node_id));
+      const allOccurrencesStale = occurrenceStale.length > 0 && occurrenceStale.every(Boolean);
+      const staleNonEmptyOnly = evidence.occurrences.some((occurrence, index) => occurrenceStale[index] && occurrence.non_empty_text)
+        && !evidence.occurrences.some((occurrence, index) => !occurrenceStale[index] && occurrence.non_empty_text);
+      if (allOccurrencesStale) {
         prior.stale_records++;
-        if (evidence.non_empty_text) prior.stale_non_empty_text_records++;
+      }
+      if (staleNonEmptyOnly) {
+        prior.stale_non_empty_text_records++;
       }
       if (activeSnapshotUpdatedAt && (!prior.snapshot_updated_at || activeSnapshotUpdatedAt > prior.snapshot_updated_at)) prior.snapshot_updated_at = activeSnapshotUpdatedAt;
       if (activeSnapshotSuccessAt && (!prior.last_success_at || activeSnapshotSuccessAt > prior.last_success_at)) prior.last_success_at = activeSnapshotSuccessAt;
@@ -75,12 +89,15 @@ export function buildDataCoverage(db, now = Date.now()) {
   for (const row of fieldStatement.iterate()) {
     if (row.kind !== activeKind || row.resource_id !== activeResource) {
       flushFields(); activeKind = row.kind; activeResource = row.resource_id;
+      activeFields = new Map(); activeParents = new Map(); activeStaleObjects = new Set();
       const parsedAt = typeof row.updated_at === 'string' ? Date.parse(row.updated_at) : NaN;
       activeSnapshotUpdatedAt = Number.isFinite(parsedAt) ? new Date(parsedAt).toISOString() : null;
       const parsedSuccessAt = typeof row.last_success_at === 'string' ? Date.parse(row.last_success_at) : NaN;
       activeSnapshotSuccessAt = Number.isFinite(parsedSuccessAt) ? new Date(parsedSuccessAt).toISOString() : null;
       activeSnapshotStale = row.stale === 1;
     }
+    if (Number.isInteger(row.node_id)) activeParents.set(row.node_id, Number.isInteger(row.parent_id) ? row.parent_id : null);
+    if (row.key_type === 'stale' && row.value_type === 'true' && Number.isInteger(row.parent_id)) activeStaleObjects.add(row.parent_id);
     const entry = byKind.get(row.kind);
     const scalarArrayItem = Number.isInteger(row.key_type) && typeof row.field === 'string' && /\[\d+\]$/.test(row.field) && ['text','integer','real','true','false','null'].includes(row.value_type);
     if (!entry || (typeof row.key_type !== 'string' && !scalarArrayItem) || typeof row.field !== 'string') continue;
@@ -95,9 +112,10 @@ export function buildDataCoverage(db, now = Date.now()) {
     if (activeFields.has(field)) {
       const prior = activeFields.get(field);
       prior.non_empty_text ||= nonEmptyText;
+      prior.occurrences.push({node_id:row.node_id,non_empty_text:nonEmptyText});
       continue;
     }
-    if (activeFields.size < 10000) activeFields.set(field, { non_empty_text: nonEmptyText });
+    if (activeFields.size < 10000) activeFields.set(field, { non_empty_text: nonEmptyText, occurrences: [{node_id:row.node_id,non_empty_text:nonEmptyText}] });
     else entry.fieldInventoryTruncated = true;
   }
   flushFields();

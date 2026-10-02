@@ -12,6 +12,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, unlink
 import { dirname, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { mergeAccountLimitsSnapshot } from './account-limits-snapshot.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const requireWorker = createRequire(resolve(root, 'package.json'));
@@ -633,7 +634,9 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         const data={};
         for(const kind of ['quota','timelock']){try{data[kind]=await readCall(current,'account_'+kind);}catch(error){const failure=classifyReadError(error);data[kind]={available:false,response_verified:false,error:failure.code,status_code:failure.status_code};}}
         if(!owns()||sock!==current)throw Error('connection_changed');
-        snapshot('account_limits','wis-5679',{...data,partial:!data.quota.available||!data.timelock.available,observed_at:new Date().toISOString()});
+        const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='account_limits' AND resource_id='wis-5679'").get();
+        let old={};try{old=JSON.parse(prior?.payload||'{}');}catch{}
+        snapshot('account_limits','wis-5679',mergeAccountLimitsSnapshot(old,data,new Date().toISOString()));
       } else if(command.kind==='group_invite') {
         if(!/^\d+(?:-\d+)?@g\.us$/.test(command.target||'')||!db.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind IN ('group','community') AND resource_id=? LIMIT 1").get(command.target,command.target))throw Error('invalid_target');
         const code=await readCall(current,'group_invite',[command.target]);

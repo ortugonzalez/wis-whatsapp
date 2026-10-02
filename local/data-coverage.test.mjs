@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {buildDataCoverage,deriveChatMute,deriveChatPinned,deriveUnreadMention} from './data-coverage.mjs';
+import {mergeAccountLimitsSnapshot} from './account-limits-snapshot.mjs';
 
 test('coverage keeps explicit successful observation time separate from snapshot write time',()=>{
  const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
@@ -13,6 +14,21 @@ test('coverage separates stale non-empty text from current-looking text records'
  const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
  const insert=db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)');insert.run('contact','old-contact',JSON.stringify({about:'old value',stale:true}),'2026-01-01T00:00:00.000Z');insert.run('contact','current-contact',JSON.stringify({about:'current value'}),'2026-01-02T00:00:00.000Z');
  try{const field=buildDataCoverage(db).snapshot_kinds.find(row=>row.kind==='contact').field_counts.find(row=>row.field==='$.about');assert.deepEqual(field,{field:'$.about',records:2,non_empty_text_records:2,snapshot_updated_at:'2026-01-02T00:00:00.000Z',stale_records:1,stale_non_empty_text_records:1});}finally{db.close();}
+});
+
+test('coverage marks a failed account-limit subsection stale while preserving a fresh sibling',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const first='2026-01-01T00:00:00.000Z',second='2026-01-02T00:00:00.000Z',quota={available:true,response_verified:true,total_quota:120,used_quota:35},timelock={available:true,response_verified:true,is_active:false};
+ const prior=mergeAccountLimitsSnapshot({}, {quota,timelock},first),snapshot=mergeAccountLimitsSnapshot(prior,{quota:{available:false,error:'provider_error'},timelock},second);
+ assert.equal(snapshot.stale,false);assert.equal(snapshot.quota.stale,true);assert.equal(snapshot.timelock.stale,false);
+ db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('account_limits','self',JSON.stringify(snapshot),second);
+ try{const fields=buildDataCoverage(db).snapshot_kinds.find(row=>row.kind==='account_limits').field_counts;assert.equal(fields.find(row=>row.field==='$.quota."used_quota"').stale_records,1);assert.equal(fields.find(row=>row.field==='$.timelock."is_active"').stale_records??0,0);}finally{db.close();}
+});
+
+test('coverage keeps mixed stale and current array entries out of stale-only counts',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT DEFAULT \'import\',direction TEXT DEFAULT \'in\',created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const insert=db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)'),at='2026-01-01T00:00:00.000Z';insert.run('mixed_text','one',JSON.stringify({items:[{label:'old value',stale:true},{label:'current value',stale:false}]}),at);insert.run('mixed_empty','two',JSON.stringify({items:[{label:'old value',stale:true},{label:'',stale:false}]}),at);
+ try{const coverage=buildDataCoverage(db),field=(kind)=>coverage.snapshot_kinds.find(row=>row.kind===kind).field_counts.find(row=>row.field==='$.items[].label'),text=field('mixed_text'),empty=field('mixed_empty');assert.equal(text.records,1);assert.equal(text.non_empty_text_records,1);assert.equal(text.stale_records??0,0);assert.equal(text.stale_non_empty_text_records??0,0);assert.equal(empty.records,1);assert.equal(empty.non_empty_text_records,1);assert.equal(empty.stale_records??0,0);assert.equal(empty.stale_non_empty_text_records,1);}finally{db.close();}
 });
 
 test('coverage derives chat and group mute evidence in milliseconds without leaking direct chats into group results',()=>{
