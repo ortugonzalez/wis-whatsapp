@@ -11,3 +11,13 @@ Producción antes del cambio: endpoint público informa connected, sin error act
 Publicado y confirmado por Chrome/EasyPanel: Success, 2026-10-02 23:44:20 UTC, título `feat: expose sanitized media download outcomes`. Cola y procesamiento estaban vacíos antes de publicar; después, el endpoint productivo sigue connected sin error actual. La captura de imagen falló por timeout tanto para el diálogo como para un recorte menor; se conserva evidencia textual del registro, sin inventar captura ni validar medios reales aún.
 
 Siguiente ruta: comprobar recepción pasiva real y resultados sanitizados nuevos cuando WhatsApp entregue medios, sin generar tráfico de prueba. Ampliar integración para tamaño excedido, escritura fallida e historial. La paridad WHAPI sigue incompleta.
+
+## Seguimiento 2026-10-02, ejecución de 23:51 UTC
+
+Ruta 5: se añadió una prueba de integración aislada de SQLite y worker falso que verifica cuatro casos antes pendientes: tamaño superior a 25 MiB, fallo del proveedor con texto sensible ficticio, directorio temporal obstruido para simular fallo de escritura e historial que no inicia descargas. En todos se conserva el mensaje legible sin media_path; los snapshots contienen solo estado y fecha, sin el error ficticio. Owner: 1/1 PASS. No cambia el código productivo ni requiere otro despliegue.
+
+Chrome mantiene el registro Success de 23:44:20 UTC. El filtro En cola muestra cero resultados y el endpoint productivo informa connected sin error actual. Son evidencias de estado, no recepción nueva. No se repitieron las capturas que agotaron el tiempo ni se reinició el worker.
+
+QA independiente: PASS; ejecutó 1/1 pruebas y confirmó aislamiento, escenarios y sanitización sin tocar producción.
+
+Próxima ruta: auditar de forma agregada la frescura de datos en el dashboard productivo y seleccionar una brecha de lectura WHAPI pendiente; no asumir que los fixtures locales prueban medios reales.
