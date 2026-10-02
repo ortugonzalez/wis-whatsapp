@@ -1,3 +1,4 @@
+import { attachGroupMemberTags } from './group-member-tags.mjs';
 import { attachAccountSettings } from './account-settings.mjs';
 import { attachNewsletterEvents } from './newsletter-events.mjs';
 import { randomUUID } from 'node:crypto';
@@ -1016,6 +1017,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
       };
       attachNewsletterEvents(current.ev,{guarded,snapshot,event});
       attachAccountSettings(current.ev,{guarded,snapshot});
+      attachGroupMemberTags(current.ev,{guarded,snapshot});
       current.ev.on('messaging-history.set', guarded(({messages,contacts,chats,progress,isLatest,syncType,lidPnMappings,peerDataRequestSessionId}) => {
         if(contacts?.length)saveContacts(contacts);
         if(lidPnMappings?.length)for(const mapping of lidPnMappings.slice(0,10000))saveIdentity(mapping,'messaging-history.set');
