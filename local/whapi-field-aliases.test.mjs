@@ -2,8 +2,24 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
+import {summarizeCapabilityFieldCoverage} from './whapi-field-coverage.mjs';
 
 const aliases=await (async()=>{const context={window:{}};vm.runInNewContext(await readFile(new URL('./public/whapi-field-aliases.js',import.meta.url),'utf8'),context);return context.window.WIS_WHAPI_FIELD_ALIASES;})();
+
+test('passive settings, member labels and reaction notifications do not imply unrelated WHAPI response coverage',()=>{
+ const definitions=[['getchannelsettings',['locale']],['getgroup',['participants[].rank']],['getmessagesnewsletter',['messages[].reactions[].count','messages[].reactions[].unread']]];
+ const reference={methods:definitions.map(([id,paths])=>({id,operations:[{response_fields:{200:paths.map(path=>({path}))}}]}))};
+ // Even identical names in an unrelated observation must not create coverage.
+ const coverage={snapshot_kinds:[
+  {kind:'account_setting',field_counts:[{field:'locale',records:1},{field:'value',records:1}]},
+  {kind:'group_member_tag',field_counts:[{field:'label',records:1},{field:'participants[0].rank',records:1}]},
+  {kind:'newsletter_reaction',field_counts:[{field:'reported_event_count',records:1},{field:'messages[0].reactions[0].count',records:1},{field:'messages[0].reactions[0].unread',records:1}]},
+ ]};
+ const report=summarizeCapabilityFieldCoverage(reference,coverage,aliases);
+ assert.equal(report.totals.exact_response_fields_observed,0);
+ assert.equal(report.totals.semantic_response_fields_observed,0);
+ assert.equal(report.totals.response_fields_without_observation,4);
+});
 
 test('every reviewed method declares local source kinds',()=>{
   assert.ok(Object.keys(aliases).length>0);
