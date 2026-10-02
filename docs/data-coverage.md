@@ -596,3 +596,8 @@ El barrido programado `all` figura completado y su contador agregado avanzó de 
 ### Lectura automática blocklist, 2026-10-02 08:20 UTC
 
 El turno programado de `blocklist` figura completado y su contador agregado avanzó de 27 a 28. La escritura global llegó a las 08:20 UTC; el inventario de rutas siguió en 410 y los fallos acumulados permanecieron en 67. Esto confirma el comando registrado, no la actualización de cada campo. La conexión se mantuvo verificada, el worker activo y los envíos pausados. Próxima ruta automática: `communities` a las 08:35 UTC. No se inspeccionó la lista de bloqueos ni se hizo una consulta manual.
+
+
+### Lectura automática communities, 2026-10-02 08:35 UTC
+
+El turno programado de `communities` figura completado y el contador agregado avanzó de 29 a 30. La escritura del snapshot global llegó a las 08:35 UTC; el inventario permaneció en 410 rutas y los fallos acumulados en 67. No aparecieron rutas nuevas. La finalización del comando no acredita por sí sola cambios en las relaciones o campos individuales. La identidad permaneció verificada, el worker activo y los envíos pausados. Próxima ruta automática: `collections` a las 08:50 UTC. No se abrieron nombres, IDs ni payloads, y no se lanzó consulta manual.
