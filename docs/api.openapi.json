@@ -2947,6 +2947,16 @@
               "type": "integer",
               "minimum": 0
             }
+          },
+          {
+            "name": "channel_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{1,40}@newsletter$"
+            },
+            "description": "Exact channel filter; only newsletter_view and newsletter_reaction. Rows are latest notifications per message, not complete history or aggregate reaction totals."
           }
         ],
         "responses": {

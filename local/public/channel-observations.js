@@ -1,0 +1,21 @@
+'use strict';
+function channelObservationRows(rows,kind){
+ return rows.map(row=>{const d=row.data||{},reaction=kind==='newsletter_reaction';return `<article class="detail-section">${kv('ID de mensaje del servidor',d.server_id??'No informado')}${reaction?kv('Reacción informada',d.code??'No informada')+kv('Cantidad de esta notificación',d.reported_event_count??'No informada')+kv('Retirada informada',d.removed===true?'Sí':d.removed===false?'No':'No informada'):kv('Vistas informadas',d.reported_view_count??'No informadas')}${kv('Fecha de observación',d.observed_at?fmt(d.observed_at):row.updated_at?fmt(row.updated_at):'No registrada')}</article>`;}).join('');
+}
+function channelObservationsCard(channel){
+ const el=document.createElement('section');el.className='detail-section';el.dataset.channelObservations='';
+ el.innerHTML='<header><h3>Vistas y reacciones observadas</h3><button class="btn" data-observation-refresh>Actualizar datos guardados</button></header><p class="detail-hint">Última notificación recibida por mensaje y tipo. No es un historial completo. La cantidad de una notificación de reacción no representa el total de reacciones. Las fechas indican cuándo se observó el dato; no garantizan que siga vigente.</p><label>Tipo de notificación<select data-observation-kind><option value="newsletter_view">Vistas</option><option value="newsletter_reaction">Reacciones</option></select></label><p class="detail-hint" data-observation-state aria-live="polite"></p><div data-observation-rows></div><div class="pagination"><button class="btn" data-observation-prev>Anterior</button><span data-observation-page></span><button class="btn" data-observation-next>Siguiente</button></div>';
+ let offset=0,sequence=0,timer;const size=25,selector=el.querySelector('[data-observation-kind]'),prev=el.querySelector('[data-observation-prev]'),next=el.querySelector('[data-observation-next]'),refresh=el.querySelector('[data-observation-refresh]');
+ async function load(){const request=++sequence,kind=selector.value;prev.disabled=next.disabled=refresh.disabled=true;
+  try{const r=await observedList('snapshots',{kind,channel_id:channel,limit:size,offset});if(!el.isConnected||request!==sequence)return;
+   el.querySelector('[data-observation-state]').textContent=`${r.meta.total??r.rows.length} registros guardados de este tipo. No se consulta WhatsApp al actualizar esta sección.`;
+   el.querySelector('[data-observation-rows]').innerHTML=r.rows.length?channelObservationRows(r.rows,kind):'<p class="snapshot-empty">No hay notificaciones guardadas en esta página. Esto no significa que el canal tenga cero vistas o reacciones.</p>';
+   el.querySelector('[data-observation-page]').textContent=r.rows.length?`${offset+1}–${offset+r.rows.length}`:'Sin filas';prev.disabled=offset===0;next.disabled=!r.meta.has_more;
+  }catch{if(el.isConnected&&request===sequence)el.querySelector('[data-observation-state]').textContent='No se pudo actualizar. Los datos visibles pueden ser anteriores; intentá nuevamente.';}
+  finally{if(el.isConnected&&request===sequence)refresh.disabled=false;}
+ }
+ selector.onchange=()=>{offset=0;el.querySelector('[data-observation-rows]').replaceChildren();void load();};refresh.onclick=()=>void load();prev.onclick=()=>{offset=Math.max(0,offset-size);void load();};next.onclick=()=>{offset+=size;void load();};
+ return {el,start(){void load();timer=setInterval(()=>{if(!el.isConnected){clearInterval(timer);sequence++;return;}if(!document.hidden&&!refresh.disabled)void load();},Math.max(5,uiPrefs.poll_seconds)*1000);}};
+}
+const resourceDetailBeforeChannelObservations=resourceDetail;
+resourceDetail=async function(resource,row){const epoch=viewEpoch,pending=resourceDetailBeforeChannelObservations(resource,row),drawer=document.querySelector('.detail-drawer');await pending;if(resource!=='channels'||epoch!==viewEpoch||drawer!==document.querySelector('.detail-drawer'))return;const channel=typeof row==='string'?row:row.id||row.jid;if(!/^\d{1,40}@newsletter$/.test(channel||''))return;if(!drawer?.isConnected||drawer.querySelector('[data-channel-observations]'))return;const card=channelObservationsCard(channel);drawer.querySelector('.drawer-body').append(card.el);card.start();};
