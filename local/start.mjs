@@ -3,21 +3,18 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { existsSync, unlinkSync, writeFileSync, readFileSync, openSync, closeSync } from 'node:fs';
 import {createSupervisor} from './supervisor.mjs';
+import {claimSupervisorLock,releaseSupervisorLock} from './supervisor-lock.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 process.chdir(root);
 try { process.loadEnvFile(resolve(root, '.env.local')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
 await import('./setup.mjs');
 const lockFile=resolve(root,'.local/runtime.lock');
 const runtimeFile=resolve(root,'.local/runtime.json');
-if(existsSync(lockFile)){
- const prior=Number(readFileSync(lockFile,'utf8'));
- if(!Number.isSafeInteger(prior)||prior<=0)throw Error('Supervisor lock invalid; inspect local processes before recovery.');
- let alive=true;try{process.kill(prior,0);}catch(error){if(error.code==='ESRCH')alive=false;else throw error;}
- if(alive)throw Error('Another WIS supervisor is already running.');
- unlinkSync(lockFile);
-}
-const lock=openSync(lockFile,'wx',0o600);writeFileSync(lock,String(process.pid));closeSync(lock);
+const lockDatabase=resolve(root,'.local/runtime-lock.sqlite');
+const lockClaim=claimSupervisorLock({databasePath:lockDatabase,legacyLockFile:lockFile,currentPid:process.pid,isAlive:pid=>{try{process.kill(pid,0);return true;}catch(error){if(error.code==='ESRCH')return false;throw error;}}});
+const lock=openSync(lockFile,'w',0o600);writeFileSync(lock,String(process.pid));closeSync(lock);
 process.on('exit',()=>{
+ try{releaseSupervisorLock(lockDatabase,lockClaim);}catch{}
  try{if(readFileSync(lockFile,'utf8')===String(process.pid))unlinkSync(lockFile);}catch{}
  try{if(JSON.parse(readFileSync(runtimeFile,'utf8')).pid===process.pid)unlinkSync(runtimeFile);}catch{}
 });

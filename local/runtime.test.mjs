@@ -9,6 +9,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
+import {DatabaseSync} from 'node:sqlite';
 const id='11111111-1111-4111-8111-111111111111';
 function fixture(timeoutMs=1000,workerEnabled=true){const children=[],states=[],exits=[];const supervisor=createSupervisor({timeoutMs,workerEnabled,publish:s=>states.push(structuredClone(s)),exit:c=>exits.push(c),spawnChild:(kind,generation)=>{const c=new EventEmitter();Object.assign(c,{kind,generation,pid:children.length+100,exitCode:null,signalCode:null,connected:true,sent:[],send(m,cb){this.sent.push(m);cb?.();},kill(){this.signalCode='SIGTERM';this.emit('exit',null,'SIGTERM');},finish(){this.exitCode=0;this.emit('exit',0);}});children.push(c);return c;}});return {supervisor,children,states,exits};}
 test('server-only deployment does not start a WhatsApp worker and reports reads unavailable',()=>{
@@ -59,14 +60,16 @@ test('ready timeout fails closed without another server or worker spawn',async()
 });
 test('isolated supervisor preserves lock, reloads API via CLI and gracefully stops both children',{timeout:15000},async()=>{
  const root=mkdtempSync(join(tmpdir(),'wis-runtime-'));mkdirSync(join(root,'local'));mkdirSync(join(root,'.local'));
- for(const file of ['start.mjs','control.mjs','supervisor.mjs','group-invite-info.mjs','newsletter-invite-info.mjs'])copyFileSync(new URL(file,import.meta.url),join(root,'local',file));
+  for(const file of ['start.mjs','control.mjs','supervisor.mjs','supervisor-lock.mjs','group-invite-info.mjs','newsletter-invite-info.mjs'])copyFileSync(new URL(file,import.meta.url),join(root,'local',file));
  writeFileSync(join(root,'local/setup.mjs'),'');
  for(const name of ['server','worker'])writeFileSync(join(root,'local',name+'.mjs'),`import{writeFileSync}from'node:fs';writeFileSync('.local/${name}.ready','yes');process.send?.({type:'wis.ready',generation:process.env.WIS_RUNTIME_GENERATION});process.on('message',m=>{if(m?.type==='wis.shutdown'){writeFileSync('.local/${name}.stopped','yes');process.exit(0);}});`);
- const child=spawn(process.execPath,[join(root,'local/start.mjs')],{cwd:root,stdio:'ignore',windowsHide:true});
+ const children=[spawn(process.execPath,[join(root,'local/start.mjs')],{cwd:root,stdio:'ignore',windowsHide:true}),spawn(process.execPath,[join(root,'local/start.mjs')],{cwd:root,stdio:'ignore',windowsHide:true})];
  try{
   const until=Date.now()+6000;while((!existsSync(join(root,'.local/worker.ready'))||!existsSync(join(root,'.local/server.ready')))&&Date.now()<until)await new Promise(r=>setTimeout(r,25));
   assert.ok(existsSync(join(root,'.local/worker.ready')));assert.ok(existsSync(join(root,'.local/server.ready')));
   const original=JSON.parse(readFileSync(join(root,'.local/runtime.json'),'utf8'));
+  const child=children.find(candidate=>candidate.pid===original.pid);assert.ok(child,'one concurrent start must own the supervisor');
+  const loser=children.find(candidate=>candidate!==child);const loserExit=loser.exitCode!==null?[loser.exitCode]:await Promise.race([once(loser,'exit'),new Promise(resolve=>setTimeout(()=>resolve(['timeout']),3000))]);assert.notEqual(loserExit[0],'timeout','concurrent duplicate supervisor must exit promptly');assert.notEqual(loserExit[0],0);
   const duplicate=spawn(process.execPath,[join(root,'local/start.mjs')],{cwd:root,stdio:'ignore',windowsHide:true});
   const [duplicateCode]=await once(duplicate,'exit');assert.notEqual(duplicateCode,0);
   assert.equal(JSON.parse(readFileSync(join(root,'.local/runtime.json'),'utf8')).pid,original.pid);
@@ -75,5 +78,6 @@ test('isolated supervisor preserves lock, reloads API via CLI and gracefully sto
   const fresh=JSON.parse(readFileSync(join(root,'.local/runtime.json'),'utf8'));assert.equal(fresh.pid,original.pid);assert.equal(fresh.worker_pid,original.worker_pid);assert.notEqual(fresh.server_pid,original.server_pid);assert.equal(fresh.reload.status,'ready');assert.equal(existsSync(join(root,'.local/worker.stopped')),false);
   const ended=once(child,'exit');writeFileSync(join(root,'.local/stop-request'),'stop');
   const [code]=await ended;assert.equal(code,0);assert.ok(existsSync(join(root,'.local/worker.stopped')));assert.ok(existsSync(join(root,'.local/server.stopped')));assert.equal(existsSync(join(root,'.local/runtime.lock')),false);
- }finally{if(child.exitCode===null)child.kill();}
+  const leaseDb=new DatabaseSync(join(root,'.local/runtime-lock.sqlite'));try{assert.equal(leaseDb.prepare('SELECT count(*) AS count FROM wis_supervisor_lock').get().count,0);}finally{leaseDb.close();}
+ }finally{for(const child of children)if(child.exitCode===null)child.kill();}
 });
