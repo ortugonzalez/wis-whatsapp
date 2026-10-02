@@ -1,6 +1,20 @@
 # Estado de entrega WIS WhatsApp
 
-Actualizado: **2026-10-02 07:53 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+Actualizado: **2026-10-02 08:22 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+
+### Cobertura multimedia por tipo y verificación productiva, 2026-10-02 08:22 (Buenos Aires)
+
+Se desplegó `fix: scope media coverage to non-empty typed metadata`. La evidencia de mensajes ahora se separa por tipo (imagen, audio, video, documento y ubicación), evitando que un MIME de audio o video se atribuya a otro método WHAPI. Los campos de texto multimedia solo cuentan si no están vacíos. La normalización guarda el caption en metadatos para los mensajes recibidos a partir del cambio y mantiene el cuerpo de mensaje existente; no inventa ni rellena el historial anterior. La cobertura devuelve nombres y conteos, nunca valores.
+
+QA independiente: **PASS** en la revisión de aliases y casos vacíos/no vacíos. Suite completa **257/257**, build y `git diff --check` aprobados. Commit desplegado: `fix: scope media coverage to non-empty typed metadata`.
+
+Después del reinicio, Chrome mostró brevemente el error de servicio no disponible. Los logs de EasyPanel registraron intentos de arranque bloqueados por el supervisor anterior y luego `WIS local ready`; al recargar Chrome, el panel volvió a cargar. La comprobación posterior mostró **conectada, identidad verificada, sesión persistente y envíos pausados**. No se alteró la sesión ni se envió ningún mensaje.
+
+La lectura automática sigue habilitada cada 15 minutos. La última ruta programada `disappearing_mode` terminó a las 08:06 y la solicitud de lectura `all` finalizó a las 08:21; `community_subgroups` se omitió porque no hay una comunidad conocida. Próxima ruta: `all`, prevista para las 08:37. Persisten fallos previos de `bot_list` (17) y `avatars` (7); la cobertura de bot list sigue desconocida y no se forzó una repetición.
+
+En el panel, el catálogo revisado conserva 182 métodos y 44.628 rutas de respuesta documentadas. La cobertura muestra 188 rutas con evidencia local: 14 exactas y 174 revisadas semánticamente; quedan 44.440 sin observar. Hay alguna observación en 23 de 177 métodos de respuesta y 4 métodos están observados por completo. Estas cifras describen evidencia, no equivalencia funcional; la cobertura sigue siendo parcial y no se declara paridad con WHAPI.
+
+Próxima ruta: dejar correr el ciclo programado y verificar que el servicio se mantiene estable; continuar la auditoría con respuestas reales y resolver `bot_list` solo mediante una lectura verificable y limitada, sin reintentos agresivos.
 
 ### Recuperación de arranque y verificación productiva, 2026-10-02 07:53 (Buenos Aires)
 
