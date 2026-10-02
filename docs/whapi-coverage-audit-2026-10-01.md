@@ -415,3 +415,9 @@ La programación avanzó a `blocklist` a las 22:35; el turno `all` terminó `don
 La configuración confirmó `blocklist` `done`, worker activo y lease vigente; la siguiente ruta es `communities` a las 22:50. La cobertura permanece en 161/44.628 rutas observadas/revisadas (14 exactas, 147 semánticas, 44.467 sin observar; 4 métodos completos). No hubo nuevas rutas verificadas ni se inspeccionó el contenido del bloqueo.
 
 **Próxima ruta:** observar el ciclo automático `communities` a las 22:50 y comprobar su estado y cobertura.
+
+### Resultado automático de communities - 2026-10-01 22:50
+
+`communities` terminó `done`; la sesión operativa conserva el worker activo y lease vigente. No aparecieron rutas WHAPI nuevas: 161/44.628 observadas/revisadas (14 exactas, 147 semánticas, 44.467 sin observar; 4 métodos completos). La siguiente ruta es `collections` a las 23:05. No se abrieron nombres ni integrantes.
+
+**Próxima ruta:** comprobar el estado agregado de `collections` a las 23:05 y comparar cobertura.
