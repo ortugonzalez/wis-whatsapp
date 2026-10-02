@@ -1,0 +1,18 @@
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {resolve,dirname} from 'node:path';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+
+// Generates an isolated deployment; never connects to a host or copies customer data.
+export function deploymentSpec({slug,name,suffix,domain},context){
+ if(!/^[a-z][a-z0-9-]{2,39}$/.test(slug??'')||!/^\d{4}$/.test(suffix??'')||typeof name!=='string'||!name.trim()||name.length>80||/[\x00-\x1f\x7f]/.test(name)||typeof domain!=='string'||domain.length>253||!domain.includes('.')||!domain.split('.').every(part=>/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(part)))throw Error('invalid_workspace_arguments');
+ const id='wis-whatsapp-'+slug;
+ return {name:id,services:{panel:{build:{context},restart:'unless-stopped',init:true,environment:{NODE_ENV:'production',WIS_LOCAL_HOST:'0.0.0.0',WIS_LOCAL_PORT:'3010',WIS_DEPLOYMENT_KIND:'production',WIS_ALLOWED_HOSTS:domain,WIS_TRUST_PROXY:'true',WIS_WORKSPACE_NAME:name.trim(),WIS_EXPECTED_PHONE_SUFFIX:suffix,WIS_ADMIN_USERNAME:'admin',WIS_WORKER_DISABLED:'true',WIS_OUTBOUND_ENABLED:'false',WIS_WEBHOOKS_ENABLED:'false'},expose:['3010'],volumes:['data:/app/.local'],logging:{driver:'json-file',options:{'max-size':'10m','max-file':'3'}}}},volumes:{data:{name:id+'-data'}}};
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
+ const args={};for(let i=2;i<process.argv.length;i+=2){const flag=process.argv[i],value=process.argv[i+1];if(!['--slug','--name','--suffix','--domain'].includes(flag)||!value||Object.hasOwn(args,flag.slice(2)))throw Error('Usage: --slug client --name Client --suffix 1234 --domain client.example.com');args[flag.slice(2)]=value;}
+ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),spec=deploymentSpec(args,root),destination=resolve(root,'.local','provisioning',args.slug);
+ mkdirSync(destination,{recursive:true,mode:0o700});
+ writeFileSync(resolve(destination,'compose.json'),JSON.stringify(spec,null,2)+'\n',{flag:'wx',mode:0o600});
+ writeFileSync(resolve(destination,'README.txt'),`WIS — instalación dedicada para ${args.name}\n\nEste archivo no despliega ni inicia servicios.\n\nEasyPanel: crear App separada; usar el Dockerfile de este repositorio, puerto 3010, dominio HTTPS ${args.domain}, volumen EXCLUSIVO ${spec.volumes.data.name} montado en /app/.local y variables de compose.json. No importar la base, archivos auth, correo SMTP ni tokens de WIS.\n\nAlternativa Docker Compose: docker compose -f compose.json up -d --build. Requiere configurar un reverse proxy HTTPS en la red de este proyecto hacia panel:3010; no publica un puerto al host.\n\nLa contraseña se genera al primer arranque en el volumen privado, admin-access.txt. Entrar, cambiarla en Mi espacio y configurar recuperación de correo propia. Definir política de backup externo cifrado y probar restauración antes de entregar.\n\nWorker apagado por defecto: habilitarlo solo para esta instancia, comprobar la identidad completa y vincular el teléfono del cliente. No reutilizar sesiones de otra instancia. Envíos y webhooks siguen apagados.\n\nOferta actual: beta administrada, un administrador, una línea; sin cobros ni alta automática. No garantiza paridad WHAPI ni inmunidad frente a suspensión.\n`,{flag:'wx',mode:0o600});
+ console.log('Deployment files prepared at '+destination+'. No services started.');
+}

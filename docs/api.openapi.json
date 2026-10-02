@@ -2163,7 +2163,10 @@
                               "format": "date-time"
                             },
                             "next_kind": {
-                              "type": ["string", "null"],
+                              "type": [
+                                "string",
+                                "null"
+                              ],
                               "enum": [
                                 "all",
                                 "blocklist",
@@ -2176,10 +2179,10 @@
                                 "contact_profiles",
                                 "group_requests",
                                 "avatars",
-                                  "bot_list",
-                                  "disappearing_mode",
-                                  "community_subgroups",
-                                  null
+                                "bot_list",
+                                "disappearing_mode",
+                                "community_subgroups",
+                                null
                               ]
                             },
                             "last_kind": {
@@ -2216,16 +2219,42 @@
                               "type": "array",
                               "items": {
                                 "type": "string",
-                                "enum": ["all", "blocklist", "communities", "catalog", "collections", "newsletters", "account_limits", "account_username", "contact_profiles", "group_requests", "avatars", "bot_list", "disappearing_mode", "community_subgroups"]
+                                "enum": [
+                                  "all",
+                                  "blocklist",
+                                  "communities",
+                                  "catalog",
+                                  "collections",
+                                  "newsletters",
+                                  "account_limits",
+                                  "account_username",
+                                  "contact_profiles",
+                                  "group_requests",
+                                  "avatars",
+                                  "bot_list",
+                                  "disappearing_mode",
+                                  "community_subgroups"
+                                ]
                               },
                               "description": "Read routes skipped for a recent timeout or missing known community."
                             },
                             "last_skip_reason": {
-                              "type": ["string", "null"],
-                              "enum": ["recent_read_timeout", "known_community_required", "recent_read_timeout_and_known_community_required", null]
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "recent_read_timeout",
+                                "known_community_required",
+                                "recent_read_timeout_and_known_community_required",
+                                null
+                              ]
                             },
                             "last_skip_at": {
-                              "type": ["string", "null"],
+                              "type": [
+                                "string",
+                                "null"
+                              ],
                               "format": "date-time"
                             },
                             "last_status": {
@@ -2365,7 +2394,10 @@
                               "format": "date-time"
                             },
                             "next_kind": {
-                              "type": ["string", "null"],
+                              "type": [
+                                "string",
+                                "null"
+                              ],
                               "enum": [
                                 "all",
                                 "blocklist",
@@ -2378,10 +2410,10 @@
                                 "contact_profiles",
                                 "group_requests",
                                 "avatars",
-                                  "bot_list",
-                                  "disappearing_mode",
-                                  "community_subgroups",
-                                  null
+                                "bot_list",
+                                "disappearing_mode",
+                                "community_subgroups",
+                                null
                               ]
                             },
                             "last_kind": {
@@ -2418,16 +2450,42 @@
                               "type": "array",
                               "items": {
                                 "type": "string",
-                                "enum": ["all", "blocklist", "communities", "catalog", "collections", "newsletters", "account_limits", "account_username", "contact_profiles", "group_requests", "avatars", "bot_list", "disappearing_mode", "community_subgroups"]
+                                "enum": [
+                                  "all",
+                                  "blocklist",
+                                  "communities",
+                                  "catalog",
+                                  "collections",
+                                  "newsletters",
+                                  "account_limits",
+                                  "account_username",
+                                  "contact_profiles",
+                                  "group_requests",
+                                  "avatars",
+                                  "bot_list",
+                                  "disappearing_mode",
+                                  "community_subgroups"
+                                ]
                               },
                               "description": "Read routes skipped for a recent timeout or missing known community."
                             },
                             "last_skip_reason": {
-                              "type": ["string", "null"],
-                              "enum": ["recent_read_timeout", "known_community_required", "recent_read_timeout_and_known_community_required", null]
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "recent_read_timeout",
+                                "known_community_required",
+                                "recent_read_timeout_and_known_community_required",
+                                null
+                              ]
                             },
                             "last_skip_at": {
-                              "type": ["string", "null"],
+                              "type": [
+                                "string",
+                                "null"
+                              ],
                               "format": "date-time"
                             },
                             "last_status": {
@@ -4355,31 +4413,91 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "observed": { "type": "boolean" },
-                        "available": { "type": "boolean" },
-                        "response_verified": { "type": "boolean" },
-                        "partial": { "type": "boolean" },
-                        "updated_at": { "type": ["string", "null"], "format": "date-time" },
+                        "observed": {
+                          "type": "boolean"
+                        },
+                        "available": {
+                          "type": "boolean"
+                        },
+                        "response_verified": {
+                          "type": "boolean"
+                        },
+                        "partial": {
+                          "type": "boolean"
+                        },
+                        "updated_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
                         "subscribers": {
                           "type": "object",
                           "properties": {
-                            "available": { "type": "boolean" },
-                            "response_verified": { "type": "boolean" },
-                            "stale": { "type": "boolean" },
-                            "value": { "type": ["integer", "null"], "minimum": 0 },
-                            "observed_at": { "type": ["string", "null"], "format": "date-time" },
-                            "error": { "type": ["string", "null"] }
+                            "available": {
+                              "type": "boolean"
+                            },
+                            "response_verified": {
+                              "type": "boolean"
+                            },
+                            "stale": {
+                              "type": "boolean"
+                            },
+                            "value": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "observed_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            },
+                            "error": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
                           }
                         },
                         "admin_count": {
                           "type": "object",
                           "properties": {
-                            "available": { "type": "boolean" },
-                            "response_verified": { "type": "boolean" },
-                            "stale": { "type": "boolean" },
-                            "value": { "type": ["integer", "null"], "minimum": 0 },
-                            "observed_at": { "type": ["string", "null"], "format": "date-time" },
-                            "error": { "type": ["string", "null"] }
+                            "available": {
+                              "type": "boolean"
+                            },
+                            "response_verified": {
+                              "type": "boolean"
+                            },
+                            "stale": {
+                              "type": "boolean"
+                            },
+                            "value": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "observed_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            },
+                            "error": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
                           }
                         }
                       }
@@ -4389,9 +4507,15 @@
               }
             }
           },
-          "401": { "description": "Authentication required" },
-          "403": { "description": "Administrator cookie required" },
-          "404": { "description": "Unknown channel" }
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrator cookie required"
+          },
+          "404": {
+            "description": "Unknown channel"
+          }
         }
       }
     },
@@ -5043,27 +5167,103 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["captured_at", "observed_at", "method_count", "method_coverage", "totals", "methods"],
+                  "required": [
+                    "captured_at",
+                    "observed_at",
+                    "method_count",
+                    "method_coverage",
+                    "totals",
+                    "methods"
+                  ],
                   "properties": {
-                    "captured_at": {"type": ["string", "null"], "format": "date-time"},
-                    "observed_at": {"type": "string", "format": "date-time"},
-                    "method_count": {"type": "integer"},
-                    "method_coverage": {"type": "object", "additionalProperties": {"type": "integer"}},
-                    "totals": {
+                    "captured_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "observed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "method_count": {
+                      "type": "integer"
+                    },
+                    "method_coverage": {
                       "type": "object",
-                      "required": ["response_fields", "exact_response_fields_observed", "semantic_response_fields_observed", "fresh_response_fields_observed", "stale_only_response_fields", "response_fields_without_observation"],
-                      "properties": {
-                        "parameter_fields": {"type": "integer"},
-                        "request_fields": {"type": "integer"},
-                        "response_fields": {"type": "integer"},
-                        "exact_response_fields_observed": {"type": "integer"},
-                        "semantic_response_fields_observed": {"type": "integer"},
-                        "fresh_response_fields_observed": {"type": "integer", "description": "Routes with at least one eligible source record not explicitly marked stale; this does not prove current freshness."},
-                        "stale_only_response_fields": {"type": "integer", "description": "Observed response routes whose eligible evidence is only from records explicitly marked stale."},
-                        "response_fields_without_observation": {"type": "integer"}
+                      "additionalProperties": {
+                        "type": "integer"
                       }
                     },
-                    "methods": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "response_fields": {"type": "integer"}, "exact_response_fields_observed": {"type": "integer"}, "semantic_response_fields_observed": {"type": "integer"}, "fresh_response_fields_observed": {"type": "integer"}, "stale_only_response_fields": {"type": "integer"}, "response_fields_without_observation": {"type": "integer"}}}}
+                    "totals": {
+                      "type": "object",
+                      "required": [
+                        "response_fields",
+                        "exact_response_fields_observed",
+                        "semantic_response_fields_observed",
+                        "fresh_response_fields_observed",
+                        "stale_only_response_fields",
+                        "response_fields_without_observation"
+                      ],
+                      "properties": {
+                        "parameter_fields": {
+                          "type": "integer"
+                        },
+                        "request_fields": {
+                          "type": "integer"
+                        },
+                        "response_fields": {
+                          "type": "integer"
+                        },
+                        "exact_response_fields_observed": {
+                          "type": "integer"
+                        },
+                        "semantic_response_fields_observed": {
+                          "type": "integer"
+                        },
+                        "fresh_response_fields_observed": {
+                          "type": "integer",
+                          "description": "Routes with at least one eligible source record not explicitly marked stale; this does not prove current freshness."
+                        },
+                        "stale_only_response_fields": {
+                          "type": "integer",
+                          "description": "Observed response routes whose eligible evidence is only from records explicitly marked stale."
+                        },
+                        "response_fields_without_observation": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "response_fields": {
+                            "type": "integer"
+                          },
+                          "exact_response_fields_observed": {
+                            "type": "integer"
+                          },
+                          "semantic_response_fields_observed": {
+                            "type": "integer"
+                          },
+                          "fresh_response_fields_observed": {
+                            "type": "integer"
+                          },
+                          "stale_only_response_fields": {
+                            "type": "integer"
+                          },
+                          "response_fields_without_observation": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -5315,6 +5515,140 @@
           },
           "404": {
             "description": "Unknown conversation"
+          }
+        }
+      }
+    },
+    "/workspace": {
+      "get": {
+        "summary": "Administrator workspace profile and observed setup checks",
+        "description": "One dedicated installation per customer. Does not claim shared multitenancy, delivered recovery email or production readiness.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON data containing profile, checks, managed_beta commercial status and limitations"
+          },
+          "401": {
+            "description": "Unauthenticated, forbidden, invalid input or rate limited; JSON error code."
+          },
+          "403": {
+            "description": "Unauthenticated, forbidden, invalid input or rate limited; JSON error code."
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update workspace display names and support contact",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "description": "Same-origin administrator only. Does not change recovery email, linked account or production flags.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "connection_name",
+                  "support_email"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "connection_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "support_email": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "description": "Email address or empty string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated workspace profile and checks"
+          },
+          "400": {
+            "description": "Unauthenticated, forbidden, invalid input or rate limited; JSON error code."
+          },
+          "401": {
+            "description": "Unauthenticated, forbidden, invalid input or rate limited; JSON error code."
+          },
+          "403": {
+            "description": "Unauthenticated, forbidden, invalid input or rate limited; JSON error code."
+          }
+        }
+      }
+    },
+    "/password": {
+      "post": {
+        "summary": "Change administrator password, verifying current password",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "description": "Same-origin administrator only. New password 12–256 characters. Revokes other browser sessions and reset links; keeps current session, API tokens and WhatsApp credentials. Five failed current-password attempts per process trigger a 15-minute cooldown.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "current_password",
+                  "new_password"
+                ],
+                "properties": {
+                  "current_password": {
+                    "type": "string",
+                    "format": "password",
+                    "maxLength": 512
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 12,
+                    "maxLength": 256
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "password_changed and other_sessions_revoked"
+          },
+          "400": {
+            "description": "Unauthenticated, forbidden, invalid input or rate limited; JSON error code."
+          },
+          "401": {
+            "description": "Unauthenticated, forbidden, invalid input or rate limited; JSON error code."
+          },
+          "403": {
+            "description": "Unauthenticated, forbidden, invalid input or rate limited; JSON error code."
+          },
+          "429": {
+            "description": "Unauthenticated, forbidden, invalid input or rate limited; JSON error code."
           }
         }
       }

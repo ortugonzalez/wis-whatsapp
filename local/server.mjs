@@ -1,4 +1,5 @@
 import {LOCAL_LIMITS} from './limits.mjs';
+import {expectedLineSuffix,workspaceStatus,updateWorkspaceProfile} from './workspace.mjs';
 import {projectAccountLimits} from './account-limits-projection.mjs';
 import {buildDataCoverage,deriveChatMute} from './data-coverage.mjs';
 import {listCapabilityFields,searchCapabilityFields} from './capability-fields.mjs';
@@ -87,6 +88,7 @@ function cleanConnection(row){const {qr_payload,lease_owner,...safe}=row;return 
 function connectionDiagnostic(database){const row=database.prepare("SELECT payload FROM snapshots WHERE kind='connection_diagnostics' AND resource_id='wis-5679'").get();if(!row)return null;let value;try{value=JSON.parse(row.payload);}catch{return null;}const at=typeof value.last_disconnect_at==='string'&&Number.isFinite(Date.parse(value.last_disconnect_at))?new Date(value.last_disconnect_at).toISOString():null;if(!at)return null;const reasons=new Set(['logged_out','forbidden','timed_out','multidevice_mismatch','connection_closed','connection_replaced','bad_session','unavailable_service','restart_required','unknown']);return {at,status_code:Number.isInteger(value.status_code)&&value.status_code>=100&&value.status_code<=599?value.status_code:null,reason:reasons.has(value.reason)?value.reason:'unknown'};}
 function authStateUpdatedAt(directory){try{const authDirectory=resolve(directory,'baileys-auth');let latest=0;for(const entry of readdirSync(authDirectory,{withFileTypes:true})){if(!entry.isFile()||!entry.name.endsWith('.json'))continue;const mtime=statSync(resolve(authDirectory,entry.name)).mtimeMs;if(Number.isFinite(mtime)&&mtime>latest)latest=mtime;}return latest?new Date(latest).toISOString():null;}catch{return null;}}
 export function makeServer(database=db,options={}){
+ const workspaceEnvironment=options.workspaceEnvironment??process.env;const lineSuffix=expectedLineSuffix(workspaceEnvironment);
  const directory=options.stateDir??stateDir;const adminUsername=String(options.adminUsername??process.env.WIS_ADMIN_USERNAME??'localadmin').trim()||'localadmin';const recoveryEmail=(options.adminRecoveryEmail??process.env.WIS_ADMIN_RECOVERY_EMAIL??'').trim();const sendRecoveryEmail=Object.hasOwn(options,'sendRecoveryEmail')?options.sendRecoveryEmail:createPasswordRecoverySender();const passwordRecoveryAvailable=validRecoveryEmail(recoveryEmail)&&typeof sendRecoveryEmail==='function';const failures=new Map(),readAuditTimes=new Map(),groupInviteLookups=new Map(),newsletterInviteLookups=new Map();
  const lookupGroupInviteInfo=options.lookupGroupInviteInfo??createGroupInviteInfoRpc();
  const lookupNewsletterInviteInfo=options.lookupNewsletterInviteInfo??createNewsletterInviteInfoRpc();
@@ -180,11 +182,27 @@ export function makeServer(database=db,options={}){
      audit('connection.recover',actor.id);return send({command:'recover'},202);
     }
     if(method==='POST'&&['connect','disconnect','logout'].includes(path.split('/').pop())){const command=path.split('/').pop();database.prepare("UPDATE connections SET command=?,updated_at=? WHERE id='wis-5679'").run(command,now());audit('connection.'+command,actor.id);return send({command},202);}
-    if(path==='/api/whatsapp/identity'&&method==='POST'){const b=await jsonBody(req);if(!phone(b.phone_e164)||!b.phone_e164.endsWith('5679'))fail(400,'expected_line_5679_required');if(connection.status==='connected'&&connection.phone?.replace(/\D/g,'')!==b.phone_e164.replace(/\D/g,''))fail(409,'connected_identity_mismatch');database.prepare("UPDATE connections SET expected_phone_e164=?,updated_at=? WHERE id='wis-5679'").run(b.phone_e164,now());audit('connection.identity',actor.id);return send({expected_phone_e164:b.phone_e164});}
+    if(path==='/api/whatsapp/identity'&&method==='POST'){const b=await jsonBody(req);if(!phone(b.phone_e164)||!b.phone_e164.endsWith(lineSuffix))fail(400,lineSuffix==='5679'?'expected_line_5679_required':'expected_line_suffix_required');if(connection.status==='connected'&&connection.phone?.replace(/\D/g,'')!==b.phone_e164.replace(/\D/g,''))fail(409,'connected_identity_mismatch');database.prepare("UPDATE connections SET expected_phone_e164=?,updated_at=? WHERE id='wis-5679'").run(b.phone_e164,now());audit('connection.identity',actor.id);return send({expected_phone_e164:b.phone_e164});}
     fail(404,'not_found');
    }
    if(path.startsWith('/api/v1/')){
     auth(null);const resource=path.slice('/api/v1/'.length);if(method==='GET'&&!['tokens','webhooks','webhook-deliveries','webhook-events'].includes(resource))auth('read');const b=method==='GET'||method==='DELETE'?{}:await jsonBody(req);
+    if(resource==='workspace'){
+     auth('read',true);if(!['GET','PATCH'].includes(method))fail(405,'method_not_allowed');
+     if(method==='PATCH'){updateWorkspaceProfile(database,b);audit('workspace.updated',actor.id);}
+     return send(workspaceStatus(database,{environment:workspaceEnvironment,recoveryAvailable:passwordRecoveryAvailable}));
+    }
+    if(resource==='password'&&method==='POST'){
+     auth('read',true);
+     if(Object.keys(b).some(k=>!['current_password','new_password'].includes(k))||typeof b.current_password!=='string'||b.current_password.length>512||typeof b.new_password!=='string'||b.new_password.length<12||b.new_password.length>256)fail(400,'invalid_password_change');
+     const attemptKey='password-change',recent=failures.get(attemptKey);if(recent?.count>=5&&Date.now()-recent.at<15*60_000)fail(429,'password_change_rate_limited');
+     const stored=database.prepare("SELECT value FROM settings WHERE key='admin_password'").get()?.value;const [salt,digest]=(stored??'').split(':');
+     if(!salt||!digest||!timingSafeEqual(scryptSync(b.current_password,salt,64),Buffer.from(digest,'hex'))){failures.set(attemptKey,{count:recent&&Date.now()-recent.at<15*60_000?recent.count+1:1,at:Date.now()});fail(401,'invalid_current_password');}
+     if(b.current_password===b.new_password)fail(400,'password_unchanged');
+     const nextSalt=randomBytes(16).toString('hex'),nextHash=nextSalt+':'+scryptSync(b.new_password,nextSalt,64).toString('hex');
+     transaction(database,()=>{database.prepare("UPDATE settings SET value=? WHERE key='admin_password'").run(nextHash);database.prepare('DELETE FROM sessions WHERE token_hash<>?').run(actor.sessionHash);database.prepare('DELETE FROM password_reset_tokens').run();audit('password.changed',actor.id);});failures.delete(attemptKey);
+     return send({password_changed:true,other_sessions_revoked:true});
+    }
     if(resource==='group-invite-info'&&method==='POST'){
      auth('read',true);if(Object.keys(b).some(k=>k!=='invite_code')||!validGroupInviteCode(b.invite_code))fail(400,'invalid_invite_code');
      const last=groupInviteLookups.get(actor.id)??0;if(Date.now()-last<5000)fail(429,'read_rate_limited');groupInviteLookups.set(actor.id,Date.now());
