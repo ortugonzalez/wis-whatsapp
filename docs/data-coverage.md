@@ -561,3 +561,8 @@ El turno programado de `avatars` figura completado y su contador agregado aument
 ### Fallo de la lectura programada bot_list, 2026-10-02 07:20 UTC
 
 El turno automático de `bot_list` quedó registrado como fallido a las 07:20 UTC con el código agregado y sanitizado `provider_error`. El total de fallos aumentó de 66 a 67 y el inventario de rutas siguió en 410; no hay una respuesta verificada nueva para esta lectura. El código visible no identifica una causa más específica, por lo que no se atribuye el fallo a un dato o permiso concreto. La conexión mantuvo identidad verificada y worker activo; los envíos siguieron pausados. Próxima ruta automática: `disappearing_mode` a las 07:35 UTC. No se inspeccionaron datos de bots ni se hizo un reintento manual.
+
+
+### Alcance de la auditoría local WHAPI, 2026-10-02 07:23 UTC
+
+La ejecución de solo lectura `npm run audit:whapi-fields -- --summary` usó `repository_local_default`, no la base de EasyPanel. Su último snapshot local es del 2026-09-28 23:43 UTC. El informe local cuenta 182 métodos, 44.628 campos de respuesta, 14 coincidencias exactas y 125 semánticas; 23 de 177 métodos con respuesta tienen alguna observación y cuatro aparecen completos en esa base. Por su antigüedad, estos números no describen la cobertura de producción al 2026-10-02 ni se deben comparar como si ambas bases estuvieran sincronizadas. La interfaz autenticada de producción se comprobó por separado y muestra agregados propios; no se transfirieron payloads ni valores privados a este informe.
