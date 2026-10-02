@@ -665,3 +665,9 @@ Esta inspección abrió únicamente el catálogo público y sus conteos agregado
 La ruta programada `communities` figura completada; su contador agregado avanzó de 30 a 31 y el snapshot global se escribió a las 09:07 (Buenos Aires). No se detectó cambio en las rutas de respuesta observadas ni en los agregados de mensajes/contactos/grupos. La conexión y la identidad siguen verificadas, el worker activo y los envíos pausados. El último mensaje entrante en vivo permanece en 2026-09-28 16:32 (Buenos Aires), así que la sesión conectada no acredita recepción actual. Los fallos de lectura continúan en 70.
 
 El siguiente ciclo visible es `catalog`, a las 09:22 (Buenos Aires). Se dejará correr el turno programado y se revisará su estado; los errores anteriores del catálogo público no se reintentarán manualmente. Esta comprobación solo usó conteos agregados y estados sanitizados, sin mostrar valores privados ni iniciar lecturas manuales.
+
+### Frescura del ingreso y resultado de `catalog`, 2026-10-02 12:22 UTC
+
+La portada de producción ahora presenta por separado la fecha del último mensaje entrante guardado y la del último evento general; no afirma que la recepción sea en tiempo real. El dato agregado que mostró el panel fue 2026-09-28 16:57 (Buenos Aires) para el último mensaje entrante y 2026-10-02 09:20 para el último evento. Tras el despliegue, la conexión siguió activa, con identidad verificada y envíos pausados. El endpoint solo devuelve la fecha agregada, sin contenido ni identificadores; una prueba HTTP local confirmó que el valor coincide con el último mensaje de dirección entrante.
+
+La lectura programada `catalog` inició a las 09:22 (Buenos Aires) y finalizó como `failed` con `read_timeout`. No se considera una lectura válida del catálogo ni agrega cobertura; no se reintentó manualmente. La rotación continúa con `collections`, prevista a las 09:37 (Buenos Aires). Se mantiene la evidencia histórica separada de los intentos recientes fallidos.
