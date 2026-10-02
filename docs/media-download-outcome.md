@@ -8,4 +8,6 @@ Owner: suite 292/292; QA independiente: PASS, 2/2 focales. Prueba de ingestión 
 
 Producción antes del cambio: endpoint público informa connected, sin error actual; Chrome confirma despliegue anterior exitoso de 23:25:59 UTC. Esto no prueba recepción reciente.
 
+Publicado y confirmado por Chrome/EasyPanel: Success, 2026-10-02 23:44:20 UTC, título `feat: expose sanitized media download outcomes`. Cola y procesamiento estaban vacíos antes de publicar; después, el endpoint productivo sigue connected sin error actual. La captura de imagen falló por timeout tanto para el diálogo como para un recorte menor; se conserva evidencia textual del registro, sin inventar captura ni validar medios reales aún.
+
 Siguiente ruta: comprobar recepción pasiva real y resultados sanitizados nuevos cuando WhatsApp entregue medios, sin generar tráfico de prueba. Ampliar integración para tamaño excedido, escritura fallida e historial. La paridad WHAPI sigue incompleta.
