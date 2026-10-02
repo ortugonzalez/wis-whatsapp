@@ -576,3 +576,8 @@ El panel de capacidades de EasyPanel indicó `182` métodos y `44.628` rutas de 
 ### Lectura automática de disappearing_mode, 2026-10-02 07:35 UTC
 
 El turno programado de `disappearing_mode` figura completado y su contador agregado avanzó de 11 a 12. La escritura global del snapshot llegó a las 07:35 UTC; el inventario quedó en 410 rutas y el total de fallos permaneció en 67. El registro de ejecución no demuestra actualización de cada campo, y no se inspeccionaron valores del temporizador. La identidad siguió verificada, el worker activo y los envíos pausados. Próxima ruta automática: `community_subgroups` a las 07:50 UTC. No se inició una lectura manual ni se cambió el modo de expiración.
+
+
+### Turno de subgrupos omitido por falta de comunidad conocida, 2026-10-02 07:50 UTC
+
+Configuración registra `community_subgroups` en `last_skipped_kinds` con `last_skip_reason=known_community_required`. No se encoló una lectura ni se escribió un snapshot nuevo para esa ruta; no se trata de una respuesta vacía ni de un fallo de WhatsApp. El worker mantiene el lease y la programación avanzó a `all` para las 08:05 UTC. No se consultaron IDs ni se inició una lectura manual.
