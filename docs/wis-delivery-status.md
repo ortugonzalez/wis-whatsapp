@@ -1,6 +1,6 @@
 # Estado de entrega WIS WhatsApp
 
-Actualizado: **2026-10-02 08:39 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+Actualizado: **2026-10-02 08:46 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
 
 ### Validación del lector de bots, 2026-10-02 08:39 (Buenos Aires)
 
@@ -8,7 +8,13 @@ EasyPanel implementó `25332d4` (`fix: validate bot list response before persist
 
 Después del despliegue, la vista general autenticada de Chrome mostró WhatsApp conectada e identidad verificada, worker activo, sesión persistente, envíos pausados, 0 operaciones pendientes y 0 fallidas. La última escritura de snapshot visible era a las 08:37. La programación seguía habilitada y la siguiente ruta visible era `blocklist` para las 08:52; por tanto, `bot_list` **todavía no había vuelto a ejecutarse con esta corrección**. El panel aún mostraba su fallo histórico más reciente de las 07:51. No se solicitó una lectura manual ni se interpretó ese fallo como lista vacía. Próxima acción: dejar que la rotación programada llegue a `bot_list` y comprobar el resultado nuevo en el panel antes de cerrar esa brecha.
 
+El recálculo del catálogo de las 08:41 muestra 182 funciones, 44.628 rutas de respuesta documentadas, 188 con observación local (14 exactas y 174 por equivalencia revisada), y 44.440 sin observar; 23/177 funciones con respuestas tienen alguna ruta observada y 4/177 todas. Estos son indicios parciales, no paridad.
+
 La recepción entrante en vivo más reciente que muestra el panel es del 28/9 a las 16:32. La sesión conectada no prueba que haya llegado un evento entrante nuevo desde entonces. La paridad con WHAPI permanece parcial y la evidencia de variables depende de lecturas observadas, no solo de su presencia en el inventario.
+
+### Resultado de una revalidación de bot_list, 2026-10-02 08:44 (Buenos Aires)
+
+Después del despliegue se autorizó y ejecutó una única lectura manual desde la tarjeta de solo lectura. WhatsApp volvió a responder con `provider_error` y código sanitizado **500**. El contador de fallos de `bot_list` pasó de 17 a 18; no hay una respuesta exitosa nueva ni un catálogo de bots verificado. El cambio de código valida respuestas vacías explícitas, pero no elimina errores del servidor/proveedor. El dashboard continuó mostrando sesión conectada e identidad verificada, worker activo, envíos pausados, 0 operaciones pendientes y 0 operaciones de mensajería fallidas; los fallos de lectura se contabilizan por separado. El total de fallos de lectura pasó a 70. Próxima ruta visible: `blocklist` a las 08:52. No se repitió la lectura ni se alteró la sesión.
 
 ### Cobertura multimedia por tipo y verificación productiva, 2026-10-02 08:22 (Buenos Aires)
 

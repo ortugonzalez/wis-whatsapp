@@ -646,3 +646,7 @@ El ciclo programado quedó completado y el contador agregado pasó de 7 a 8. La 
 ### Fallo de lectura automática `avatars`, 2026-10-02 10:20 UTC
 
 La solicitud quedó `failed` con el código sanitizado `provider_error`; el total de fallos agregado avanzó de 67 a 68. El contador histórico de lecturas completadas de `avatars` se mantuvo en 9, con última finalización exitosa visible a las 08:05 UTC; el fallo no borra esa evidencia anterior ni acredita una actualización de perfiles. No se expusieron destinos ni metadatos privados. La conexión WhatsApp permaneció conectada y verificada; el siguiente ciclo es `bot_list`, previsto a las 10:35 UTC. No se reintentó manualmente.
+
+### Validación única de `bot_list` tras corregir la respuesta vacía, 2026-10-02 11:44 UTC
+
+Después del despliegue `25332d4`, se encoló una única consulta de solo lectura desde el panel para probar el lector corregido. El proveedor devolvió `provider_error` con código sanitizado 500. El contador de fallos de `bot_list` avanzó de 17 a 18; no hay una respuesta exitosa nueva ni lista vacía verificada. La corrección separa respuestas vacías válidas de estructuras inválidas, pero no corrige el error remoto. La sesión siguió conectada/verificada, el worker activo, los envíos pausados y sin operaciones de mensajería pendientes ni fallidas. El contador global de fallos de lectura pasó de 69 a 70. Próxima ruta visible: `blocklist` a las 11:52 UTC. No se reintentó.
