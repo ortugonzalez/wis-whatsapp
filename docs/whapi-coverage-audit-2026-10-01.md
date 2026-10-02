@@ -481,3 +481,9 @@ La consulta automática volvió a terminar `failed` con `provider_error`; `statu
 La agenda omitió `community_subgroups` con `known_community_required`: no había una comunidad elegible conocida y no se emitió esa lectura. El worker conserva su lease y el siguiente turno es `all` a la 01:35. No se descubrieron comunidades ni grupos.
 
 **Próxima ruta:** revisar estado y cobertura agregados de `all` a la 01:35; continuar sin forzar la lectura omitida.
+
+### Resultado automático de all - 2026-10-02 01:35
+
+El turno `all` terminó `done`, con worker activo y lease vigente; siguiente ruta `blocklist` a la 01:50. El catálogo de campos continúa en 161/44.628 (14 exactas, 147 semánticas, 44.467 sin observar, cuatro métodos completos). No se observaron nuevas rutas WHAPI en esta lectura ni se copiaron datos personales.
+
+**Próxima ruta:** observar `blocklist` a la 01:50 y volver a comparar solo agregados.
