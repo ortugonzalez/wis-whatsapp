@@ -457,3 +457,9 @@ El lote programado de perfiles terminó `done`, con lease vigente y worker activ
 En esta vuelta `group_requests` terminó `done`; el worker y su lease siguen activos. La cobertura WHAPI no cambió (161/44.628; 14 exactas, 147 semánticas y 44.467 sin observar). El resultado de éxito indica que acabó la lectura, no que se conozcan o se deban registrar personas o solicitudes concretas. El ciclo avanzó a `avatars` para las 00:35.
 
 **Próxima ruta:** comprobar solo el resultado agregado de `avatars` a las 00:35, sin abrir ni descargar imágenes.
+
+### Resultado automático de avatars - 2026-10-02 00:35
+
+La lectura de avatars terminó `done`; no se abrieron ni descargaron imágenes. Worker y lease activos, próxima ruta `bot_list` a las 00:50. No hubo rutas WHAPI nuevas: 161/44.628 (14 exactas, 147 semánticas; 44.467 sin observar; 4 métodos completos).
+
+**Próxima ruta:** revisar el nuevo intento automático de `bot_list` solo por estado y status HTTP permitido; si sigue sin código utilizable, dejarlo como brecha sin reintentar manualmente.
