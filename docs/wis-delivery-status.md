@@ -1,6 +1,14 @@
 # Estado de entrega WIS WhatsApp
 
-Actualizado: **2026-10-02 08:22 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+Actualizado: **2026-10-02 08:39 (Buenos Aires)**. Estado integral: **PARCIAL**. El panel está desplegado en EasyPanel y la sesión de WhatsApp figura conectada con identidad verificada. El sistema está operativo para consulta y administración; no se declara paridad completa con WHAPI.
+
+### Validación del lector de bots, 2026-10-02 08:39 (Buenos Aires)
+
+EasyPanel implementó `25332d4` (`fix: validate bot list response before persisting`). La lectura de solo lectura valida ahora la respuesta IQ y la sección `all`; únicamente una sección presente y vacía puede registrarse como lista vacía verificada. Una sección ausente o una respuesta inválida siguen siendo un error, no “sin bots”. QA independiente: PASS; suite completa **258/258**, build y `git diff --check` aprobados.
+
+Después del despliegue, la vista general autenticada de Chrome mostró WhatsApp conectada e identidad verificada, worker activo, sesión persistente, envíos pausados, 0 operaciones pendientes y 0 fallidas. La última escritura de snapshot visible era a las 08:37. La programación seguía habilitada y la siguiente ruta visible era `blocklist` para las 08:52; por tanto, `bot_list` **todavía no había vuelto a ejecutarse con esta corrección**. El panel aún mostraba su fallo histórico más reciente de las 07:51. No se solicitó una lectura manual ni se interpretó ese fallo como lista vacía. Próxima acción: dejar que la rotación programada llegue a `bot_list` y comprobar el resultado nuevo en el panel antes de cerrar esa brecha.
+
+La recepción entrante en vivo más reciente que muestra el panel es del 28/9 a las 16:32. La sesión conectada no prueba que haya llegado un evento entrante nuevo desde entonces. La paridad con WHAPI permanece parcial y la evidencia de variables depende de lecturas observadas, no solo de su presencia en el inventario.
 
 ### Cobertura multimedia por tipo y verificación productiva, 2026-10-02 08:22 (Buenos Aires)
 
