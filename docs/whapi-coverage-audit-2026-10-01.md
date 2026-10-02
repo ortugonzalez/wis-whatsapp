@@ -385,3 +385,9 @@ El turno terminó `failed` con `provider_error`; el worker sigue activo y el lea
 La lectura programada `avatars` terminó `done`, con worker activo y lease vigente; no se abrieron ni descargaron imágenes. La cobertura WHAPI continúa en 161/44.628 rutas de respuesta (14 exactas, 147 semánticas y 44.467 sin observar). El próximo turno es `bot_list` a las 21:35; será la primera lectura automática después de desplegar el diagnóstico acotado a códigos HTTP, por lo que se revisará solo si la respuesta ofrece un estado verificable.
 
 **Próxima ruta:** esperar `bot_list` y comprobar estado/código permitido; si vuelve `provider_error` sin código, no repetirlo ni inferir una lista vacía.
+
+### Resultado automático de bot_list - 2026-10-01 21:35
+
+La consulta programada posterior al despliegue terminó `failed` con `provider_error`. La vista de diagnóstico marca `status_code` como no disponible, así que la instrumentación acotada confirma que no hubo un status HTTP utilizable. No se obtuvo una lista verificable ni se puede concluir que esté vacía; no se repitió. Worker activo, lease vigente y próxima ruta `disappearing_mode` a las 21:50. La brecha de bots sigue abierta.
+
+**Próxima ruta:** observar el estado agregado de `disappearing_mode` a las 21:50; no volver a consultar `bot_list` sin evidencia técnica nueva.
