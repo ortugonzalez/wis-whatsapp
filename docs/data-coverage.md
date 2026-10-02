@@ -556,3 +556,8 @@ El turno automático de `group_requests` quedó registrado como fallido a las 06
 ### Lectura automática de `avatars`, 2026-10-02 07:05 UTC
 
 El turno programado de `avatars` figura completado y su contador agregado aumentó de 8 a 9. La escritura global avanzó a las 07:05 UTC, el inventario de rutas permaneció en 410 y el total de fallos siguió en 66. No se observaron rutas nuevas en el inventario; el estado del comando no se toma como validación del contenido de las imágenes ni de cada campo individual. La conexión mantuvo identidad verificada y worker activo; los envíos siguieron pausados. Próxima ruta automática: `bot_list`, prevista para las 07:20 UTC. No se descargaron ni inspeccionaron imágenes y no se inició una consulta manual.
+
+
+### Fallo de la lectura programada bot_list, 2026-10-02 07:20 UTC
+
+El turno automático de `bot_list` quedó registrado como fallido a las 07:20 UTC con el código agregado y sanitizado `provider_error`. El total de fallos aumentó de 66 a 67 y el inventario de rutas siguió en 410; no hay una respuesta verificada nueva para esta lectura. El código visible no identifica una causa más específica, por lo que no se atribuye el fallo a un dato o permiso concreto. La conexión mantuvo identidad verificada y worker activo; los envíos siguieron pausados. Próxima ruta automática: `disappearing_mode` a las 07:35 UTC. No se inspeccionaron datos de bots ni se hizo un reintento manual.
