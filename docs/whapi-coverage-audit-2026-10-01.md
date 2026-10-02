@@ -451,3 +451,9 @@ La programación confirmó `account_username` `done`, con worker activo y lease 
 El lote programado de perfiles terminó `done`, con lease vigente y worker activo. La cobertura permanece en 161/44.628 rutas (14 exactas, 147 semánticas; 44.467 sin observar y 4 métodos completos); no se atribuyeron nuevas variables al lote. La siguiente ruta es `group_requests` a las 00:20.
 
 **Próxima ruta:** esperar y revisar solo estado agregado de `group_requests`; no abrir conversaciones ni listar participantes.
+
+### Resultado automático de group_requests - 2026-10-02 00:20
+
+En esta vuelta `group_requests` terminó `done`; el worker y su lease siguen activos. La cobertura WHAPI no cambió (161/44.628; 14 exactas, 147 semánticas y 44.467 sin observar). El resultado de éxito indica que acabó la lectura, no que se conozcan o se deban registrar personas o solicitudes concretas. El ciclo avanzó a `avatars` para las 00:35.
+
+**Próxima ruta:** comprobar solo el resultado agregado de `avatars` a las 00:35, sin abrir ni descargar imágenes.
