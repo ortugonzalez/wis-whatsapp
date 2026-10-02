@@ -1,3 +1,4 @@
+import { attachNewsletterEvents } from './newsletter-events.mjs';
 import { randomUUID } from 'node:crypto';
 import { LOCAL_LIMITS } from './limits.mjs';
 import { createPublicCatalogReader, PublicCatalogError } from './catalog-http.mjs';
@@ -1012,6 +1013,7 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
         if(!owns() || sock!==current)return;
         try {handler(payload);} catch {console.error('metadata_persistence_failed');}
       };
+      attachNewsletterEvents(current.ev,{guarded,snapshot,event});
       current.ev.on('messaging-history.set', guarded(({messages,contacts,chats,progress,isLatest,syncType,lidPnMappings,peerDataRequestSessionId}) => {
         if(contacts?.length)saveContacts(contacts);
         if(lidPnMappings?.length)for(const mapping of lidPnMappings.slice(0,10000))saveIdentity(mapping,'messaging-history.set');

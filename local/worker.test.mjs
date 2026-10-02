@@ -592,6 +592,23 @@ test('received stories expire, deduplicate and cannot resurrect after revocation
  } finally {await worker.stop();db.close();}
 });
 
+test('passive newsletter events persist latest notification and clear missing reaction fields',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();const dir=mkdtempSync(resolve(tmpdir(),'wis-newsletter-events-')),ev=new EventEmitter();let writes=0;
+ const fake={default:()=>({ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},sendMessage(){writes++;},newsletterSubscribeUpdates(){writes++;}}),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ const worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(dir,'auth')});
+ try {
+  const base={id:'123@newsletter',server_id:'42'};
+  ev.emit('newsletter.reaction',{...base,reaction:{code:'👍',count:1,removed:false}});
+  ev.emit('newsletter.reaction',{...base,reaction:{removed:true}});
+  const row=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletter_reaction'").get().payload);
+  assert.equal(row.code,null);assert.equal(row.reported_event_count,null);assert.equal(row.removed,true);
+  ev.emit('newsletter.view',{...base,count:0,secret:'SECRET'});
+  assert.equal(db.prepare("SELECT count(*) n FROM snapshots WHERE kind='newsletter_view'").get().n,1);
+  assert.equal(JSON.stringify(db.prepare("SELECT payload FROM snapshots WHERE kind='newsletter_view'").get()).includes('SECRET'),false);
+  assert.equal(writes,0);
+ } finally {await worker.stop();db.close();}
+});
+
 test('passive join events retain bounded observations and never claim current pending membership',async()=>{
  const db=database();db.prepare("UPDATE connections SET command='connect'").run();const dir=mkdtempSync(resolve(tmpdir(),'wis-join-events-')),ev=new EventEmitter();let writes=0;
  const fake={default:()=>mockRawQueries({ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},groupRequestParticipantsUpdate(){writes++;}}),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
