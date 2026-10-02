@@ -611,3 +611,8 @@ El turno programado de `collections` figura completado y su contador agregado av
 ### Lectura automática newsletters, 2026-10-02 09:05 UTC
 
 El turno programado de `newsletters` figura completado y el contador agregado avanzó de 28 a 29. La escritura global alcanzó las 09:05 UTC; el inventario siguió en 410 rutas y los fallos acumulados en 67. No aparecieron rutas nuevas, y el resultado del comando no confirma que cada canal conocido haya actualizado todos sus campos. La identidad permaneció verificada, el worker activo y los envíos pausados. Próxima ruta automática: `account_limits` a las 09:20 UTC. No se inspeccionaron datos individuales ni se inició una lectura manual.
+
+
+### Lectura automática account_limits, 2026-10-02 09:20 UTC
+
+El turno programado de `account_limits` figura completado y el contador agregado avanzó de 24 a 25. La escritura global llegó a las 09:20 UTC; el inventario siguió en 410 rutas y las lecturas fallidas en 67. Esta ficha continúa sin una marca explícita de éxito/frescura del snapshot de límites, por lo que el resultado del comando no permite afirmar que cada límite esté actualizado. La identidad permaneció verificada, el worker activo y los envíos pausados. Próxima ruta: `account_username` a las 09:35 UTC. No se copiaron valores de cuotas ni se ejecutó una consulta manual.
