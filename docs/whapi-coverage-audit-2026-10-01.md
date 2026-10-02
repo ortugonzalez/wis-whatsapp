@@ -433,3 +433,9 @@ El turno `collections` terminó `done`; la agenda omitió `catalog` por `recent_
 El turno `newsletters` terminó `done`; worker y lease vigentes. La cobertura sigue en 161/44.628 rutas de respuesta (14 exactas, 147 semánticas; 44.467 sin observar y cuatro métodos completos); no se acreditó ninguna ruta nueva. El cooldown mantuvo `catalog` fuera del ciclo. La siguiente ruta es `account_limits` a las 23:35.
 
 **Próxima ruta:** verificar el estado agregado de `account_limits` a las 23:35; no repetir `catalog`.
+
+### Resultado automático de account_limits - 2026-10-01 23:35
+
+El turno `account_limits` se completó con lease vigente y worker activo; el siguiente es `account_username` a las 23:50. No cambió el resumen de WHAPI: 161/44.628 rutas (14 exactas, 147 semánticas; 44.467 sin observar y 4 métodos completos). El cooldown evitó un nuevo intento al catálogo.
+
+**Próxima ruta:** observar `account_username` a las 23:50 sin extraer el valor privado; reportar solo estado y cobertura.
