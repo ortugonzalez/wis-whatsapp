@@ -9,3 +9,5 @@ Cada ajuste tiene snapshot independiente `account_setting`, valor escalar y `obs
 Los datos aparecen solo si WhatsApp entrega el evento. No se infieren desde otros ajustes ni desde credenciales históricas. Esta función amplía las variables locales observadas, sin declarar equivalencia con campos WHAPI no comprobados. El estado de bloqueo de conversaciones no se incorporó en esta entrega.
 
 Validación: suite completa 267/267, build aprobado y 11/11 pruebas focales posteriores al añadido de aislamiento HTTP. Las pruebas no conectan con WhatsApp ni cambian configuración real.
+
+Producción: EasyPanel informó éxito el 2026-10-02 a las 14:04 UTC. Chrome mostró la tarjeta nueva y un ajuste real recibido después del reinicio, con su marca temporal individual. No se copiaron credenciales ni datos de perfil al informe. Esto prueba una observación de la cuenta, no la recepción de los seis ajustes ni paridad WHAPI. Próxima ruta: contrastar los eventos restantes antes de ampliar la captura; mantener desconocidos los ajustes aún no recibidos.
