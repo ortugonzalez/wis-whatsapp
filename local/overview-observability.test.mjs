@@ -28,6 +28,18 @@ test('overview field total tolerates absent coverage sections',()=>{
  assert.equal(context.observedFieldCount({snapshot_kinds:[{field_counts:null}],storage_kinds:null}),0);
 });
 
+test('recovered overview and coverage requests clear only their stale page error',()=>{
+ for(const path of ['/api/v1/overview','/api/v1/coverage']){
+  const error={textContent:`El servicio no respondió para ${path}`,classList:{add(value){this.value=value;}}};
+  assert.equal(context.clearRecoveredOverviewError(error),true);
+  assert.equal(error.textContent,'');
+  assert.equal(error.classList.value,'hidden');
+ }
+ const unrelated={textContent:'Error de autenticación',classList:{add(){throw new Error('No debe ocultar errores ajenos');}}};
+ assert.equal(context.clearRecoveredOverviewError(unrelated),false);
+ assert.equal(unrelated.textContent,'Error de autenticación');
+});
+
 test('overview picks the most recent valid snapshot write without treating it as field freshness',()=>{
  assert.equal(context.latestSnapshotAt({snapshot_kinds:[{last_updated_at:'2026-09-28T10:00:00.000Z'},{last_updated_at:'invalid'},{last_updated_at:'2026-09-29T08:00:00.000Z'}]}),'2026-09-29T08:00:00.000Z');
  assert.equal(context.latestSnapshotAt({snapshot_kinds:[]}),null);

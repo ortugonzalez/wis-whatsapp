@@ -13,6 +13,7 @@ function connectionStatusLabel(connection){
  return connection.status==='connected'?(connection.identity_verified?'Conectado · identidad verificada':'Conectado · identidad pendiente'):connection.status==='qr_pending'?'Esperando el escaneo del QR':connection.status==='connecting'?'Conectando':connection.status==='reconnecting'?'Reconectando':connection.status==='disconnected'?'Desconectado':'Estado no disponible';
 }
 function observedFieldCount(coverage){return ['snapshot_kinds','storage_kinds','contextual_kinds'].reduce((count,section)=>count+(coverage[section]||[]).reduce((sum,row)=>sum+(Array.isArray(row.field_counts)?row.field_counts.length:0),0),0);}
+function clearRecoveredOverviewError(pageError){if(!pageError)return false;const message=pageError.textContent||'';if(!['/api/v1/coverage','/api/v1/overview'].some(path=>message.includes(path)))return false;pageError.textContent='';pageError.classList.add('hidden');return true;}
 function latestSnapshotAt(coverage){return (Array.isArray(coverage?.snapshot_kinds)?coverage.snapshot_kinds:[]).map(row=>row?.last_updated_at).filter(value=>typeof value==='string'&&Number.isFinite(Date.parse(value))).sort((a,b)=>Date.parse(b)-Date.parse(a))[0]||null;}
 function scheduledRunAtLabel(schedule){if(!schedule.enabled)return 'Pausada';if(schedule.due&&schedule.blocked_reason==='connection_required')return 'Vencida · requiere conexión verificada';if(schedule.due)return 'Vencida · pendiente de ejecutar';return schedule.next_run_at?fmt(schedule.next_run_at):'Sin próxima ejecución';}
 function stopOverviewObservability(){clearInterval(overviewObservabilityTimer);overviewObservabilityTimer=null;}
@@ -27,8 +28,7 @@ async function refreshOverviewObservability(){
  try{
   const [coverage,settings,connection]=await Promise.all([api('/api/v1/coverage'),api('/api/v1/settings'),api('/api/whatsapp/connection')]);
   if(state.page!=='overview'||epoch!==viewEpoch||!section.isConnected)return;
-  const pageError=document.getElementById('page-error');
-  if(pageError?.textContent.includes('/api/v1/coverage')){pageError.textContent='';pageError.classList.add('hidden');}
+  clearRecoveredOverviewError(document.getElementById('page-error'));
   const schedule=settings.scheduled_reads||{};
   const failedReads=(coverage.read_commands||[]).filter(row=>row.status==='failed').reduce((sum,row)=>sum+(Number.isInteger(row.count)?row.count:0),0);
   const observedFields=observedFieldCount(coverage);
