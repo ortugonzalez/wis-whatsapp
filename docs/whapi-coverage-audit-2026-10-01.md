@@ -499,3 +499,9 @@ El turno programado `blocklist` terminó `done`; el worker continúa activo con 
 La lectura automática `communities` terminó `done`; worker activo y lease vigente. El resumen de respuestas permanece en 161/44.628 (14 exactas, 147 semánticas; 44.467 sin observar y cuatro métodos completos), sin cambios de cobertura atribuibles a este ciclo. No se registraron nombres, integrantes ni identificadores. La agenda avanzó a `catalog` a las 02:20.
 
 **Próxima ruta:** comprobar solo el estado de la ruta automática `catalog` y el motivo de omisión/fallo si lo hubiera; no iniciar un reintento manual tras el timeout conocido.
+
+### Resultado automático de catalog - 2026-10-02 02:20
+
+La ejecución programada terminó `failed`. El diagnóstico sanitizado del panel identificó el alcance `own_account`: la consulta pública informó `public_catalog_unavailable` y la alternativa Baileys IQ agotó el tiempo de lectura (`read_timeout`). Por lo tanto, no hay evidencia de que el catálogo esté vacío, ni se observaron productos nuevos. El resumen WHAPI permanece en 161/44.628 (14 exactas, 147 semánticas, 44.467 sin observar; cuatro métodos completos). Worker activo, lease vigente y siguiente ruta `collections` a las 02:35. No se inició un nuevo intento.
+
+**Próxima ruta:** revisar el turno automático `collections` y solo sus conteos/estado; mantener `catalog` sin reintentos manuales hasta un cambio técnico verificable en el lector.
