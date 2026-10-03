@@ -60,3 +60,21 @@ test('scheduled newsletter jobs are labeled distinctly from the channels view',a
  assert.match(source,/newsletters:'Canales \(newsletters\)'/);
  assert.match(scheduledReads,/newsletters:'Canales \(newsletters\)'/);
 });
+
+test('rendered observability distinguishes message dates and lease evidence from reception',async()=>{
+ const section={isConnected:true,innerHTML:''};
+ const coverage={last_live_message_at:'2026-01-01T00:00:00.000Z',live_inbound_count:14,snapshot_kinds:[]};
+ let lease;
+ const scope={overview(){},login(){},state:{page:'overview'},viewEpoch:1,window:{addEventListener(){}},clearInterval(){},setInterval(){},document:{getElementById:id=>id==='overview-observability'?section:null},api:async path=>path.endsWith('/coverage')?coverage:path.endsWith('/settings')?{scheduled_reads:{worker_lease_current:lease}}:{status:'connected',identity_verified:true},fmt:value=>value,esc:value=>String(value),badge:()=>''};
+ runInNewContext(source,scope);
+ for(const [value,label] of [[undefined,'Lease no informado'],[false,'Sin lease vigente'],[true,'Lease vigente']]){
+  lease=value;await scope.refreshOverviewObservability();
+  assert.ok(section.innerHTML.includes(label));
+  assert.match(section.innerHTML,/Fecha del último entrante · origen live/);
+  assert.match(section.innerHTML,/no la hora de recepción/);
+  assert.match(section.innerHTML,/no recepción reciente/);
+  assert.doesNotMatch(section.innerHTML,/Última recepción observada/);
+ }
+ coverage.last_live_message_at=null;await scope.refreshOverviewObservability();
+ assert.match(section.innerHTML,/Sin mensaje entrante de origen live almacenado/);
+});
