@@ -26,5 +26,10 @@ test('real Business contract counts validated own minutes semantically and keeps
   let projected=buildDataCoverage(db).contextual_kinds.find(k=>k.kind==='business_minutes');assert.equal(projected.field_counts[0].snapshot_last_success_at,'2026-10-02T08:00:00Z');assert.equal(projected.field_counts[0].snapshot_updated_at,'2026-10-03T08:00:00Z');
   update({...profile,business_hours:{config:[...Array(28).fill({}),{open_time:'0'}]}});assert.equal(summarize().semantic_response_fields_observed,0);projected=buildDataCoverage(db).contextual_kinds.find(k=>k.kind==='business_minutes');assert.equal(projected.truncated,true);assert.equal(projected.row_limit,28);
   assert.doesNotMatch(JSON.stringify(projected),/wis-5679|contact-fixture|other-fixture/);
+  const arrayReference={methods:JSON.parse(readFileSync(new URL('../public/whapi-fields.json',import.meta.url),'utf8')).methods.filter(m=>m.id==='getbusinessprofile').map(m=>({...m,operations:m.operations.map(op=>({...op,response_fields:Object.fromEntries(Object.entries(op.response_fields).map(([status,fields])=>[status,fields.filter(f=>f.path==='hours.config')]))}))}))};
+  const arrayTotals=()=>summarizeCapabilityFieldCoverage(arrayReference,buildDataCoverage(db),context.window.WIS_WHAPI_FIELD_ALIASES).totals;
+  for(const config of [null,'bad',{},0]){update({...profile,business_hours:{config}});assert.equal(arrayTotals().semantic_response_fields_observed,0);}
+  update({...profile,business_hours:{config:[]}});assert.equal(arrayTotals().response_fields,1);assert.equal(arrayTotals().semantic_response_fields_observed,1);assert.equal(arrayTotals().exact_response_fields_observed,0);assert.equal(summarize().semantic_response_fields_observed,0);
+  update({...profile,stale:true,business_hours:{config:[]}});assert.equal(arrayTotals().stale_only_response_fields,1);assert.equal(arrayTotals().fresh_response_fields_observed,0);
  }finally{db.close();}
 });

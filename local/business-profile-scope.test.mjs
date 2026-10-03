@@ -9,5 +9,5 @@ test('own Business response coverage cannot be supplied by contact profiles',()=
  const summarize=kinds=>summarizeCapabilityFieldCoverage(reference,{snapshot_kinds:kinds},aliases).totals;
  const onlyContacts=summarize([contact]);assert.equal(onlyContacts.exact_response_fields_observed+onlyContacts.semantic_response_fields_observed,0);
  const own={kind:'business',records:1,field_counts:[{field:'business_hours',records:1},{field:'business_hours.config[]',records:1}]};
- const ownTotals=summarize([contact,own]);assert.equal(ownTotals.semantic_response_fields_observed,2);
+ const ownTotals=summarize([contact,own]);assert.equal(ownTotals.semantic_response_fields_observed,1);
 });

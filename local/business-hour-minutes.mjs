@@ -32,6 +32,7 @@ export function buildBusinessMinuteCoverage(db) {
  const projection=projectBusinessHourMinutes(data);
  result.truncated=projection.truncated;
  result.records=1;
+ if(Array.isArray(data?.business_hours?.config))result.field_counts.push({field:'hours.config',records:1,stale_records:stale?1:0,snapshot_last_success_at:previousSuccess?data.last_success_at:null,snapshot_updated_at:typeof row.updated_at==='string'&&Number.isFinite(Date.parse(row.updated_at))?row.updated_at:null});
  for(const key of ['openTime','closeTime']){
   if(!projection.rows.some(item=>Object.hasOwn(item,key)))continue;
   result.field_counts.push({field:`hours.config[].${key}`,records:1,stale_records:stale?1:0,snapshot_last_success_at:previousSuccess?data.last_success_at:null,snapshot_updated_at:typeof row.updated_at==='string'&&Number.isFinite(Date.parse(row.updated_at))?row.updated_at:null});

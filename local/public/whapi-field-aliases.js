@@ -324,7 +324,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       ]),
       'hours.timeZone': Object.freeze([{ kind: 'business', field: 'business_hours.timezone', note: 'zona horaria de horarios; nombre de campo distinto, semántica equivalente' }]),
       'hours.config': Object.freeze([
-        { kind: 'business', field: 'business_hours.config[]', note: 'lista del perfil propio normalizada desde business_config o config de Baileys' },
+        { kind: 'business_minutes', field: 'hours.config', note: 'lista del perfil propio validada como array; lista vacía no acredita valores de sus elementos; los horarios numéricos se inspeccionan hasta 28 filas' },
       ]),
       'hours.config[].day': Object.freeze([{ kind: 'business', field: 'business_hours.config[].day_of_week', note: 'día semanal de horario; conserva la enumeración informada por Baileys' }]),
       'hours.config[].mode': Object.freeze([{ kind: 'business', field: 'business_hours.config[].mode', note: 'modo del horario observado' }]),

@@ -19,11 +19,11 @@ test('coverage is own-account only and retains stale classification without retu
   const payload={available:true,stale:false,business_hours:{config:[{open_time:'540',close_time:'960'}]}};
   const put=(id,data)=>db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)').run('business',id,JSON.stringify(data),'2026-10-03T00:00:00Z');
   put('other',payload);assert.equal(buildBusinessMinuteCoverage(db).records,0);
-  put('wis-5679',payload);let r=buildBusinessMinuteCoverage(db);assert.equal(r.field_counts.length,2);assert.equal(r.field_counts[0].stale_records,0);assert.doesNotMatch(JSON.stringify(r),/540|960|wis-5679/);
+  put('wis-5679',payload);let r=buildBusinessMinuteCoverage(db);assert.equal(r.field_counts.length,3);assert.equal(r.field_counts[0].stale_records,0);assert.doesNotMatch(JSON.stringify(r),/540|960|wis-5679/);
   const update=p=>db.prepare("UPDATE snapshots SET payload=? WHERE resource_id='wis-5679'").run(JSON.stringify(p));
   update({...payload,available:false,stale:true});assert.equal(buildBusinessMinuteCoverage(db).records,0);
   update({...payload,available:false,stale:true,last_success_at:'2026-10-02T00:00:00Z'});r=buildBusinessMinuteCoverage(db);assert.equal(r.field_counts[0].stale_records,1);
-  update({...payload,business_hours:{config:[{open_time:'bad',close_time:''}]}});assert.equal(buildBusinessMinuteCoverage(db).field_counts.length,0);
-  update({...payload,business_hours:{config:[...Array(28).fill({}),{open_time:'540'}]}});r=buildBusinessMinuteCoverage(db);assert.equal(r.truncated,true);assert.equal(r.row_limit,28);assert.equal(r.field_counts.length,0);
+  update({...payload,business_hours:{config:[{open_time:'bad',close_time:''}]}});assert.equal(buildBusinessMinuteCoverage(db).field_counts.length,1);
+  update({...payload,business_hours:{config:[...Array(28).fill({}),{open_time:'540'}]}});r=buildBusinessMinuteCoverage(db);assert.equal(r.truncated,true);assert.equal(r.row_limit,28);assert.equal(r.field_counts.length,1);
  }finally{db.close();}
 });

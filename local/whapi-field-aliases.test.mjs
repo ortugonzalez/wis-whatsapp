@@ -143,7 +143,7 @@ test('business profile aliases map only observed business fields',()=>{
     ['business','business_hours'],
   ]);
   assert.deepEqual(Array.from(aliases.getbusinessprofile.fields['hours.config'],mapping=>[mapping.kind,mapping.field]),[
-    ['business','business_hours.config[]'],
+    ['business_minutes','hours.config'],
   ]);
 });
 
