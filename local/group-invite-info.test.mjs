@@ -4,9 +4,29 @@ import {EventEmitter} from 'node:events';
 import {readFileSync} from 'node:fs';
 import {createGroupInviteInfoRpc,groupMetadataByInviteCode,validGroupInviteCode} from './group-invite-info.mjs';
 
+test('participant roles require explicit provider values and report partial projection',()=>{
+ const participants=[{id:'1@lid',admin:null},{id:'2@lid',admin:'admin'},{id:'3@lid',admin:'superadmin'},...['missing',undefined,'owner','',false,0,{}].map((admin,index)=>admin==='missing'?{id:`${index+4}@lid`}:{id:`${index+4}@lid`,admin}),{id:'invalid',admin:null}];
+ const result=groupMetadataByInviteCode({id:'123@g.us',participants});
+ assert.deepEqual(result.data.participants.slice(0,3).map(p=>p.rank),['member','admin','creator']);
+ assert.ok(result.data.participants.slice(3).every(p=>!Object.hasOwn(p,'rank')));
+ assert.equal(result.meta.participants_unknown_rank,7);
+ assert.equal(result.meta.participants_rejected,1);
+ assert.equal(result.meta.participants_projection_complete,false);
+ assert.equal(result.data.participantsCount,11); // provider list size, not count of accepted rows
+ const clean=groupMetadataByInviteCode({id:'123@g.us',participants:participants.slice(0,3)});
+ assert.equal(clean.meta.participants_projection_complete,true);
+ const absent=groupMetadataByInviteCode({id:'123@g.us'});
+ assert.equal(absent.meta.participants_projection_complete,false);
+ assert.equal(Object.hasOwn(absent.data,'participants'),false);
+ const bounded=groupMetadataByInviteCode({id:'123@g.us',participants:Array.from({length:4097},()=>({id:'1@lid',admin:null}))});
+ assert.equal(bounded.data.participants.length,4096);
+ assert.equal(bounded.meta.participants_projection_complete,false);
+ assert.equal(bounded.meta.participants_truncated,true);
+});
+
 test('invite codes are bounded opaque input and Baileys metadata maps to WHAPI fields',()=>{
  assert.equal(validGroupInviteCode('Abc_123-'),true);assert.equal(validGroupInviteCode('https://chat.whatsapp.com/Abc123'),false);assert.equal(validGroupInviteCode('x'.repeat(129)),false);
- const result=groupMetadataByInviteCode({id:'12345@g.us',subject:'Equipo',subjectTime:1700000000,creation:1600000000,owner:'123@s.whatsapp.net',size:3,ephemeralDuration:86400,participants:[{id:'123@s.whatsapp.net',admin:'superadmin'},{id:'456@s.whatsapp.net',admin:'admin'},{id:'789@lid'}]},'2026-01-02T00:00:00.000Z');
+ const result=groupMetadataByInviteCode({id:'12345@g.us',subject:'Equipo',subjectTime:1700000000,creation:1600000000,owner:'123@s.whatsapp.net',size:3,ephemeralDuration:86400,participants:[{id:'123@s.whatsapp.net',admin:'superadmin'},{id:'456@s.whatsapp.net',admin:'admin'},{id:'789@lid',admin:null}]},'2026-01-02T00:00:00.000Z');
  assert.deepEqual(result.data,{id:'12345@g.us',name_at:1700000000,name:'Equipo',participants:[{id:'123@s.whatsapp.net',rank:'creator'},{id:'456@s.whatsapp.net',rank:'admin'},{id:'789@lid',rank:'member'}],participantsCount:3,created_at:1600000000,created_by:'123@s.whatsapp.net',ephemeral:86400});
  const item=JSON.parse(readFileSync(new URL('../public/whapi-fields.json',import.meta.url),'utf8')).methods.find(method=>method.id==='getgroupmetadatabyinvitecode');
  const reference=item?.operations.find(operation=>operation.operation_id==='getGroupMetadataByInviteCode');assert.ok(reference);

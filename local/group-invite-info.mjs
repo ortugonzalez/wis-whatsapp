@@ -20,10 +20,13 @@ export function groupMetadataByInviteCode(value, observedAt = new Date().toISOSt
   add('name_at', integer(value.subjectTime));
   add('name', text(value.subject));
   const participants = Array.isArray(value.participants) ? value.participants : [];
+  let rejectedParticipants = 0;
+  let unknownRanks = 0;
   const bounded = participants.slice(0, 4096).flatMap(participant => {
-    if (!participant || !JID.test(participant.id || '')) return [];
-    const rank = participant.admin === 'superadmin' ? 'creator' : participant.admin === 'admin' ? 'admin' : 'member';
-    return [{ id: participant.id, rank }];
+    if (!participant || typeof participant.id !== 'string' || !JID.test(participant.id)) { rejectedParticipants++; return []; }
+    const rank = participant.admin === 'superadmin' ? 'creator' : participant.admin === 'admin' ? 'admin' : participant.admin === null ? 'member' : undefined;
+    if (rank === undefined) unknownRanks++;
+    return [{ id: participant.id, ...(rank === undefined ? {} : { rank }) }];
   });
   add('participants', Array.isArray(value.participants) ? bounded : undefined);
   add('participantsCount', Number.isSafeInteger(value.size) && value.size >= 0 ? value.size : Array.isArray(value.participants) && value.participants.length <= 4096 ? value.participants.length : undefined);
@@ -38,6 +41,9 @@ export function groupMetadataByInviteCode(value, observedAt = new Date().toISOSt
       observed_at: observedAt,
       available_fields: available,
       participants_truncated: participants.length > 4096,
+      participants_rejected: rejectedParticipants,
+      participants_unknown_rank: unknownRanks,
+      participants_projection_complete: Array.isArray(value.participants) && participants.length <= 4096 && rejectedParticipants === 0 && unknownRanks === 0,
     },
   };
 }

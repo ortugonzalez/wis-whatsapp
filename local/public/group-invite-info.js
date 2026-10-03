@@ -7,7 +7,7 @@ function groupInviteMetadataCard(){
   const inviteCode=input.value.trim();output.hidden=true;output.textContent='';
   if(!/^[A-Za-z0-9_-]{1,128}$/.test(inviteCode)){state.textContent='Ingresá únicamente el código, sin la URL de invitación.';input.value='';return;}
   button.disabled=true;state.textContent='Consultando WhatsApp…';
-  try{const response=await api('/api/v1/group-invite-info','POST',{invite_code:inviteCode});if(!section.isConnected)return;output.textContent=JSON.stringify(response.data,null,2);output.hidden=false;state.textContent=`Respuesta verificada · ${response.meta.observed_at} · Participantes ${response.data.participants?.length??0}${response.meta.participants_truncated?' (lista recortada)':''}.`;
+  try{const response=await api('/api/v1/group-invite-info','POST',{invite_code:inviteCode});if(!section.isConnected)return;output.textContent=JSON.stringify(response.data,null,2);output.hidden=false;state.textContent=`Respuesta recibida · ${response.meta.observed_at} · Participantes informados ${response.data.participants?.length??0}${response.meta.participants_truncated?' (lista recortada)':''}.${response.meta.participants_projection_complete===true?'':' Hay datos de participantes incompletos o descartados; no se infieren roles faltantes.'} La respuesta no garantiza la lista completa del grupo.`;
   }catch{if(section.isConnected)state.textContent='No se pudo consultar. Revisá la conexión y volvé a intentarlo más tarde.';
   }finally{input.value='';button.disabled=false;}
  });
