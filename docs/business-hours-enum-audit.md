@@ -19,3 +19,21 @@ alcance propio, valores válidos/invalidos, stale y límite de 28 filas. QA inde
 La corrección se agrupa con la validación del contenedor array del turno anterior.
 La presencia de la lista no acredita sus elementos. No se pretende verificar todos
 los valores productivos ni completar el contrato WHAPI por observar un campo.
+
+## Publicación y evidencia
+
+Suite completa 318/318 PASS (47 segundos), diff limpio. Push solo a production,
+un despliegue EasyPanel: Success 08:55:29 UTC. Chrome confirma lista, día y modo
+validados 1/1, igual que apertura y cierre; snapshot propio 05:55 BA. El contrato
+propio pasa de 8/12 a 9/12 observados por corregir el contenedor, no por obtener
+datos nuevos. Dirección/email/sitios siguen sin observación. Captura local ignorada
+.local/business-enums-production.png, sin valores personales.
+
+Tras publicar sigue conectado con identidad verificada y lease vigente; 443 campos
+listados, 29 tipos, snapshot general 05:55 BA. Último entrante live sin cambios.
+No se modificaron flags, credenciales ni vinculación. Dashboard abierto en resumen.
+
+Próxima ruta: revisar evidencia agregada de fallos de lecturas (83 acumulados) y
+último lote recibido, distinguiendo fallos de catálogo de desconexión/recepción.
+No repetir solicitudes agotadas sin un cambio de causa. La cobertura del resto
+de WHAPI y preparación SaaS siguen incompletas.
