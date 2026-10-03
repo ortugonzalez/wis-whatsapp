@@ -200,7 +200,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     fields: Object.freeze({
       'contacts[].id': Object.freeze([{ kind: 'contacts', field: 'wa_jid', note: 'identificador WhatsApp conservado; puede ser PN o LID' }]),
       'contacts[].phone': Object.freeze([{ kind: 'contacts', field: 'phone_e164', note: 'teléfono E.164 cuando fue observado; no se infiere desde un LID' }]),
-      'contacts[].name': Object.freeze([{ kind: 'contacts', field: 'display_name', note: 'nombre local conservado' }]),
+      'contacts[].name': Object.freeze([{ kind: 'contact', field: 'name', note: 'nombre de libreta observado en WhatsApp; no usa display_name local, que puede ser un teléfono o JID de respaldo', requires_non_empty_text: true }]),
       'contacts[].pushname': Object.freeze([{ kind: 'contact', field: 'notify', note: 'nombre push recibido de WhatsApp en el snapshot del contacto', requires_non_empty_text: true }]),
       'contacts[].status': Object.freeze([{ kind: 'contact', field: 'status.status', note: 'texto de estado de perfil recibido de WhatsApp, solo cuando contiene texto', requires_non_empty_text: true }]),
     }),
@@ -210,7 +210,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     fields: Object.freeze({
       id: Object.freeze([{ kind: 'contacts', field: 'wa_jid', note: 'identificador WhatsApp conservado; puede ser PN o LID' }]),
       phone: Object.freeze([{ kind: 'contacts', field: 'phone_e164', note: 'teléfono E.164 cuando fue observado; no se infiere desde un LID' }]),
-      name: Object.freeze([{ kind: 'contacts', field: 'display_name', note: 'nombre local conservado' }]),
+      name: Object.freeze([{ kind: 'contact', field: 'name', note: 'nombre de libreta observado en WhatsApp; no usa display_name local, que puede ser un teléfono o JID de respaldo', requires_non_empty_text: true }]),
       pushname: Object.freeze([{ kind: 'contact', field: 'notify', note: 'nombre push recibido de WhatsApp en el snapshot del contacto', requires_non_empty_text: true }]),
       status: Object.freeze([{ kind: 'contact', field: 'status.status', note: 'texto de estado de perfil recibido de WhatsApp, solo cuando contiene texto', requires_non_empty_text: true }]),
     }),
