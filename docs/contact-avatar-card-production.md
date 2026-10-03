@@ -16,3 +16,18 @@ Fixture cerrada y servidor detenido; no worker iniciado.
 
 Antes de desplegar: Chrome mostró 0 sending y 0 pending. No se cambian flags,
 credenciales, permisos o programación. No añade paridad WHAPI.
+
+## Verificación productiva
+
+Un despliegue, EasyPanel Success 2026-10-03 06:54:53 UTC. Chrome recibió la
+tarjeta y su consulta real: 954/954 destinos, 14 caché con disponibilidad declarada,
+8 sin archivo válido, 932 no recolectados; las demás categorías en cero. Estos
+conteos de destinos no son los 980 registros de contactos ni personas únicas.
+La firma y vigencia remota siguen sin comprobarse. No se hizo nueva lectura WA.
+Captura de recorte agotó tiempo; ruta alternativa de viewport tras enfocar tarjeta
+funcionó. Evidencia ignorada `.local/contact-avatar-production.png`.
+
+Próxima ruta: QA de persistencia/backup de avatars (frente 5). Verificar que las
+herramientas de respaldo declaren correctamente exclusiones y no presenten la
+caché como recuperable cuando no va en el respaldo, sin ejecutar restauraciones
+ni modificar producción. Cobertura WHAPI permanece incompleta.
