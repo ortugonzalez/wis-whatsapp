@@ -71,8 +71,8 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     fields: Object.freeze({
       id: Object.freeze([{ kind: 'messages', field: 'wa_message_id', note: 'ID de WhatsApp; evita confundirlo con el ID local' }]),
       type: Object.freeze([{ kind: 'messages', field: 'type', note: 'tipo normalizado al recibir el mensaje; valores permitidos pueden variar frente a WHAPI' }]),
-      chat_id: Object.freeze([{ kind: 'conversations', field: 'wa_chat_id', note: 'identificador del chat conservado' }]),
-      chat_name: Object.freeze([{ kind: 'conversations', field: 'title', note: 'nombre local de la conversacion' }]),
+      chat_id: Object.freeze([{ kind: 'message_chat', field: 'wa_chat_id', requires_non_empty_text: true, note: 'identificador no vacío del chat enlazado al mensaje; conteo por mensaje' }]),
+      chat_name: Object.freeze([{ kind: 'message_chat', field: 'title', requires_non_empty_text: true, note: 'nombre local no vacío del chat enlazado al mensaje; no prueba el nombre histórico al enviarse' }]),
       from_me: Object.freeze([{ kind: 'messages', field: 'direction', note: 'out equivale a true; in equivale a false' }]),
       timestamp: Object.freeze([{ kind: 'messages', field: 'created_at', note: 'fecha ISO local; WHAPI informa timestamp numerico' }]),
       status: Object.freeze([{ kind: 'messages', field: 'delivery_status', note: 'estado local de entrega' }]),
@@ -86,8 +86,8 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     fields: Object.freeze({
       'messages[].id': Object.freeze([{ kind: 'messages', field: 'wa_message_id', note: 'ID de WhatsApp; evita confundirlo con el ID local' }]),
       'messages[].type': Object.freeze([{ kind: 'messages', field: 'type', note: 'tipo normalizado al recibir el mensaje; valores permitidos pueden variar frente a WHAPI' }]),
-      'messages[].chat_id': Object.freeze([{ kind: 'conversations', field: 'wa_chat_id', note: 'identificador del chat conservado' }]),
-      'messages[].chat_name': Object.freeze([{ kind: 'conversations', field: 'title', note: 'nombre local de la conversacion' }]),
+      'messages[].chat_id': Object.freeze([{ kind: 'message_chat', field: 'wa_chat_id', requires_non_empty_text: true, note: 'identificador no vacío del chat enlazado al mensaje; conteo por mensaje' }]),
+      'messages[].chat_name': Object.freeze([{ kind: 'message_chat', field: 'title', requires_non_empty_text: true, note: 'nombre local no vacío del chat enlazado al mensaje; no prueba el nombre histórico al enviarse' }]),
       'messages[].from_me': Object.freeze([{ kind: 'messages', field: 'direction', note: 'out equivale a true; in equivale a false' }]),
       'messages[].timestamp': Object.freeze([{ kind: 'messages', field: 'created_at', note: 'fecha ISO local; WHAPI informa timestamp numerico' }]),
       'messages[].status': Object.freeze([{ kind: 'messages', field: 'delivery_status', note: 'estado local de entrega' }]),
@@ -101,8 +101,8 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     fields: Object.freeze({
       'messages[].id': Object.freeze([{ kind: 'messages', field: 'wa_message_id', note: 'ID de WhatsApp; evita confundirlo con el ID local' }]),
       'messages[].type': Object.freeze([{ kind: 'messages', field: 'type', note: 'tipo normalizado al recibir el mensaje; valores permitidos pueden variar frente a WHAPI' }]),
-      'messages[].chat_id': Object.freeze([{ kind: 'conversations', field: 'wa_chat_id', note: 'identificador del chat conservado' }]),
-      'messages[].chat_name': Object.freeze([{ kind: 'conversations', field: 'title', note: 'nombre local de la conversacion' }]),
+      'messages[].chat_id': Object.freeze([{ kind: 'message_chat', field: 'wa_chat_id', requires_non_empty_text: true, note: 'identificador no vacío del chat enlazado al mensaje; conteo por mensaje' }]),
+      'messages[].chat_name': Object.freeze([{ kind: 'message_chat', field: 'title', requires_non_empty_text: true, note: 'nombre local no vacío del chat enlazado al mensaje; no prueba el nombre histórico al enviarse' }]),
       'messages[].from_me': Object.freeze([{ kind: 'messages', field: 'direction', note: 'out equivale a true; in equivale a false' }]),
       'messages[].timestamp': Object.freeze([{ kind: 'messages', field: 'created_at', note: 'fecha ISO local; WHAPI informa timestamp numerico' }]),
       'messages[].status': Object.freeze([{ kind: 'messages', field: 'delivery_status', note: 'estado local de entrega' }]),
