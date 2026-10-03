@@ -1,9 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {existsSync,mkdirSync,readdirSync,readFileSync,mkdtempSync,writeFileSync} from 'node:fs';
+import {existsSync,mkdirSync,readdirSync,readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {resolve} from 'node:path';
+import {resolve,dirname,basename} from 'node:path';
 import {EventEmitter} from 'node:events';
 import {proto} from 'baileys';
 import {PublicCatalogError} from './catalog-http.mjs';
@@ -375,6 +375,29 @@ test('mock socket QR, persistent incoming history, no sends and graceful lease r
  assert.equal(db.prepare('SELECT last_message_preview FROM conversations').get().last_message_preview,'new');
  assert.equal(sends,0);await worker.stop();assert.equal(ended,1);
  assert.equal(db.prepare('SELECT lease_owner FROM connections').get().lease_owner,null);db.close();
+});
+test('worker wires passive reception snapshots and ignores old socket events after stop',async()=>{
+ const db=database();db.prepare("UPDATE connections SET command='connect'").run();
+ const directory=mkdtempSync(resolve(tmpdir(),'wis-receive-wiring-')),ev=new EventEmitter();let sends=0;
+ const socket={ev,user:{id:'5491111115679@s.whatsapp.net'},end(){},sendMessage(){sends++;throw Error('no send allowed');}};
+ const fake={default:()=>mockRawQueries(socket),useMultiFileAuthState:async()=>({state:{creds:{},keys:{}},saveCreds:async()=>{}}),makeCacheableSignalKeyStore:()=>({}),DisconnectReason:{loggedOut:401}};
+ let worker;
+ try{
+  worker=await runWorker({db,baileys:fake,logger:{},authDir:resolve(directory,'auth'),mediaDir:resolve(directory,'media'),avatarDir:resolve(directory,'avatars')});
+  assert.ok(db.prepare('SELECT lease_owner FROM connections').get().lease_owner);
+  const message={key:{fromMe:false,id:'qa-private-message',remoteJid:'123@g.us'},messageTimestamp:1700000000,message:{conversation:'qa-private-body'}};
+  const count=()=>db.prepare("SELECT count(*) AS n FROM snapshots WHERE kind IN('message_activity','receive_activity')").get().n;
+  ev.emit('messaging-history.set',{messages:[message]});assert.equal(count(),0);
+  const before=Date.now();ev.emit('messages.upsert',{type:'notify',messages:[message,message]});
+  const get=(kind,id)=>JSON.parse(db.prepare('SELECT payload FROM snapshots WHERE kind=? AND resource_id=?').get(kind,id).payload);
+  const notify=get('receive_activity','inbound_notify');assert.equal(notify.inbound_envelopes,2);assert.ok(Date.parse(notify.observed_at)>=before);assert.notEqual(Date.parse(notify.observed_at),1700000000000);
+  assert.equal(get('message_activity','last_upsert').inbound,2);
+  ev.emit('messages.upsert',{type:'append',messages:[{...message,key:{...message.key,id:'qa-echo',fromMe:true}}]});assert.equal(count(),2);assert.deepEqual(get('receive_activity','inbound_notify'),notify);assert.equal(get('message_activity','last_upsert').outbound,1);
+  await worker.stop();assert.equal(db.prepare('SELECT lease_owner FROM connections').get().lease_owner,null);
+  const stored=db.prepare("SELECT payload FROM snapshots WHERE kind IN('message_activity','receive_activity') ORDER BY kind,resource_id").all();
+  ev.emit('messages.upsert',{type:'notify',messages:[message]});assert.deepEqual(db.prepare("SELECT payload FROM snapshots WHERE kind IN('message_activity','receive_activity') ORDER BY kind,resource_id").all(),stored);
+  assert.doesNotMatch(JSON.stringify(stored),/qa-private|123@g.us/);assert.equal(sends,0);
+ }finally{if(worker)await worker.stop();db.close();const target=resolve(directory);assert.equal(dirname(target),resolve(tmpdir()));assert.ok(basename(target).startsWith('wis-receive-wiring-'));rmSync(target,{recursive:true,force:true});}
 });
 test('revoked WhatsApp session recovery archives old auth and prepares a fresh QR without logging out',async()=>{
  const db=database(),dir=mkdtempSync(resolve(tmpdir(),'wis-worker-recovery-')),authDir=resolve(dir,'baileys-auth');
