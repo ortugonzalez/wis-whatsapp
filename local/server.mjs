@@ -293,6 +293,15 @@ export function makeServer(database=db,options={}){
      if(resource==='collection-products'){const {limit,offset,q}=page();const products=safe.products.filter(p=>!q||[p.id,p.name??'',p.description??''].some(value=>value.toLowerCase().includes(q.toLowerCase())));const data=products.slice(offset,offset+limit);return send(data,200,{...meta,observed:safe.products_collected===false?false:safe.products_collected===true||safe.products.length>0,collection_id:id,total:products.length,limit,offset,has_more:offset+data.length<products.length,products_collected:safe.products_collected,products_truncated:safe.products_truncated,collection_status:meta.collection_status==='unavailable'?'unavailable':safe.products_collected===false||safe.products_collected!==true&&!safe.products.length?'not_collected':safe.products_truncated?'truncated':'observed_partial'});}
      return send({...safe,[collection?'collection_id':'product_id']:safe.id??null,id:row.resource_id,updated_at:row.updated_at},200,meta);
     }
+    if(resource==='label-associations'&&method==='GET'){
+     const type=url.searchParams.get('type')??'chat';if(!['chat','message'].includes(type))fail(400,'invalid_association_type');
+     const associationType=type==='chat'?'label_jid':'label_message';
+     const scope="kind='label_association' AND json_extract(payload,'$.type')=?";
+     const observed=database.prepare(`SELECT count(*) AS n,max(updated_at) AS last FROM snapshots WHERE ${scope}`).get(associationType);
+     let where=scope+" AND json_extract(payload,'$.associated')=1";const params=[associationType];
+     if(page().q){where+=" AND (resource_id LIKE ? ESCAPE '\\' OR payload LIKE ? ESCAPE '\\')";params.push(search(),search());}
+     return paged('snapshots',where,params,'updated_at DESC,resource_id','*',row=>({...JSON.parse(row.payload),id:row.resource_id,updated_at:row.updated_at}),{association_type:type,observed:observed.n>0,collection_status:observed.n?'observed_partial':'not_collected',last_updated_at:observed.last,summaries:[],history_complete:false});
+    }
     if(explorers[resource]&&method==='GET'){
      const config=explorers[resource];let where='kind=?';let params=[config.kind];if(resource==='labels')where+=" AND json_extract(payload,'$.deleted') IS NOT 1";if(resource==='label-associations')where+=" AND json_extract(payload,'$.type')='label_jid' AND json_extract(payload,'$.associated')=1";if(resource==='products')where+=" AND (json_extract(payload,'$.scope') IS NULL OR EXISTS (SELECT 1 FROM snapshots summary WHERE summary.kind='catalog' AND summary.resource_id=json_extract(snapshots.payload,'$.owner_jid') AND json_extract(summary.payload,'$.scope')=json_extract(snapshots.payload,'$.scope')))";if(page().q)where+=" AND (resource_id LIKE ? ESCAPE '\\' OR payload LIKE ? ESCAPE '\\')";
      const observed=database.prepare('SELECT count(*) AS n,max(updated_at) AS last FROM snapshots WHERE kind IN(?,?)').get(config.kind,config.summary);

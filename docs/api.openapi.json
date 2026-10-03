@@ -3218,7 +3218,7 @@
     "/label-associations": {
       "get": {
         "summary": "Read persisted label-associations; read scope",
-        "description": "Rows are observed snapshots only. meta.collection_status distinguishes not_collected, unavailable, truncated, complete and observed_partial. Passive label/channel data is never presented as a complete remote inventory. No network call or WhatsApp mutation occurs.",
+        "description": "Read active persisted label associations only. type=chat (default) preserves the chat contract; type=message returns observed message references, not full messages. Metadata observation and last_updated_at are scoped to the selected type, including removal observations, independent of search/pagination. No remote inventory is requested and history_complete is always false.",
         "parameters": [
           {
             "name": "q",
@@ -3245,6 +3245,18 @@
               "type": "integer",
               "minimum": 0,
               "default": 0
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "chat",
+                "message"
+              ],
+              "default": "chat"
             }
           }
         ],
@@ -3300,6 +3312,17 @@
                           "items": {
                             "type": "object"
                           }
+                        },
+                        "association_type": {
+                          "type": "string",
+                          "enum": [
+                            "chat",
+                            "message"
+                          ]
+                        },
+                        "history_complete": {
+                          "type": "boolean",
+                          "const": false
                         }
                       }
                     }
@@ -3307,6 +3330,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid association type"
           },
           "403": {
             "description": "Missing scope or administrator session"
