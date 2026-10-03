@@ -48,7 +48,7 @@ export function summarizeCapabilityFieldCoverage(reference,coverage,aliases={}){
       });
       const hasSemantic=semanticCandidates.length>0;
       if(hasSemantic)semantic++;
-      const exactRows=sourceKinds.map(kind=>({kind,value:observed.get(`${kind}\0${path}`)})).filter(item=>item.value&&item.value.records>0);
+      const exactRows=candidates.length?[]:sourceKinds.map(kind=>({kind,value:observed.get(`${kind}\0${path}`)})).filter(item=>item.value&&item.value.records>0);
       const allowedExact=item=>!candidates.some(candidate=>candidate.kind===item.kind&&exactObservedPath(candidate.field)===path&&candidate.requires_non_empty_text&&item.value.non_empty_text_records<=0);
       const hasExact=exactRows.some(allowedExact);
       if(hasExact&&!hasSemantic)exact++;
