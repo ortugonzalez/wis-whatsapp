@@ -41,3 +41,17 @@ Captura local ignorada: `.local/reference-table-visual-qa.png`.
 La revisión estática independiente PASS y la comprobación DOM/teclado del turno
 previo se complementan con esta inspección visual. `git diff --check` sin errores.
 Antes de publicar, Chrome mostró cero operaciones `sending` y cero `pending`.
+
+## Producción
+
+Commit `4b5ffae`, un único despliegue, EasyPanel Success a las 05:54:28 UTC.
+Chrome, tras recargar, mostró región enfocada con once encabezados, ancho de
+1875 px dentro de 1022 px, y scrollLeft 40 al usar flecha derecha. El filtro
+getcontact devolvió 11 definiciones; evidencia contact.name sigue 32/979,
+texto 32/32. Captura productiva ahora funcionó: encabezados fijos y evidencia
+completa legibles. Archivo ignorado `.local/reference-table-production.png`.
+El servidor de fixture quedó detenido y su pestaña cerrada; no se creó worker.
+
+Próxima ruta: inventario de campos sin observación (frente 2), priorizando
+equivalencias verificables con datos ya disponibles y sin solicitudes duplicadas.
+Esta mejora visual no agrega cobertura ni demuestra actividad entrante reciente.
