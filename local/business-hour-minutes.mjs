@@ -34,7 +34,7 @@ export function buildBusinessMinuteCoverage(db) {
  result.records=1;
  for(const key of ['openTime','closeTime']){
   if(!projection.rows.some(item=>Object.hasOwn(item,key)))continue;
-  result.field_counts.push({field:`hours.config[].${key}`,records:1,stale_records:stale?1:0,snapshot_updated_at:typeof row.updated_at==='string'&&Number.isFinite(Date.parse(row.updated_at))?row.updated_at:null});
+  result.field_counts.push({field:`hours.config[].${key}`,records:1,stale_records:stale?1:0,snapshot_last_success_at:previousSuccess?data.last_success_at:null,snapshot_updated_at:typeof row.updated_at==='string'&&Number.isFinite(Date.parse(row.updated_at))?row.updated_at:null});
  }
  return result;
 }
