@@ -246,7 +246,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     }),
     fields: Object.freeze({
       name: Object.freeze([{ kind: 'contact', field: 'name', note: 'nombre de contacto recibido de WhatsApp', requires_non_empty_text: true }]),
-      push_name: Object.freeze([{ kind: 'contact', field: 'notify', note: 'nombre push observado en la libreta de WhatsApp' }]),
+      push_name: Object.freeze([{ kind: 'contact', field: 'notify', note: 'nombre push observado en la libreta de WhatsApp; solo cuenta texto no vacío', requires_non_empty_text: true }]),
       verified_name: Object.freeze([{ kind: 'contact', field: 'verifiedName', note: 'nombre Business verificado recibido de WhatsApp', requires_non_empty_text: true }]),
       about: Object.freeze([{ kind: 'contact', field: 'status.status', note: 'texto About del contacto obtenido por Baileys fetchStatus', requires_non_empty_text: true }]),
     }),
