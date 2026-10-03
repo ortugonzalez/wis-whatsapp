@@ -796,10 +796,15 @@ test('quotes, mentions, reactions, receipts, edits and revokes persist safe meta
   ev.emit('message-receipt.update',[{key,receipt:{userJid:'222@lid',readTimestamp:1700000002,secret:'never-store'}}]);
   assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE kind='reaction'").get().n,1);
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='receipt'").get().payload).readTimestamp,1700000002);
+  ev.emit('messages.update',[{key,update:{status:5}}]);
+  const observed=JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='delivery_observation' AND resource_id='m'").get().payload);
+  assert.equal(observed.source,'baileys.messages.update');assert.equal(observed.raw_status_code,5);assert.equal(observed.interpreted_status,'played');
+  assert.equal(db.prepare("SELECT delivery_status FROM messages WHERE wa_message_id='m'").get().delivery_status,'read');
   ev.emit('messages.update',[{key,update:{message:{editedMessage:{message:{conversation:'Edited'}}},messageTimestamp:1700000003}}]);
   await new Promise(r=>setTimeout(r,0));assert.equal(db.prepare("SELECT body FROM messages WHERE wa_message_id='m'").get().body,'Edited');assert.equal(metadata().edited,true);
   ev.emit('messages.update',[{key,update:{message:null,messageStubType:1}}]);
   await new Promise(r=>setTimeout(r,0));assert.equal(db.prepare("SELECT body FROM messages WHERE wa_message_id='m'").get().body,null);assert.equal(metadata().revoked,true);
+  assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='delivery_observation' AND resource_id='m'").get().payload).raw_status_code,5);
   assert.equal(db.prepare('SELECT last_message_preview FROM conversations').get().last_message_preview,'Mensaje eliminado');
   assert.equal(db.prepare("SELECT count(*) AS n FROM snapshots WHERE payload LIKE '%never-store%'").get().n,0);
  } finally {await worker.stop();db.close();}

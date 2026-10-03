@@ -1267,6 +1267,7 @@
     "/messages": {
       "get": {
         "summary": "List messages",
+        "description": "With id, returns one persisted message and related metadata. delivery_observation is null unless a Baileys messages.update status event was observed for that stored message; when present it contains the raw code, interpreted event status, observation time and up to 20 retained events. The local delivery_status may be initialized from message direction or normalized independently, including played to read. Neither field proves complete delivery history or WHAPI status parity. List reads are local only.",
         "responses": {
           "200": {
             "description": "Local persisted data; no WhatsApp write",

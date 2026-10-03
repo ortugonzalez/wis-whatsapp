@@ -2,6 +2,7 @@ import { createBlocklistInvalidation } from './blocklist-invalidation.mjs';
 import { attachGroupMemberTags } from './group-member-tags.mjs';
 import { attachAccountSettings } from './account-settings.mjs';
 import { attachReceiveActivity } from './receive-activity.mjs';
+import { nextDeliveryObservation } from './delivery-observation.mjs';
 import { createBoundedMediaDownload, collectBoundedMedia } from './bounded-media.mjs';
 import { attachNewsletterEvents } from './newsletter-events.mjs';
 import { randomUUID } from 'node:crypto';
@@ -1152,6 +1153,12 @@ export async function runWorker({ db, baileys, logger, authDir = resolve(root, '
           if(update.message===null || update.message?.editedMessage?.message)queue=queue.then(()=>applyMessageChange(key,update)).catch(()=>console.error('message_update_failed'));
           const status = {2:'sent',3:'delivered',4:'read',5:'read'}[update.status];
           if(status) {
+            if(typeof key?.id==='string'&&key.id.length>0&&key.id.length<=200&&db.prepare('SELECT 1 FROM messages WHERE wa_message_id=?').get(key.id)){
+              const prior=db.prepare("SELECT payload FROM snapshots WHERE kind='delivery_observation' AND resource_id=?").get(key.id);
+              let old=null;try{old=JSON.parse(prior?.payload||'null');}catch{}
+              const observation=nextDeliveryObservation(old,update.status,new Date().toISOString());
+              if(observation)snapshot('delivery_observation',key.id,observation);
+            }
             const previous=receipts.get(key.id);
             const rank={sent:1,delivered:2,read:3};
             if(!previous || rank[status]>rank[previous])receipts.set(key.id,status);
