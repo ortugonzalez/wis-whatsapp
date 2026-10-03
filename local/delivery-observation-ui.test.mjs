@@ -14,4 +14,9 @@ test('message detail distinguishes observed provider status from local state',()
  assert.match(html,/no confirma el historial completo/);
  assert.match(context.deliveryObservationSection(null),/no acredita por sí solo un recibo remoto/);
  assert.match(source,/deliveryObservationSection\(detail\.delivery_observation\)/);
+ const receipts=context.receiptObservationSection([{participant:'participant@lid',read_timestamp:{raw:'1767315660',iso:'2026-01-02T01:01:00Z'},persisted_at:'2026-01-02T01:02:00Z'}]);
+ assert.match(receipts,/readTimestamp · valor recibido: 1767315660/);
+ assert.match(receipts,/sin el tipo original no se distingue cuál ocurrió/);
+ assert.match(context.receiptObservationSection([]),/No hay marcas por participante persistidas/);
+ assert.match(source,/receiptObservationSection\(detail\.receipt_observations\)/);
 });

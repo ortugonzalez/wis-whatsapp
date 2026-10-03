@@ -21,6 +21,7 @@ test('message list supports bounded WHAPI-style filters over persisted local row
   snapshot.run('message','wa-group',JSON.stringify({participant:'5491111111111@s.whatsapp.net'}),'2026-01-03T00:00:00.000Z');
   snapshot.run('message','wa-system',JSON.stringify({messageStubType:1}),'2026-01-04T00:00:00.000Z');
   snapshot.run('delivery_observation','wa-out',JSON.stringify({source:'baileys.messages.update',raw_status_code:5,interpreted_status:'played',observed_at:'2026-01-02T01:00:00Z',secret:'omit',observations:[{source:'baileys.messages.update',raw_status_code:5,interpreted_status:'played',observed_at:'2026-01-02T01:00:00Z',secret:'omit'}]}),'2026-01-02T01:00:00Z');
+  snapshot.run('receipt','wa-out:participant',JSON.stringify({message_id:'wa-out',userJid:'participant@lid',receiptTimestamp:1767315600,readTimestamp:1767315660,secret:'omit'}),'2026-01-02T01:02:00Z');
   const server = makeServer(database);
   await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
   const base = `http://127.0.0.1:${server.address().port}/api/v1/messages`;
@@ -31,6 +32,11 @@ test('message list supports bounded WHAPI-style filters over persisted local row
     assert.equal(detail.delivery_observation.interpreted_status,'played');
     assert.equal(detail.message.delivery_status,'sent');
     assert.equal(JSON.stringify(detail.delivery_observation).includes('secret'),false);
+    assert.equal(detail.receipt_observations.length,1);
+    assert.equal(detail.receipt_observations[0].source,'baileys.message-receipt.update');
+    assert.equal(detail.receipt_observations[0].read_timestamp.iso,'2026-01-02T01:01:00.000Z');
+    assert.equal(detail.receipt_observations[0].persisted_at,'2026-01-02T01:02:00.000Z');
+    assert.equal(JSON.stringify(detail.receipt_observations).includes('secret'),false);
     assert.equal((await (await fetch(`${base}?id=m-in`,{headers})).json()).data.delivery_observation,null);
     const filtered = await fetch(`${base}?from_me=false&time_from=1767225600&time_to=1767571200&sort=asc&count=2`,{headers});
     assert.equal(filtered.status,200);
