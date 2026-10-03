@@ -15,3 +15,9 @@ Despliegue 2bf6740, conectado con identidad verificada y lease vigente. Snapshot
 ## Próxima ruta
 
 Publicar el conjunto de evidencia de texto tras la suite completa. Verificar conteos agregados productivos y continuidad de sesión, sin lecturas nuevas de WhatsApp. Después limitar chat_id/chat_name de mensajes a conversaciones enlazadas; esa brecha identificada permanece pendiente.
+
+## Publicación verificada
+
+Suite completa 326/326 PASS. EasyPanel confirmó Success para 59f724a a las 11:41:05 UTC, incluyendo el agregado de texto del turno anterior. Antes de publicar, cero operaciones pendientes o procesando. Después, Chrome mostró stored_text_message.body 1479/1479 textos no vacíos, frente al antiguo conteo bruto body de 1539/1539 mensajes de todos los tipos. En grupos, el último mensaje acredita texto en 20/26 conversaciones grupales. No se confunden esos 26 chats con los 18 snapshots de metadata grupal.
+
+La sesión conserva identidad verificada y lease vigente. Snapshot 08:41 Buenos Aires; 446 campos inventariados (tres agregados adicionales, no nuevos datos recibidos), 84 fallos acumulados y los mismos 14 entrantes live. No hay nueva recepción verificada. Captura segura revisada en `.local/text-scope-production.png`, fuera de Git. Próxima ruta pendiente: correlación chat_id/chat_name con mensajes existentes.
