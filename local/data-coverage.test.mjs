@@ -162,6 +162,14 @@ test('coverage separates live and imported message freshness without exposing ar
  try{const coverage=buildDataCoverage(db);assert.deepEqual(coverage.message_sources,[{source:'live_inbound',count:1,latest_at:'2026-01-06T00:00:00.000Z'},{source:'live_outbound',count:1,latest_at:'2026-01-07T00:00:00.000Z'},{source:'import_inbound',count:1,latest_at:'2026-01-01T00:00:00.000Z'},{source:'other',count:1,latest_at:null}]);assert.equal(coverage.live_inbound_count,1);assert.equal(coverage.last_live_message_at,'2026-01-06T00:00:00.000Z');assert.equal(JSON.stringify(coverage).includes('private-source'),false);}finally{db.close();}
 });
 
+test('coverage exposes valid inbound notification time separately from message time',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,source TEXT,direction TEXT,created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
+ const insert=db.prepare('INSERT INTO snapshots VALUES(?,?,?,?)');
+ insert.run('receive_activity','inbound_notify',JSON.stringify({observed_at:'2026-10-03T12:33:00Z',private_detail:'do-not-expose'}),'2026-10-03T12:33:00Z');
+ insert.run('receive_activity','inbound_append',JSON.stringify({observed_at:'invalid'}),'2026-10-03T12:34:00Z');
+ try{const coverage=buildDataCoverage(db);assert.equal(coverage.last_inbound_notification_at,'2026-10-03T12:33:00.000Z');assert.equal(coverage.last_inbound_append_at,null);assert.equal(coverage.last_live_message_at,null);assert.equal(JSON.stringify(coverage).includes('do-not-expose'),false);}finally{db.close();}
+});
+
 test('coverage includes normalized storage field counts without returning row values',()=>{
  const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE contacts(id TEXT,wa_jid TEXT);CREATE TABLE conversations(id TEXT,wa_chat_id TEXT,title TEXT);CREATE TABLE messages(id TEXT,wa_message_id TEXT,type TEXT,body TEXT,media_path TEXT,source TEXT,direction TEXT,delivery_status TEXT,created_at TEXT);CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT);CREATE TABLE read_commands(id TEXT,kind TEXT,status TEXT,target TEXT,error TEXT,updated_at TEXT);');
  db.prepare('INSERT INTO contacts VALUES(?,?)').run('private-contact-id','private-jid');db.prepare('INSERT INTO conversations VALUES(?,?,?)').run('private-conversation-id','private-chat-id','private-title');db.prepare('INSERT INTO messages(id,wa_message_id,type,body,source,direction,delivery_status,created_at) VALUES(?,?,?,?,?,?,?,?)').run('private-message-id','private-wa-id','text','private-body','live','in','delivered','2026-01-01T00:00:00.000Z');

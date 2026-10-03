@@ -74,7 +74,7 @@ test('last scheduled read describes command state without claiming successful re
 
 test('rendered observability distinguishes message dates and lease evidence from reception',async()=>{
  const section={isConnected:true,innerHTML:''};
- const coverage={last_live_message_at:'2026-01-01T00:00:00.000Z',live_inbound_count:14,snapshot_kinds:[]};
+ const coverage={last_live_message_at:'2026-01-01T00:00:00.000Z',last_inbound_notification_at:'2026-10-03T12:33:00.000Z',live_inbound_count:14,snapshot_kinds:[]};
  let lease;
  const scope={overview(){},login(){},state:{page:'overview'},viewEpoch:1,window:{addEventListener(){}},clearInterval(){},setInterval(){},document:{getElementById:id=>id==='overview-observability'?section:null},api:async path=>path.endsWith('/coverage')?coverage:path.endsWith('/settings')?{scheduled_reads:{worker_lease_current:lease}}:{status:'connected',identity_verified:true},fmt:value=>value,esc:value=>String(value),badge:()=>''};
  runInNewContext(source,scope);
@@ -82,6 +82,9 @@ test('rendered observability distinguishes message dates and lease evidence from
   lease=value;await scope.refreshOverviewObservability();
   assert.ok(section.innerHTML.includes(label));
   assert.match(section.innerHTML,/Fecha del último entrante · origen live/);
+  assert.match(section.innerHTML,/Última notificación entrante observada/);
+  assert.match(section.innerHTML,/2026-10-03T12:33:00.000Z/);
+  assert.match(section.innerHTML,/no un mensaje único ni su persistencia/);
   assert.match(section.innerHTML,/no la hora de recepción/);
   assert.match(section.innerHTML,/no recepción reciente/);
   assert.match(section.innerHTML,/Fallos de lectura acumulados/);
@@ -89,6 +92,7 @@ test('rendered observability distinguishes message dates and lease evidence from
   assert.match(section.innerHTML,/Un comando finalizado no garantiza datos completos ni recepción de mensajes/);
   assert.doesNotMatch(section.innerHTML,/Última recepción observada/);
  }
- coverage.last_live_message_at=null;await scope.refreshOverviewObservability();
+ coverage.last_live_message_at=null;coverage.last_inbound_notification_at=null;await scope.refreshOverviewObservability();
  assert.match(section.innerHTML,/Sin mensaje entrante de origen live almacenado/);
+ assert.match(section.innerHTML,/Sin notificación entrante observada/);
 });

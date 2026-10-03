@@ -397,6 +397,10 @@ export function buildDataCoverage(db, now = Date.now()) {
     if (typeof row.latest_at === 'string' && Number.isFinite(Date.parse(row.latest_at)) && (!prior.latest_at || row.latest_at > prior.latest_at)) prior.latest_at = new Date(row.latest_at).toISOString();
     messageSources.set(source, prior);
   }
+  const inboundActivityAt = type => {
+    const row = db.prepare("SELECT json_extract(payload,'$.observed_at') AS value FROM snapshots WHERE kind='receive_activity' AND resource_id=? AND json_valid(payload)").get('inbound_' + type);
+    return typeof row?.value === 'string' && Number.isFinite(Date.parse(row.value)) ? new Date(row.value).toISOString() : null;
+  };
   return {
     entities: {
       contacts: { known: count('SELECT count(*) AS count FROM contacts'), with_whatsapp_id: count("SELECT count(*) AS count FROM contacts WHERE wa_jid IS NOT NULL AND wa_jid!=''"), metadata_records: kindCount('contact') },
@@ -409,6 +413,8 @@ export function buildDataCoverage(db, now = Date.now()) {
     message_sources: ['live_inbound','live_outbound','import_inbound','import_outbound','other'].filter(source => messageSources.has(source)).map(source => messageSources.get(source)),
     live_inbound_count: messageSources.get('live_inbound')?.count ?? 0,
     last_live_message_at: messageSources.get('live_inbound')?.latest_at ?? null,
+    last_inbound_notification_at: inboundActivityAt('notify'),
+    last_inbound_append_at: inboundActivityAt('append'),
     snapshot_kinds: snapshotKinds,
     storage_kinds: storageKinds,
     contextual_kinds: contextualKinds,
