@@ -17,3 +17,11 @@ Despliegue b7dcd4a, sesión conectada e identidad verificada, lease vigente. Sna
 ## Siguiente ruta
 
 Verificar la publicación conjunta con la corrección de alcance de getgroup.id. Después, revisar frescura y respuesta agregada del ciclo de lecturas; un comando finalizado no prueba nuevos mensajes ni cobertura de todos los campos. Mantener la consulta por código exclusivamente a petición, sin usarla como prueba automática productiva.
+
+## Publicación y verificación
+
+Suite completa: 324/324 PASS. Publicado 2bf6740 junto con 9c93f43; EasyPanel confirmó Success el 2026-10-03 a las 10:56:28 UTC. Antes de publicar, filtros de operaciones pendientes y procesando mostraron cero filas.
+
+Chrome ya muestra getgroup.id respaldado exclusivamente por group.id, 18/18 snapshots, sin los 568 chats y conversaciones genéricos. Get group conserva 29/759 rutas observadas: se corrigió procedencia, no se agregaron campos. Captura local revisada sin valores privados: `.local/group-scope-production.png`, excluida de Git.
+
+Después del despliegue: conectado con identidad verificada, lease vigente, snapshot más reciente 07:56 Buenos Aires. Se mantienen 84 errores acumulados y los mismos 14 entrantes live; no hay nueva evidencia de recepción. No se ejercitó la consulta por invitación en producción: sus casos de rol desconocido quedan verificados por fixtures y QA, no por una consulta remota. Próxima ruta: analizar el fallo de bots ya registrado mediante evidencia existente, sin repetir la lectura agotada ni alterar el calendario.
