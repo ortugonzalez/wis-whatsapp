@@ -246,6 +246,15 @@ test('read-only metadata commands persist account/groups, normalize events and r
   ev.emit('labels.association',{type:'add',association:{type:'label_jid',chatId:'chat',labelId:'retired'}});
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='label_association' AND resource_id='chat:retired:'").get().payload).associated,false);
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM events WHERE kind='labels.association'").get().payload).ignored_due_to_deleted_label,true);
+  const associationFor=(messageId='')=>JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='label_association' AND resource_id=?").get(`chat:priority:${messageId}`).payload);
+  const associate=(type,messageId)=>ev.emit('labels.association',{type,association:{type:messageId?'label_message':'label_jid',chatId:'chat',labelId:'priority',...(messageId?{messageId}:{}),secret:'never-store'}});
+  associate('add');associate('add','message-a');associate('add','message-b');
+  assert.equal(associationFor().associated,true);assert.equal(associationFor('message-a').type,'label_message');
+  associate('remove','message-a');
+  assert.equal(associationFor('message-a').associated,false);assert.equal(associationFor('message-b').associated,true);assert.equal(associationFor().associated,true);
+  ev.emit('labels.edit',{id:'priority',deleted:true});
+  for(const messageId of ['', 'message-a', 'message-b'])assert.equal(associationFor(messageId).associated,false);
+  associate('add','message-b');assert.equal(associationFor('message-b').associated,false);
   assert.equal(JSON.parse(db.prepare("SELECT payload FROM snapshots WHERE kind='group'").get().payload).subject,'Group');
   assert.equal(db.prepare("SELECT status FROM read_commands WHERE kind='all'").get().status,'done');
   assert.equal(db.prepare("SELECT payload FROM snapshots WHERE kind='chat' AND resource_id='555@lid'").get().payload.includes('tcToken'),false);
