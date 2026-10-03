@@ -24,6 +24,17 @@ test('backup restore validates schema/integrity and never changes source bytes',
  const original=readFileSync(source);const report=await verifyBackup(source,{tempRoot});
  assert.equal(report.status,'verified');assert.equal(report.counts.settings,1);assert.equal(JSON.stringify(report).includes('PRIVATE'),false);assert.deepEqual(readFileSync(source),original);assert.deepEqual(readdirSync(tempRoot),[]);
  assert.equal(report.content_verified,true);assert.equal(report.content_digest,undefined);assert.equal(report.session_included,false);
+ assert.equal(report.recovery.ready_to_activate,false);assert.equal(report.recovery.reconciliation_required,false);assert.equal(report.avatars_included,false);
+});
+
+test('verified backup reports uncertain queued work without changing it or authorizing replay',async()=>{
+ const root=mkdtempSync(resolve(tmpdir(),'wis-backup-queue-')),source=resolve(root,'backup.sqlite'),tempRoot=resolve(root,'verify');
+ const db=new DatabaseSync(source);db.exec(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));
+ for(const [i,status] of ['pending','pending','sending','outcome_unknown','sent','failed'].entries())db.prepare('INSERT INTO operations(id,to_e164,body,status,idempotency_key,request_hash,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').run(String(i),'PRIVATE_RECIPIENT','PRIVATE_CONTENT',status,String(i),'PRIVATE_HASH','2026-01-01','2026-01-01');
+ db.close();const original=readFileSync(source);const report=await verifyBackup(source,{tempRoot});
+ assert.deepEqual(report.recovery,{ready_to_activate:false,operation_counts:{pending:2,sending:1,outcome_unknown:1},reconciliation_required:true,worker_must_remain_disabled:true,outbound_must_remain_disabled:true,webhooks_must_remain_disabled:true});
+ assert.doesNotMatch(JSON.stringify(report),/PRIVATE_|PRIVATE_RECIPIENT|PRIVATE_HASH/);
+ assert.deepEqual(readFileSync(source),original);assert.deepEqual(readdirSync(tempRoot),[]);
 });
 test('corrupt, incomplete and incompatible version backups fail safely',async()=>{
  const root=mkdtempSync(resolve(tmpdir(),'wis-invalid-backup-')),tempRoot=resolve(root,'verify');

@@ -73,7 +73,9 @@ export async function verifyBackup(source,{tempRoot}={}) {
   restoredDb=new DatabaseSync(copy,{readOnly:true});const restored=inspect(restoredDb);
   if(JSON.stringify(original)!==JSON.stringify(restored))throw Error('backup_restore_mismatch');
   // Never expose fingerprints of private data or credentials in reports.
-  return {status:'verified',user_version:restored.user_version,counts:restored.counts,content_verified:true,scope:'sqlite_only',session_included:false,media_included:false};
+  const operationCounts={pending:0,sending:0,outcome_unknown:0};
+  for(const row of restoredDb.prepare("SELECT status,count(*) AS count FROM operations WHERE status IN ('pending','sending','outcome_unknown') GROUP BY status").all())operationCounts[row.status]=row.count;
+  return {status:'verified',user_version:restored.user_version,counts:restored.counts,content_verified:true,scope:'sqlite_only',session_included:false,media_included:false,avatars_included:false,recovery:{ready_to_activate:false,operation_counts:operationCounts,reconciliation_required:Object.values(operationCounts).some(count=>count>0),worker_must_remain_disabled:true,outbound_must_remain_disabled:true,webhooks_must_remain_disabled:true}};
  } catch(error) {
   const safe=new Set(['backup_temp_root_required','backup_integrity_failed','backup_foreign_keys_failed','backup_version_unsupported','backup_schema_missing','backup_schema_incompatible','backup_restore_mismatch','backup_content_unsupported']);
   throw Error(safe.has(error?.message)?error.message:'backup_unreadable');
