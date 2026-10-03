@@ -1931,7 +1931,8 @@
           "403": {
             "description": "Insufficient scope"
           }
-        }
+        },
+        "description": " last_upsert_activity is null until a valid aggregate socket batch has been observed. Otherwise it includes observed_at, upsert_type (notify/append/other), non-negative integer envelope and direction counts, without_content (overlaps directions), scope=last_upsert_batch, unique_messages=false and persistence_confirmed=false. It is not a cumulative total or proof of recent inbound delivery."
       }
     },
     "/account": {

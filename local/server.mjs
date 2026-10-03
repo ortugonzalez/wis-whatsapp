@@ -1,4 +1,5 @@
 import { observedGroupMemberTags } from './group-member-tags.mjs';
+import {readUpsertActivity} from './receive-activity.mjs';
 import {LOCAL_LIMITS} from './limits.mjs';
 import {expectedLineSuffix,workspaceStatus,updateWorkspaceProfile} from './workspace.mjs';
 import {projectAccountLimits} from './account-limits-projection.mjs';
@@ -255,7 +256,7 @@ export function makeServer(database=db,options={}){
      const count=table=>database.prepare('SELECT count(*) AS n FROM '+table).get().n;
      const counts={contacts:count('contacts'),conversations:count('conversations'),messages:count('messages'),groups:database.prepare("SELECT count(*) AS n FROM snapshots WHERE kind='group'").get().n,operations:count('operations'),pending:database.prepare("SELECT count(*) AS n FROM operations WHERE status IN('pending','sending')").get().n,failed:database.prepare("SELECT count(*) AS n FROM operations WHERE status IN('failed','outcome_unknown')").get().n,events:count('events')};
      const activityDate=type=>database.prepare("SELECT json_extract(payload,'$.observed_at') AS value FROM snapshots WHERE kind='receive_activity' AND resource_id=? AND json_valid(payload)").get('inbound_'+type)?.value??null;
-     return send({last_inbound_notification_at:activityDate('notify'),last_inbound_append_at:activityDate('append'),counts,connection:cleanConnection(database.prepare("SELECT * FROM connections WHERE id='wis-5679'").get()),account_updated_at:database.prepare("SELECT max(updated_at) AS value FROM snapshots WHERE kind='profile' AND resource_id='wis-5679'").get().value,last_event_at:database.prepare('SELECT max(created_at) AS value FROM events').get().value,last_inbound_message_at:database.prepare('SELECT max(created_at) AS value FROM messages WHERE direction=?').get('in').value,history_complete:false});
+     return send({last_upsert_activity:readUpsertActivity(database),last_inbound_notification_at:activityDate('notify'),last_inbound_append_at:activityDate('append'),counts,connection:cleanConnection(database.prepare("SELECT * FROM connections WHERE id='wis-5679'").get()),account_updated_at:database.prepare("SELECT max(updated_at) AS value FROM snapshots WHERE kind='profile' AND resource_id='wis-5679'").get().value,last_event_at:database.prepare('SELECT max(created_at) AS value FROM events').get().value,last_inbound_message_at:database.prepare('SELECT max(created_at) AS value FROM messages WHERE direction=?').get('in').value,history_complete:false});
     }
     if(resource==='coverage'&&method==='GET'){
      auth('read');

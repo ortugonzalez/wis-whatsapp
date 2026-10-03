@@ -1,5 +1,14 @@
 // Activity means an inbound envelope observed on this socket, not a new unique
 // message, successful persistence, delivery to a person, or complete history.
+export function readUpsertActivity(db) {
+  const row=db.prepare("SELECT payload FROM snapshots WHERE kind='message_activity' AND resource_id='last_upsert'").get();
+  if(!row)return null;
+  let data;try{data=JSON.parse(row.payload);}catch{return null;}
+  if(!data||data.source!=='baileys.messages.upsert'||!['notify','append','other'].includes(data.upsert_type)||typeof data.observed_at!=='string'||!Number.isFinite(Date.parse(data.observed_at)))return null;
+  const keys=['envelopes','inbound','outbound','unknown_direction','without_content'];
+  if(keys.some(key=>!Number.isSafeInteger(data[key])||data[key]<0)||data.inbound+data.outbound+data.unknown_direction!==data.envelopes||data.without_content>data.envelopes)return null;
+  return {observed_at:new Date(data.observed_at).toISOString(),upsert_type:data.upsert_type,...Object.fromEntries(keys.map(key=>[key,data[key]])),scope:'last_upsert_batch',unique_messages:false,persistence_confirmed:false};
+}
 export function attachReceiveActivity(emitter,{guarded,snapshot,now=()=>new Date().toISOString()}) {
   emitter.on('messages.upsert',guarded(value=>{
     if(!Array.isArray(value?.messages))return;
