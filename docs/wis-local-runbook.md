@@ -52,6 +52,23 @@ Los envíos están deshabilitados por defecto. Requieren consentimiento registra
 
 La prueba local del 2 de octubre de 2026 verificó la base actual con 17 tablas. Una copia local anterior falló con `backup_schema_missing` y se conservó intacta: no debe emplearse como restauración de esta versión. Esta prueba no corresponde a la base de EasyPanel. Sigue pendiente probar el respaldo integral de producción, cifrado fuera del servidor, incluyendo sesión y archivos privados sin iniciar un segundo worker.
 
+### Ensayo de consulta de una copia restaurada
+
+`rtk proxy node --test local/restore-api-smoke.test.mjs` crea exclusivamente datos ficticios en un directorio temporal único, verifica el respaldo, restaura una copia y abre la API en loopback con puerto efímero. No inicia supervisor, worker, sesión WhatsApp ni dispatcher. Comprueba autenticación y consulta de operaciones pendientes, enviándose y de resultado desconocido; conserva sus estados e idempotencia y los bytes de la fuente. Al terminar cierra el servidor y elimina su directorio de ensayo.
+
+El ensayo demuestra lectura HTTP de una copia compatible, no recuperación integral ni arranque del contenedor. No ejecutar `local:start` contra una copia real solo porque este ensayo pase.
+
+### Conciliación antes de reactivar una restauración real
+
+Mantener la restauración aislada y worker, envíos y webhooks desactivados. El estado `verified` del respaldo acredita SQLite; `recovery.ready_to_activate` permanece false. Identificar primero el punto temporal del respaldo y conservar la fuente intacta.
+
+- `pending`: pudo ejecutarse después de la copia; cotejar idempotencia y evidencia duradera posterior antes de considerar cualquier envío.
+- `sending` y `outcome_unknown`: no reenviar por timeout o falta de confirmación. Obtener evidencia suficiente del proveedor y del registro operativo; ausencia en un historial parcial no prueba que no se envió.
+- `sent`, `delivered` y `read`: conservar trazabilidad, sin reencolar como prueba.
+- Revisar también entregas de webhooks, campañas y comandos de lectura restaurados. Los conteos de operaciones del verificador no abarcan esas colas ni certifican su conciliación.
+
+Documentar la decisión y evidencia sin secretos en el registro operativo privado. No hay un comando automático de conciliación/activación en este procedimiento; no reemplazarlo por ediciones SQL improvisadas. Resolver propiedad exclusiva de sesión, archivos, dominio, autenticación, backup externo y pruebas acordadas antes de habilitar componentes. Una recuperación de producción y cualquier envío real necesitan su alcance específico; esta guía no los ejecuta.
+
 La herramienta pasó 5 pruebas específicas, revisión independiente y la suite de 273 pruebas. Se desplegó en EasyPanel el 2 de octubre de 2026 a las 14:41 UTC; después del despliegue el endpoint de estado y Chrome confirmaron la conexión activa. Próximo frente operativo: respaldo integral externo y ensayo controlado de recuperación; desplegar la herramienta no demuestra que ese respaldo exista.
 
 ## Cobertura
