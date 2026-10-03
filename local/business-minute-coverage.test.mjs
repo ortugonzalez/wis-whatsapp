@@ -31,5 +31,11 @@ test('real Business contract counts validated own minutes semantically and keeps
   for(const config of [null,'bad',{},0]){update({...profile,business_hours:{config}});assert.equal(arrayTotals().semantic_response_fields_observed,0);}
   update({...profile,business_hours:{config:[]}});assert.equal(arrayTotals().response_fields,1);assert.equal(arrayTotals().semantic_response_fields_observed,1);assert.equal(arrayTotals().exact_response_fields_observed,0);assert.equal(summarize().semantic_response_fields_observed,0);
   update({...profile,stale:true,business_hours:{config:[]}});assert.equal(arrayTotals().stale_only_response_fields,1);assert.equal(arrayTotals().fresh_response_fields_observed,0);
+  const enumReference={methods:JSON.parse(readFileSync(new URL('../public/whapi-fields.json',import.meta.url),'utf8')).methods.filter(m=>m.id==='getbusinessprofile').map(m=>({...m,operations:m.operations.map(op=>({...op,response_fields:Object.fromEntries(Object.entries(op.response_fields).map(([status,fields])=>[status,fields.filter(f=>['hours.config[].day','hours.config[].mode'].includes(f.path))]))}))}))};
+  const enumTotals=()=>summarizeCapabilityFieldCoverage(enumReference,buildDataCoverage(db),context.window.WIS_WHAPI_FIELD_ALIASES).totals;
+  update({...profile,business_hours:{config:[{day_of_week:'monday',mode:'unknown'}]}});assert.equal(enumTotals().response_fields,2);assert.equal(enumTotals().semantic_response_fields_observed,0);
+  update({...profile,business_hours:{config:[{day_of_week:'mon',mode:'specific_hours'}]}});assert.equal(enumTotals().semantic_response_fields_observed,2);assert.equal(enumTotals().exact_response_fields_observed,0);
+  update({...profile,stale:true,business_hours:{config:[{day_of_week:'mon',mode:'open_24h'}]}});assert.equal(enumTotals().stale_only_response_fields,2);
+  update({...profile,business_hours:{config:[...Array(28).fill({}),{day_of_week:'mon',mode:'open_24h'}]}});assert.equal(enumTotals().semantic_response_fields_observed,0);
  }finally{db.close();}
 });

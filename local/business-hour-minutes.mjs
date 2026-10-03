@@ -1,4 +1,6 @@
 // A conservative projection; original provider attributes remain untouched.
+const BUSINESS_DAYS=new Set(['sun','mon','tue','wed','thu','fri','sat']);
+const BUSINESS_MODES=new Set(['open_24h','specific_hours']);
 export function parseBusinessMinute(value, { closing = false } = {}) {
  if (typeof value === 'string') {
   if (!/^\d{1,4}$/.test(value)) return null;
@@ -13,6 +15,8 @@ export function projectBusinessHourMinutes(data) {
  const rows=config.slice(0,28).map(item=>{
   const row={};
   if(!item||typeof item!=='object'||Array.isArray(item))return row;
+  if(BUSINESS_DAYS.has(item.day_of_week))row.day=item.day_of_week;
+  if(BUSINESS_MODES.has(item.mode))row.mode=item.mode;
   const open=parseBusinessMinute(item.open_time),close=parseBusinessMinute(item.close_time,{closing:true});
   if(open!==null)row.openTime=open;
   if(close!==null)row.closeTime=close;
@@ -33,7 +37,7 @@ export function buildBusinessMinuteCoverage(db) {
  result.truncated=projection.truncated;
  result.records=1;
  if(Array.isArray(data?.business_hours?.config))result.field_counts.push({field:'hours.config',records:1,stale_records:stale?1:0,snapshot_last_success_at:previousSuccess?data.last_success_at:null,snapshot_updated_at:typeof row.updated_at==='string'&&Number.isFinite(Date.parse(row.updated_at))?row.updated_at:null});
- for(const key of ['openTime','closeTime']){
+ for(const key of ['openTime','closeTime','day','mode']){
   if(!projection.rows.some(item=>Object.hasOwn(item,key)))continue;
   result.field_counts.push({field:`hours.config[].${key}`,records:1,stale_records:stale?1:0,snapshot_last_success_at:previousSuccess?data.last_success_at:null,snapshot_updated_at:typeof row.updated_at==='string'&&Number.isFinite(Date.parse(row.updated_at))?row.updated_at:null});
  }

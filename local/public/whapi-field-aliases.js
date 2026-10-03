@@ -326,8 +326,8 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       'hours.config': Object.freeze([
         { kind: 'business_minutes', field: 'hours.config', note: 'lista del perfil propio validada como array; lista vacía no acredita valores de sus elementos; los horarios numéricos se inspeccionan hasta 28 filas' },
       ]),
-      'hours.config[].day': Object.freeze([{ kind: 'business', field: 'business_hours.config[].day_of_week', note: 'día semanal de horario; conserva la enumeración informada por Baileys' }]),
-      'hours.config[].mode': Object.freeze([{ kind: 'business', field: 'business_hours.config[].mode', note: 'modo del horario observado' }]),
+      'hours.config[].day': Object.freeze([{ kind: 'business_minutes', field: 'hours.config[].day', note: 'día del perfil propio validado contra sun/mon/tue/wed/thu/fri/sat, sin inferir ni traducir valores desconocidos; hasta 28 filas' }]),
+      'hours.config[].mode': Object.freeze([{ kind: 'business_minutes', field: 'hours.config[].mode', note: 'modo del perfil propio validado contra open_24h/specific_hours; hasta 28 filas, atributos originales preservados' }]),
       'hours.config[].openTime': Object.freeze([{ kind: 'business_minutes', field: 'hours.config[].openTime', note: 'proyección numérica del perfil propio en minutos desde medianoche (0..1439); inspección limitada a 28 filas, originales preservados; equivalencia semántica' }]),
       'hours.config[].closeTime': Object.freeze([{ kind: 'business_minutes', field: 'hours.config[].closeTime', note: 'proyección numérica del perfil propio en minutos desde medianoche (0..1440); inspección limitada a 28 filas, originales preservados; equivalencia semántica' }]),
     }),

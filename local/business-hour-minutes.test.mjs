@@ -13,6 +13,13 @@ test('projection keeps row alignment without modifying raw attributes or exposin
  assert.equal(projectBusinessHourMinutes({business_hours:{config:Array(29).fill({open_time:'0'})}}).rows.length,28);
  assert.equal(projectBusinessHourMinutes({business_hours:{config:Array(29).fill({})}}).truncated,true);
 });
+test('day and mode projection uses only exact documented enum values and preserves source',()=>{
+ for(const day of ['sun','mon','tue','wed','thu','fri','sat'])for(const mode of ['open_24h','specific_hours']){
+  const raw={business_hours:{config:[{day_of_week:day,mode}]}},before=JSON.stringify(raw);
+  assert.deepEqual(projectBusinessHourMinutes(raw).rows,[{day,mode}]);assert.equal(JSON.stringify(raw),before);
+ }
+ for(const value of ['monday','MON','mon ','','closed',null,{},0,true])assert.deepEqual(projectBusinessHourMinutes({business_hours:{config:[{day_of_week:value,mode:value}]}}).rows,[{}]);
+});
 test('coverage is own-account only and retains stale classification without returning minutes',()=>{
  const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE snapshots(kind TEXT,resource_id TEXT,payload TEXT,updated_at TEXT)');
  try{
