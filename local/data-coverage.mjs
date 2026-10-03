@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import {buildUnambiguousIdentityCoverage} from './identity-coverage.mjs';
 import { projectAccountLimits } from './account-limits-projection.mjs';
 import { classifyWhatsAppChatType } from './wa-chat-type.mjs';
 
@@ -297,6 +298,8 @@ export function buildDataCoverage(db, now = Date.now()) {
     });
   }
   const contextualKinds = [];
+  const identityContext=buildUnambiguousIdentityCoverage(db);
+  if(identityContext.records)contextualKinds.push(identityContext);
   const labelPayload="CASE WHEN json_valid(payload) THEN payload ELSE '{}' END";
   const activeLabels=`kind='label' AND json_extract(${labelPayload},'$.deleted') IS NOT 1`;
   const labelFields=['id','name'].map(field=>{

@@ -258,8 +258,8 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     }),
   }),
   getlidbyids: Object.freeze({ source_kinds: Object.freeze(['identity']) }),
-  getlidbyid: Object.freeze({ source_kinds: Object.freeze(['identity']), fields: Object.freeze({ lid: Object.freeze([{ kind: 'identity', field: 'lid', note: 'LID del mapeo observado' }]) }) }),
-  getidbylid: Object.freeze({ source_kinds: Object.freeze(['identity']), fields: Object.freeze({ id: Object.freeze([{ kind: 'identity', field: 'pn', note: 'PN del mapeo observado; puede faltar si WhatsApp no lo entregó' }]) }) }),
+  getlidbyid: Object.freeze({ source_kinds: Object.freeze(['unambiguous_identity']), fields: Object.freeze({ lid: Object.freeze([{ kind: 'unambiguous_identity', field: 'lid', note: 'LID de un par explícito válido sin conflictos ni colisiones entre candidatos; no prueba vigencia actual' }]) }) }),
+  getidbylid: Object.freeze({ source_kinds: Object.freeze(['unambiguous_identity']), fields: Object.freeze({ id: Object.freeze([{ kind: 'unambiguous_identity', field: 'pn', note: 'PN de un par explícito válido sin conflictos ni colisiones; no se infiere del LID' }]) }) }),
   getcontactabout: Object.freeze({
     source_kinds: Object.freeze(['contact']),
     fields: Object.freeze({
