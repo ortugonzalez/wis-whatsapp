@@ -30,3 +30,14 @@ de recuperación. Próximo turno: comprobar visualmente mediante otro navegador
 disponible para la fixture local, cerrar QA y recién entonces desplegar. Si sigue
 bloqueado, pasar al inventario de campos pendientes (frente 2), sin tocar sesión.
 La paridad WHAPI y la recepción reciente continúan sin demostrarse.
+
+## Cierre visual — 2026-10-03 05:52 UTC
+
+Ruta alternativa efectiva: fixture en navegador integrado, manteniendo Chrome
+para producción. Capturas visuales confirmaron texto sin fragmentación, barra
+horizontal accesible y encabezados fijos al desplazar verticalmente; evidencia
+completa visible al extremo derecho. La fixture contiene solo texto sintético.
+Captura local ignorada: `.local/reference-table-visual-qa.png`.
+La revisión estática independiente PASS y la comprobación DOM/teclado del turno
+previo se complementan con esta inspección visual. `git diff --check` sin errores.
+Antes de publicar, Chrome mostró cero operaciones `sending` y cero `pending`.
