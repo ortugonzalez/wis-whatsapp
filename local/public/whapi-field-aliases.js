@@ -217,7 +217,13 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
   }),
   // Restrict exact field matching to the local resource that could represent
   // each WHAPI response. Missing resource kinds remain explicitly unobserved.
-  checkhealth: Object.freeze({ source_kinds: Object.freeze(['connection']) }),
+  checkhealth: Object.freeze({
+    source_kinds: Object.freeze(['connection']),
+    fields: Object.freeze({
+      'user.name': Object.freeze([{kind:'profile',field:'name',requires_non_empty_text:true,note:'Nombre observado en el perfil propio de Baileys; no prueba salud actual del canal ni recepción reciente.'}]),
+      'user.pushname': Object.freeze([{kind:'profile',field:'notify',requires_non_empty_text:true,note:'Nombre push observado en el perfil propio de Baileys; se conserva la fecha del snapshot, no la del cálculo de cobertura.'}]),
+    }),
+  }),
   getchannelsettings: Object.freeze({ source_kinds: Object.freeze(['connection']) }),
   getallowedevents: Object.freeze({ source_kinds: Object.freeze(['connection']) }),
   loginuser: Object.freeze({ source_kinds: Object.freeze(['connection']) }),

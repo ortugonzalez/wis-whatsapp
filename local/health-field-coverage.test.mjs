@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import {summarizeCapabilityFieldCoverage} from './whapi-field-coverage.mjs';
+const context={window:{}};
+vm.runInNewContext(readFileSync(new URL('./public/whapi-field-aliases.js',import.meta.url),'utf8'),context);
+const aliases=context.window.WIS_WHAPI_FIELD_ALIASES;
+const all=JSON.parse(readFileSync(new URL('../public/whapi-fields.json',import.meta.url),'utf8'));
+const reference={methods:[all.methods.find(method=>method.id==='checkhealth')]};
+const summarize=rows=>summarizeCapabilityFieldCoverage(reference,{snapshot_kinds:rows},aliases).totals;
+test('health coverage maps only observed own profile names, not connection flags or foreign profiles',()=>{
+ const field=(field,non_empty_text_records=1,stale_records=0)=>({field,records:1,non_empty_text_records,stale_records,stale_non_empty_text_records:stale_records});
+ const connected={kind:'connection',field_counts:['connection','isOnline','receivedPendingNotifications','isNewLogin'].map(x=>field(x,0))};
+ const foreign={kind:'contact',field_counts:['name','notify','user.name','user.pushname'].map(x=>field(x))};
+ assert.equal(summarize([connected,foreign]).semantic_response_fields_observed,0);
+ const observed=summarize([connected,foreign,{kind:'profile',field_counts:[field('name'),field('notify')]}]);
+ assert.equal(observed.response_fields,22);assert.equal(observed.semantic_response_fields_observed,2);
+ assert.equal(observed.exact_response_fields_observed,0);assert.equal(observed.response_fields_without_observation,20);
+ const empty=summarize([{kind:'profile',field_counts:[field('name',0),field('notify',0)]}]);
+ assert.equal(empty.semantic_response_fields_observed,0);
+ const stale=summarize([{kind:'profile',field_counts:[field('name',1,1),field('notify',1,1)]}]);
+ assert.equal(stale.fresh_response_fields_observed,0);assert.equal(stale.stale_only_response_fields,2);
+ assert.deepEqual(Object.keys(aliases.checkhealth.fields).sort(),['user.name','user.pushname']);
+});
