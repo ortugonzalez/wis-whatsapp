@@ -312,7 +312,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
   getmediafiles: Object.freeze({ source_kinds: Object.freeze(['messages', 'avatar']) }),
   getmedia: Object.freeze({ source_kinds: Object.freeze(['messages', 'avatar']) }),
   getbusinessprofile: Object.freeze({
-    source_kinds: Object.freeze(['business', 'contact']),
+    source_kinds: Object.freeze(['business']),
     fields: Object.freeze({
       id: Object.freeze([{ kind: 'business', field: 'wid', note: 'identificador devuelto por Baileys para el perfil de negocio consultado' }]),
       address: Object.freeze([{ kind: 'business', field: 'address', note: 'dirección del perfil de negocio cuando Baileys la devuelve', requires_non_empty_text: true }]),
@@ -321,12 +321,10 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       'websites': Object.freeze([{ kind: 'business', field: 'website[]', note: 'URL del perfil; Baileys conserva los sitios como una lista de cadenas', requires_non_empty_text: true }]),
       hours: Object.freeze([
         { kind: 'business', field: 'business_hours', note: 'objeto de horarios del perfil propio observado por Baileys' },
-        { kind: 'contact', field: 'business_profile.business_hours', note: 'objeto de horarios del perfil de un contacto correlacionado por Baileys' },
       ]),
       'hours.timeZone': Object.freeze([{ kind: 'business', field: 'business_hours.timezone', note: 'zona horaria de horarios; nombre de campo distinto, semántica equivalente' }]),
       'hours.config': Object.freeze([
         { kind: 'business', field: 'business_hours.config[]', note: 'lista del perfil propio normalizada desde business_config o config de Baileys' },
-        { kind: 'contact', field: 'business_profile.business_hours.config[]', note: 'lista del perfil del contacto normalizada desde business_config o config de Baileys' },
       ]),
       'hours.config[].day': Object.freeze([{ kind: 'business', field: 'business_hours.config[].day_of_week', note: 'día semanal de horario; conserva la enumeración informada por Baileys' }]),
       'hours.config[].mode': Object.freeze([{ kind: 'business', field: 'business_hours.config[].mode', note: 'modo del horario observado' }]),

@@ -140,10 +140,10 @@ test('business profile aliases map only observed business fields',()=>{
   assert.equal(aliases.getbusinessprofile.fields.websites[0].field,'website[]');
   assert.equal(aliases.getbusinessprofile.fields['hours.timeZone'][0].field,'business_hours.timezone');
   assert.deepEqual(Array.from(aliases.getbusinessprofile.fields.hours,mapping=>[mapping.kind,mapping.field]),[
-    ['business','business_hours'],['contact','business_profile.business_hours'],
+    ['business','business_hours'],
   ]);
   assert.deepEqual(Array.from(aliases.getbusinessprofile.fields['hours.config'],mapping=>[mapping.kind,mapping.field]),[
-    ['business','business_hours.config[]'],['contact','business_profile.business_hours.config[]'],
+    ['business','business_hours.config[]'],
   ]);
 });
 
