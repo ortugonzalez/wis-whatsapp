@@ -297,6 +297,19 @@ export function buildDataCoverage(db, now = Date.now()) {
     });
   }
   const contextualKinds = [];
+  const labelPayload="CASE WHEN json_valid(payload) THEN payload ELSE '{}' END";
+  const activeLabels=`kind='label' AND json_extract(${labelPayload},'$.deleted') IS NOT 1`;
+  const labelFields=['id','name'].map(field=>{
+    let records=0,stale=0,updated=null;
+    const rows=db.prepare(`SELECT json_extract(${labelPayload},'$.${field}') AS value,json_extract(${labelPayload},'$.stale')=1 AS stale,updated_at FROM snapshots WHERE ${activeLabels} AND json_type(${labelPayload},'$.${field}')='text'`);
+    for(const row of rows.iterate()){
+      if(!row.value.trim())continue;
+      records++;if(row.stale)stale++;
+      if(typeof row.updated_at==='string'&&Number.isFinite(Date.parse(row.updated_at))&&(!updated||Date.parse(row.updated_at)>Date.parse(updated)))updated=row.updated_at;
+    }
+    return {field,records,non_empty_text_records:records,stale_records:stale,stale_non_empty_text_records:stale,snapshot_updated_at:updated};
+  });
+  if(labelFields.some(field=>field.records>0))contextualKinds.push({kind:'active_label',records:db.prepare(`SELECT count(*) AS n FROM snapshots WHERE ${activeLabels}`).get().n,field_counts:labelFields});
   for (const item of messageTypeKinds.values()) {
     const fields = [...item.fields].sort(([a], [b]) => a.localeCompare(b));
     contextualKinds.push({

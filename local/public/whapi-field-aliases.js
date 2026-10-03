@@ -365,7 +365,10 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       cap_status: Object.freeze([{ kind: 'account_limits', field: 'quota.capping_status', note: 'estado bruto del proveedor conservado; ciclo vigente no validado, sin equivalencia WHAPI actual' }]),
     }),
   }),
-  getlabels: Object.freeze({ source_kinds: Object.freeze(['labels']) }),
+  getlabels: Object.freeze({ source_kinds: Object.freeze(['active_label']), fields: Object.freeze({
+    '[].id': Object.freeze([{kind:'active_label',field:'id',requires_non_empty_text:true,note:'Identificador observado en una etiqueta no marcada eliminada por Baileys; no demuestra un inventario completo.'}]),
+    '[].name': Object.freeze([{kind:'active_label',field:'name',requires_non_empty_text:true,note:'Nombre observado de una etiqueta no marcada eliminada; conserva la antigüedad del snapshot y no prueba vigencia actual.'}]),
+  }) }),
   getlabelassociations: Object.freeze({
     source_kinds: Object.freeze(['label_chat_association']),
     fields: Object.freeze({

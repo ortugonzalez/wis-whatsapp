@@ -163,7 +163,7 @@ test('restriction aliases require a known local account-limits snapshot',()=>{
 
 test('metadata-only capability entries still declare an evidence scope',()=>{
   for(const method of ['getlabels','getlabelassociations','getblacklist','getcommunities','getbotlist','getcall'])assert.ok(aliases[method].source_kinds.length>0,method);
-  assert.equal(aliases.getlabels.fields,undefined);
+  assert.deepEqual(Object.keys(aliases.getlabels.fields).sort(),['[].id','[].name']);
 });
 
 test('label association evidence is limited to active chat-level Baileys events',()=>{
