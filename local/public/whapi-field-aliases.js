@@ -30,6 +30,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
     source_kinds: Object.freeze(['group', 'chat', 'avatar', 'conversations', 'group_invite']),
     non_equivalent_fields: Object.freeze(['last_message.source']),
     fields: Object.freeze({
+      id: Object.freeze([{ kind: 'group', field: 'id', note: 'identificador observado en snapshots de grupos; los chats y conversaciones sin filtrar no prueban un grupo' }]),
       name: Object.freeze([{ kind: 'group', field: 'subject', note: 'nombre del grupo' }]),
       name_owner: Object.freeze([{ kind: 'group', field: 'subjectOwnerPn', note: 'PN del autor del nombre cuando WhatsApp lo informa' }]),
       name_at: Object.freeze([{ kind: 'group', field: 'subjectTime', note: 'marca de tiempo del nombre; se conserva el valor original de Baileys' }]),
