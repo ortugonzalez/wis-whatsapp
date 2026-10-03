@@ -62,7 +62,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       'last_message.timestamp': Object.freeze([{ kind: 'group_last_message', field: 'created_at', note: 'fecha local del mensaje más reciente' }]),
       'last_message.status': Object.freeze([{ kind: 'group_last_message', field: 'delivery_status', note: 'estado local del mensaje más reciente' }]),
       'last_message.from_me': Object.freeze([{ kind: 'group_last_message', field: 'direction', note: 'out equivale a true; in equivale a false' }]),
-      'last_message.text.body': Object.freeze([{ kind: 'group_last_message', field: 'body', note: 'cuerpo del mensaje más reciente cuando está almacenado' }]),
+      'last_message.text.body': Object.freeze([{ kind: 'group_last_message', field: 'text_body', requires_non_empty_text: true, note: 'texto no vacío del último mensaje, solo si su tipo es text; no usa texto de mensajes anteriores' }]),
     }),
   }),
   getmessage: Object.freeze({
@@ -133,7 +133,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       'last_message.timestamp': Object.freeze([{ kind: 'chat_last_message', field: 'created_at', note: 'fecha local del mensaje más reciente' }]),
       'last_message.status': Object.freeze([{ kind: 'chat_last_message', field: 'delivery_status', note: 'estado local del mensaje más reciente' }]),
       'last_message.from_me': Object.freeze([{ kind: 'chat_last_message', field: 'direction', note: 'out equivale a true; in equivale a false' }]),
-      'last_message.text.body': Object.freeze([{ kind: 'chat_last_message', field: 'body', note: 'cuerpo del mensaje más reciente cuando está almacenado' }]),
+      'last_message.text.body': Object.freeze([{ kind: 'chat_last_message', field: 'text_body', requires_non_empty_text: true, note: 'texto no vacío del último mensaje, solo si su tipo es text; no usa texto de mensajes anteriores' }]),
     }),
   }),
   getchats: Object.freeze({
@@ -159,7 +159,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       'chats[].last_message.timestamp': Object.freeze([{ kind: 'chat_last_message', field: 'created_at', note: 'fecha local del mensaje más reciente' }]),
       'chats[].last_message.status': Object.freeze([{ kind: 'chat_last_message', field: 'delivery_status', note: 'estado local del mensaje más reciente' }]),
       'chats[].last_message.from_me': Object.freeze([{ kind: 'chat_last_message', field: 'direction', note: 'out equivale a true; in equivale a false' }]),
-      'chats[].last_message.text.body': Object.freeze([{ kind: 'chat_last_message', field: 'body', note: 'cuerpo del mensaje más reciente cuando está almacenado' }]),
+      'chats[].last_message.text.body': Object.freeze([{ kind: 'chat_last_message', field: 'text_body', requires_non_empty_text: true, note: 'texto no vacío del último mensaje, solo si su tipo es text; no usa texto de mensajes anteriores' }]),
     }),
   }),
   getgroups: Object.freeze({
@@ -193,7 +193,7 @@ window.WIS_WHAPI_FIELD_ALIASES = Object.freeze({
       'groups[].last_message.timestamp': Object.freeze([{ kind: 'group_last_message', field: 'created_at', note: 'fecha local del mensaje más reciente' }]),
       'groups[].last_message.status': Object.freeze([{ kind: 'group_last_message', field: 'delivery_status', note: 'estado local del mensaje más reciente' }]),
       'groups[].last_message.from_me': Object.freeze([{ kind: 'group_last_message', field: 'direction', note: 'out equivale a true; in equivale a false' }]),
-      'groups[].last_message.text.body': Object.freeze([{ kind: 'group_last_message', field: 'body', note: 'cuerpo del mensaje más reciente cuando está almacenado' }]),
+      'groups[].last_message.text.body': Object.freeze([{ kind: 'group_last_message', field: 'text_body', requires_non_empty_text: true, note: 'texto no vacío del último mensaje, solo si su tipo es text; no usa texto de mensajes anteriores' }]),
     }),
   }),
   getcontacts: Object.freeze({

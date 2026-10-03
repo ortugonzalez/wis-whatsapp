@@ -348,6 +348,10 @@ export function buildDataCoverage(db, now = Date.now()) {
     expressions.push('count(CASE WHEN m.id IS NOT NULL THEN c.wa_chat_id END) AS chat_id_count');
     expressions.push('count(CASE WHEN m.id IS NOT NULL AND c.title IS NOT NULL THEN c.title END) AS chat_name_count');
     const metrics = db.prepare('SELECT ' + expressions.join(',') + ' FROM conversations c ' + latestJoin + ' WHERE ' + scope.where).get();
+    let textBodyCount = 0;
+    for (const row of db.prepare('SELECT m.type,m.body FROM conversations c ' + latestJoin + ' WHERE ' + scope.where).iterate()) {
+      if (row.type === 'text' && typeof row.body === 'string' && row.body.trim().length) textBodyCount++;
+    }
     contextualKinds.push({
       kind: scope.kind,
       records: total,
@@ -355,6 +359,7 @@ export function buildDataCoverage(db, now = Date.now()) {
         ...latestMessageColumns.map((field, index) => ({ field, records: metrics['f' + index] })),
         { field: 'wa_chat_id', records: metrics.chat_id_count },
         { field: 'title', records: metrics.chat_name_count },
+        { field: 'text_body', records: textBodyCount, non_empty_text_records: textBodyCount },
       ],
     });
   }
