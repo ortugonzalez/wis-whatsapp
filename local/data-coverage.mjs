@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {buildUnambiguousIdentityCoverage} from './identity-coverage.mjs';
 import {buildBusinessMinuteCoverage} from './business-hour-minutes.mjs';
+import {buildTextMessageCoverage} from './text-message-coverage.mjs';
 import { projectAccountLimits } from './account-limits-projection.mjs';
 import { classifyWhatsAppChatType } from './wa-chat-type.mjs';
 
@@ -299,6 +300,8 @@ export function buildDataCoverage(db, now = Date.now()) {
     });
   }
   const contextualKinds = [];
+  const textMessages = buildTextMessageCoverage(db);
+  if (textMessages?.records) contextualKinds.push(textMessages);
   const businessMinutes=buildBusinessMinuteCoverage(db);
   if(businessMinutes.records)contextualKinds.push(businessMinutes);
   const identityContext=buildUnambiguousIdentityCoverage(db);
