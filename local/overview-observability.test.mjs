@@ -60,6 +60,17 @@ test('scheduled newsletter jobs are labeled distinctly from the channels view',a
  assert.match(source,/newsletters:'Canales \(newsletters\)'/);
  assert.match(scheduledReads,/newsletters:'Canales \(newsletters\)'/);
 });
+test('last scheduled read describes command state without claiming successful reception',()=>{
+ context.fmt=value=>value;
+ assert.equal(context.lastScheduledReadLabel({}), 'Sin lectura programada registrada');
+ assert.equal(context.lastScheduledReadLabel({last_kind:'private-unknown'}), 'Sin lectura programada registrada');
+ assert.equal(context.lastScheduledReadLabel({last_kind:'constructor'}), 'Sin lectura programada registrada');
+ for(const [status,label] of [['pending','En cola'],['running','En curso'],['done','Comando finalizado'],['failed','Falló'],['constructor','Resultado no informado']]){
+  const result=context.lastScheduledReadLabel({last_kind:'catalog',last_status:status,last_enqueued_at:'2026-10-03T09:00:00Z'});
+  assert.equal(result,`Catálogo comercial · ${label} · encolada 2026-10-03T09:00:00Z`);
+ }
+ assert.equal(context.lastScheduledReadLabel({last_kind:'catalog',last_status:'done',last_enqueued_at:'secret-invalid'}),'Catálogo comercial · Comando finalizado');
+});
 
 test('rendered observability distinguishes message dates and lease evidence from reception',async()=>{
  const section={isConnected:true,innerHTML:''};
@@ -73,6 +84,9 @@ test('rendered observability distinguishes message dates and lease evidence from
   assert.match(section.innerHTML,/Fecha del último entrante · origen live/);
   assert.match(section.innerHTML,/no la hora de recepción/);
   assert.match(section.innerHTML,/no recepción reciente/);
+  assert.match(section.innerHTML,/Fallos de lectura acumulados/);
+  assert.match(section.innerHTML,/Última lectura programada/);
+  assert.match(section.innerHTML,/Un comando finalizado no garantiza datos completos ni recepción de mensajes/);
   assert.doesNotMatch(section.innerHTML,/Última recepción observada/);
  }
  coverage.last_live_message_at=null;await scope.refreshOverviewObservability();
