@@ -5957,6 +5957,23 @@
           }
         }
       }
+    },
+    "/contact-avatar-coverage": {
+      "get": {
+        "summary": "Resumen agregado de caché de fotos de contactos",
+        "description": "Solo lectura autenticada. Hasta 1000 destinos numéricos PN/LID, no personas únicas. Caché del resumen por 30 segundos y checked_at explícito. Categorías disjuntas; partial indica muestreo incompleto. Verifica ruta, existencia, tamaño y MIME declarado mediante el validador local; no firma de bytes ni frescura. No ejecuta lecturas WhatsApp ni devuelve identificadores, archivos o URLs.",
+        "responses": {
+          "200": {
+            "description": "Agregados locales, sin datos personales"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Permiso read requerido"
+          }
+        }
+      }
     }
   }
 }

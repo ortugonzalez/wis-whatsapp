@@ -5,7 +5,7 @@ export function summarizeContactAvatars(db, { hasCachedFile, limit = 1000 } = {}
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) throw new RangeError('invalid_avatar_scan_limit');
   // Match the API's bare numeric PN/LID targets before counting or limiting.
   const numericTarget = suffix => `(wa_jid GLOB '*${suffix}' AND length(wa_jid)>length('${suffix}') AND substr(wa_jid,1,length(wa_jid)-length('${suffix}')) NOT GLOB '*[^0-9]*')`;
-  const known = `SELECT DISTINCT wa_jid FROM contacts WHERE ${numericTarget('@s.whatsapp.net')} OR ${numericTarget('@lid')}`;
+  const known = `SELECT DISTINCT wa_jid FROM contacts WHERE length(wa_jid)<=150 AND (${numericTarget('@s.whatsapp.net')} OR ${numericTarget('@lid')})`;
   const total = db.prepare(`SELECT count(*) AS n FROM (${known})`).get().n;
   const result = {
     scope: 'known_contact_targets', total_targets: total, inspected_targets: 0,

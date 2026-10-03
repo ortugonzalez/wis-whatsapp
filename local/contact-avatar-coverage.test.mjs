@@ -53,6 +53,7 @@ test('malformed and device targets do not consume sample or denominator',()=>{
   try {
     for(const id of ['@lid','@s.whatsapp.net','0:1@s.whatsapp.net','0:1@lid','0a@lid',' 0@lid','0-1@s.whatsapp.net','0\n@lid','0@lid@lid','1@g.us','1@LID','1@S.WHATSAPP.NET'])put(id,{available:true,stale:false});
     put('9@lid',{available:true,stale:false});
+    put('1'.repeat(151)+'@lid',{available:true,stale:false});
     const r=summarizeContactAvatars(db,{limit:1,hasCachedFile:()=>true});
     assert.equal(r.total_targets,1);assert.equal(r.inspected_targets,1);assert.equal(r.partial,false);assert.equal(r.cached_current,1);
   }finally{db.close();}

@@ -1,3 +1,4 @@
+import {summarizeContactAvatars} from './contact-avatar-coverage.mjs';
 import { observedGroupMemberTags } from './group-member-tags.mjs';
 import {readUpsertActivity} from './receive-activity.mjs';
 import {LOCAL_LIMITS} from './limits.mjs';
@@ -97,6 +98,7 @@ export function makeServer(database=db,options={}){
  const audit=(action,actor,id)=>database.prepare('INSERT INTO audit(action,actor,resource_id,created_at) VALUES(?,?,?,?)').run(action,actor,id??null,now());
  const ownAvatarTarget=()=>{const connection=database.prepare("SELECT * FROM connections WHERE id='wis-5679'").get();return connection?.phone&&cleanConnection(connection).identity_verified?connection.phone.replace(/\D/g,'')+'@s.whatsapp.net':null;};
  const knownAvatarTarget=(target,admin)=>{if(typeof target!=='string'||target.length>150||! /^(?:\d+@(s\.whatsapp\.net|lid)|[0-9-]+@g\.us)$/.test(target))fail(400,'invalid_avatar_target');const connection=database.prepare("SELECT * FROM connections WHERE id='wis-5679'").get(),actual=connection?.phone?connection.phone.replace(/\D/g,'')+'@s.whatsapp.net':null;if(target===actual){if(!admin)fail(403,'administrator_required');if(target!==ownAvatarTarget())fail(409,'identity_not_verified');return target;}const contact=database.prepare("SELECT 1 FROM contacts WHERE wa_jid=? OR (phone_e164 IS NOT NULL AND replace(phone_e164,'+','')||'@s.whatsapp.net'=?)").get(target,target);const chat=database.prepare("SELECT 1 FROM conversations WHERE wa_chat_id=? UNION SELECT 1 FROM snapshots WHERE kind='group' AND resource_id=?").get(target,target);if(!contact&&!chat)fail(404,'unknown_avatar_target');return target;};
+ let avatarCoverageCache=null;
  const avatarMetadata=target=>{if(!target)return null;const row=database.prepare("SELECT * FROM snapshots WHERE kind='avatar' AND resource_id=?").get(target);const data=row?JSON.parse(row.payload):null,cached=existingAvatar(data,directory),available=Boolean(data?.available&&cached),stale=Boolean(data?.stale);return {target,observed:Boolean(row),available,cached,stale,status:!row?'not_collected':stale?'stale':available?'available':'unavailable',mime:cached?data.mime:null,size:cached&&Number.isSafeInteger(data.size)?data.size:null,updated_at:row?.updated_at??null,last_attempt_at:typeof data?.last_attempt_at==='string'&&Number.isFinite(Date.parse(data.last_attempt_at))?new Date(data.last_attempt_at).toISOString():null,error:data?.error?(avatarErrors.has(data.error)?data.error:'unavailable'):null,content_url:cached?'/api/v1/avatars?target='+encodeURIComponent(target)+'&content=1':null};};
  const historyFor=conversation=>{const request=database.prepare("SELECT * FROM snapshots WHERE kind='history_request' AND json_extract(payload,'$.target')=? ORDER BY updated_at DESC LIMIT 1").get(conversation.wa_chat_id);return {latest_command:database.prepare("SELECT * FROM read_commands WHERE kind='history' AND target=? ORDER BY created_at DESC,id DESC LIMIT 1").get(conversation.wa_chat_id)??null,latest_request:request?{command_id:request.resource_id,...parseSnapshot(request)}:null,latest_sync:parseSnapshot(database.prepare("SELECT * FROM snapshots WHERE kind='history' AND resource_id='wis-5679'").get()),latest_sync_scope:'account',complete:false,request_limit:LOCAL_LIMITS.history_request_messages};};
  const server=createServer(async(req,res)=>{
@@ -251,6 +253,15 @@ export function makeServer(database=db,options={}){
     const avatarForTarget=target=>{try{return avatarMetadata(knownAvatarTarget(target,actor.admin));}catch{return null;}};
     if(resource==='avatars'&&method==='GET'){
      const target=knownAvatarTarget(url.searchParams.get('target'),actor.admin),metadata=avatarMetadata(target);if(!url.searchParams.has('content'))return send(metadata);if(url.searchParams.get('content')!=='1')fail(400,'invalid_avatar_content');const row=database.prepare("SELECT payload FROM snapshots WHERE kind='avatar' AND resource_id=?").get(target),data=row?JSON.parse(row.payload):null;if(!safeAvatarFile(data))fail(404,'avatar_unavailable');const privateDir=await realpath(directory),avatarsDir=await realpath(resolve(directory,'avatars'));if(!avatarsDir.startsWith(privateDir+'/')&&!avatarsDir.startsWith(privateDir+'\\'))fail(403,'avatar_outside_storage');const file=await realpath(resolve(avatarsDir,data.filename));if(!file.startsWith(avatarsDir+'/')&&!file.startsWith(avatarsDir+'\\'))fail(403,'avatar_outside_storage');const info=await stat(file);if(!info.isFile()||info.size<1||info.size>LOCAL_LIMITS.avatar_bytes)fail(413,'avatar_size_invalid');const bytes=await readFile(file);if(!mediaMatches(bytes,data.mime))fail(415,'avatar_type_mismatch');res.writeHead(200,{'Content-Type':data.mime,'Content-Length':bytes.length,'Content-Disposition':'inline; filename="avatar'+extname(data.filename)+'"','Cache-Control':'private, no-store'});return res.end(bytes);
+    }
+    if(resource==='contact-avatar-coverage'&&method==='GET'){
+     auth('read');
+     const checked=Date.now();
+     if(!avatarCoverageCache||checked-avatarCoverageCache.at>=30000){
+      const summary=summarizeContactAvatars(database,{hasCachedFile:data=>existingAvatar(data,directory)});
+      avatarCoverageCache={at:checked,data:{...summary,checked_at:new Date(checked).toISOString(),cache_ttl_seconds:30}};
+     }
+     return send(avatarCoverageCache.data);
     }
     if(resource==='overview'&&method==='GET'){
      const count=table=>database.prepare('SELECT count(*) AS n FROM '+table).get().n;
