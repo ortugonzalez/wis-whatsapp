@@ -23,9 +23,20 @@ El test autenticado comprueba origen y fecha con un snapshot sintético, sin
 contenido personal. QA independiente: PASS, sin hallazgos P0–P2; confirmó
 autorización de lectura, respuesta sin valores privados y aclaración de alcance
 en la vista. No consultó producción. El máximo presupone marcas ISO homogéneas;
-una fecha inválida se expone como `null`, sin inventar frescura. Este cambio aún
-no está desplegado. No se declara paridad WHAPI.
+una fecha inválida se expone como `null`, sin inventar frescura. No se declara
+paridad WHAPI.
 
-Próxima ruta: 5, verificar el cambio en el servicio existente después de
-desplegarlo con el flujo revisado. Mantener separadas
-las marcas de recepción, la actividad del worker y la cobertura de campos.
+El commit `c5d3a3c` se envió al remoto productivo y se desplegó en el servicio
+existente. EasyPanel registró `Success` a las 09:07:48 UTC. Durante el reinicio,
+el dominio mostró temporalmente «Service is not reachable»; después volvió a
+servir el dashboard autenticado con línea conectada, cero operaciones pendientes
+y último evento a las 06:08 hora de Buenos Aires. La última notificación y el
+último entrante almacenado seguían en el 3 de octubre a las 09:33. La vista
+general confirma recuperación del servicio, pero la tabla de comparación WHAPI
+no pudo abrirse en Chrome en este turno; por ello no se afirma verificación
+visual del nuevo texto ni una lectura actualizada de la matriz productiva.
+
+Próxima ruta: 5, comprobar mediante la navegación normal del panel el origen y
+la fecha de snapshot de la matriz desplegada, sin repetir la interacción del
+diagnóstico que agotó el tiempo. Mantener separadas las marcas de recepción,
+la actividad del worker y la cobertura de campos.
