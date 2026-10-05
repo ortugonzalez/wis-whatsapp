@@ -49,10 +49,13 @@ test('capability field search requires authentication and returns bounded metada
     assert.ok(filteredBody.data.results.every(row => row.capability_id === 'getmessages' && row.direction === 'response'));
     assert.equal((await fetch(`${base}/api/v1/capability-fields?direction=send`, { headers: { Cookie: cookie } })).status, 400);
     assert.equal((await fetch(`${base}/api/v1/capability-fields?capability_id=../private`, { headers: { Cookie: cookie } })).status, 400);
+    database.prepare("INSERT INTO snapshots(kind,resource_id,payload,updated_at) VALUES('audit_probe','aggregate','{}','2026-10-01T12:00:00.000Z')").run();
     const coverage = await fetch(`${base}/api/v1/capability-field-coverage`, { headers: { Cookie: cookie } });
     assert.equal(coverage.status, 200);
     const coverageBody = await coverage.json();
     assert.equal(coverageBody.data.method_count, 182);
+    assert.equal(coverageBody.data.source_database, 'service_sqlite');
+    assert.equal(coverageBody.data.latest_snapshot_updated_at, '2026-10-01T12:00:00.000Z');
     assert.ok(coverageBody.data.totals.response_fields > 0);
     assert.ok(Number.isInteger(coverageBody.data.totals.fresh_response_fields_observed));
     assert.ok(Number.isInteger(coverageBody.data.totals.stale_only_response_fields));
