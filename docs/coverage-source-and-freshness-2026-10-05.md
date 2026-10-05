@@ -40,3 +40,23 @@ Próxima ruta: 5, comprobar mediante la navegación normal del panel el origen y
 la fecha de snapshot de la matriz desplegada, sin repetir la interacción del
 diagnóstico que agotó el tiempo. Mantener separadas las marcas de recepción,
 la actividad del worker y la cobertura de campos.
+
+## Verificación visual — 09:14 UTC
+
+Con la navegación normal «Más herramientas → Catálogo de funciones», Chrome
+mostró en producción el nuevo rótulo «Fuente: SQLite de esta instancia» y la
+última escritura global de snapshot a las 06:08 hora de Buenos Aires. El
+cálculo de la matriz figuraba a las 06:14; son tiempos distintos. La matriz
+productiva indicó 190/44.628 rutas de respuesta con observación (13 exactas,
+177 semánticas), 44.438 sin observar, 24/177 funciones con alguna ruta y cuatro
+completas. Todas las 190 estaban no marcadas obsoletas; ello no confirma que
+cada dato se actualizara a las 06:08. La base local del checkout seguía en
+139/44.628, con último snapshot del 28 de septiembre, y no se mezcló con esos
+conteos. No se pulsaron lecturas ni acciones de cuenta.
+
+En la vista general, la última notificación y el último entrante almacenado
+seguían en el 3 de octubre a las 09:33 hora de Buenos Aires, aunque la línea
+figuraba conectada. La verificación del rótulo queda cerrada; la recepción
+reciente y las 44.438 rutas no observadas mantienen abierta la brecha WHAPI.
+Próxima ruta: 1, inspeccionar lease, reconexión y actividad pasiva del proceso
+con las señales ya guardadas, sin reiniciar ni duplicar el worker.
